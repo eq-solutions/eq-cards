@@ -21,11 +21,25 @@
   <meta name="description" content="Tap-to-copy wallet for tradies.">
   <meta name="theme-color" content="#3DA8D8">
 
+  <!--
+    Viewport tuning for iOS PWA installs:
+    - viewport-fit=cover lets us paint into the notch/dynamic-island area
+      and the home-indicator gutter (we still respect SafeArea for content).
+    - maximum-scale=1, user-scalable=no prevents iOS from auto-zooming on
+      input focus when the input font-size is < 16px (which it is at our
+      base 15px html size). Trade-off: blocks pinch-zoom; standard for
+      app-like PWAs.
+  -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="EQ Cards">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
