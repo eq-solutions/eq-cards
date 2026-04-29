@@ -1,15 +1,31 @@
 # EQ Cards — Current Status
 
-**Last updated:** 2026-04-29 AM
-**Posture:** Pause-and-polish. Hold for INTAKE Phase 1 to land before any new feature work.
+**Last updated:** 2026-04-29 PM (overnight push)
+**Posture:** Pause-and-polish + reauthorized UX/robustness work. Schema still frozen.
 
 ---
 
 ## TL;DR
 
-EQ Cards v0.1.0 is **feature-complete for the wedge** (tap-to-copy on profile + licence fields). The web app runs locally and on Netlify. Mobile builds are deferred (Android Studio install required on the Windows host; iOS needs a Mac).
+EQ Cards v0.1.0 is **feature-complete for the wedge** (tap-to-copy on profile + licence fields), now with iPhone OCR fix, image cropping, search/filter/long-press, full Sentry breadcrumb trail, network retry, and a per-tab error boundary. Royce can dogfood end-to-end on iPhone PWA via Brave/Safari. Mobile native builds still deferred (Android Studio install required on the Windows host; iOS needs a Mac).
 
-The strategic context has changed since 2026-04-29: the broader **EQ Intake** architecture (canonical schema spine + three intake doors + every export door) is now the long-term frame, and EQ Cards is one of the three intake doors. New feature work on Cards is **paused** until the canonical schema lands so we don't pay for a rewrite later. See `EQ-INTAKE-ARCHITECTURE.md` (lives in the INTAKE bundle, not in this repo).
+Strategic context: the broader **EQ Intake** architecture (canonical schema spine + three intake doors + every export door) is being built in a parallel Cowork session. EQ Cards is one of the three intake doors. **No schema changes** in Cards until INTAKE Sprint-1 lands. UX/robustness work on existing flows is allowed and was completed overnight (see "Latest" below).
+
+A separate `docs/PRODUCT-TIERS.md` covers the Starter → Pro → Enterprise framing across the EQ Solutions suite — drafted overnight, awaiting real-customer-conversation pricing data before any of it goes live.
+
+---
+
+## Latest (overnight 2026-04-29 PM)
+
+Four-tier overnight push, four local commits, all on `main`:
+
+- **1cc0351 — Tier 1: iPhone OCR fix + image cropping + error UX.** `image_cropper` re-added (was deferred Phase 1). New crop step between picker and OCR with ID-1 card aspect ratio default. OCR loading dialog. Errors surfaced via SnackBar (no more silent `catch (_)` swallow). Sentry breadcrumbs across the OCR pipeline.
+- **fd32ff2 — Tier 2: Search, filter, expiring-soon, long-press, onboarding.** Search field + 3 filter chips above the licence list. Long-press any card → quick-actions sheet (Open / Edit). First-launch tap-to-copy hint via SnackBar (persisted in shared_preferences). All wired without schema changes.
+- **5ad17c8 — Tier 3: iPhone PWA viewport tuning.** `viewport-fit=cover` so the sky AppBar paints into the iPhone notch. `maximum-scale=1` prevents iOS auto-zoom on input focus. Multiple `apple-touch-icon` sizes for clean Add-to-Home-Screen.
+- **2dddfb8 — Tier 4: Battle-testing.** Edge Function call now retries once on 5xx/network with 1.5s backoff (never on 4xx). 30s timeout. Sentry breadcrumb trail across auth + licence repos. Per-tab `_ShellErrorBoundary` so a build-phase exception in one tab renders a fallback instead of red-screening the app.
+- **`docs/PRODUCT-TIERS.md`** drafted — Starter → Pro → Enterprise framing across the EQ Solutions suite. Working draft; pricing numbers placeholder, await real-customer conversations.
+
+**Quality after the push:** `flutter analyze` No issues · `flutter test` 129/129 passing.
 
 ---
 

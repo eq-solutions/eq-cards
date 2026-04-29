@@ -29,7 +29,7 @@
 # 'unsafe-inline' on script-src is required by Flutter's bootstrap (inline
 # script injects flutter_bootstrap.js). 'unsafe-eval' is required by DDC in
 # debug builds and by CanvasKit; release builds still need it for CanvasKit.
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://eu.i.posthog.com https://eu-assets.i.posthog.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' blob: data: https://www.gstatic.com https://hshvnjzczdytfiklhojz.supabase.co; connect-src 'self' https://www.gstatic.com https://fonts.gstatic.com https://fonts.googleapis.com https://hshvnjzczdytfiklhojz.supabase.co wss://hshvnjzczdytfiklhojz.supabase.co https://eu.i.posthog.com https://eu-assets.i.posthog.com https://*.sentry.io; manifest-src 'self'; worker-src 'self' blob:; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://eu.i.posthog.com https://eu-assets.i.posthog.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' blob: data: https://www.gstatic.com https://hshvnjzczdytfiklhojz.supabase.co; connect-src 'self' blob: data: https://www.gstatic.com https://fonts.gstatic.com https://fonts.googleapis.com https://hshvnjzczdytfiklhojz.supabase.co wss://hshvnjzczdytfiklhojz.supabase.co https://eu.i.posthog.com https://eu-assets.i.posthog.com https://*.sentry.io; manifest-src 'self'; worker-src 'self' blob:; frame-ancestors 'none'
 
 # Cache the Flutter bundle aggressively — it's content-addressed.
 /main.dart.js
