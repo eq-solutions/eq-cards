@@ -4,6 +4,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../features/auth/auth.dart';
+import '../../features/legal/presentation/screens/legal_document_screen.dart';
 import '../../features/licences/licences.dart';
 import '../../features/profile/profile.dart';
 import '../../features/settings/settings.dart';
@@ -41,6 +42,17 @@ GoRouter appRouter(AppRouterRef ref) {
           if (phone == null) return const _MissingPhoneScreen();
           return OtpScreen(phone: phone);
         },
+      ),
+      // Legal documents — top-level routes outside the shell so they can be
+      // reached from anywhere (Settings, signup flow, share sheet, etc.) and
+      // present as full-screen single-document views.
+      GoRoute(
+        path: Routes.privacyPolicy,
+        builder: (context, state) => LegalDocumentScreen.privacy(),
+      ),
+      GoRoute(
+        path: Routes.termsOfUse,
+        builder: (context, state) => LegalDocumentScreen.terms(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navShell) =>
@@ -116,12 +128,16 @@ String? _redirect(BuildContext context, GoRouterState state) {
   final isSignedIn = Supabase.instance.client.auth.currentSession != null;
   final loc = state.matchedLocation;
   final isAuthRoute = loc.startsWith('/auth/');
+  // Legal documents are reachable without sign-in so users can review the
+  // Privacy Policy and Terms before creating an account. They still appear
+  // in Settings once signed in via the same routes.
+  final isLegalRoute = loc.startsWith('/legal/');
 
   if (loc == Routes.splash || loc == Routes.home) {
     return isSignedIn ? Routes.licencesList : Routes.phoneEntry;
   }
   if (isSignedIn && isAuthRoute) return Routes.licencesList;
-  if (!isSignedIn && !isAuthRoute) return Routes.phoneEntry;
+  if (!isSignedIn && !isAuthRoute && !isLegalRoute) return Routes.phoneEntry;
   return null;
 }
 

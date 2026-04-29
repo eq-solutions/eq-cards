@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/design/app_icon_preview.dart';
 import '../../../../core/design/design_version.dart';
+import '../../../../core/router/routes.dart';
 import '../../../../core/theme/eq_colours.dart';
 import '../../../../core/theme/eq_spacing.dart';
 import '../../../../core/theme/eq_typography.dart';
@@ -21,7 +23,7 @@ class SettingsScreen extends ConsumerWidget {
     final asyncBiometric = ref.watch(biometricSettingsNotifierProvider);
 
     return Scaffold(
-      appBar: const EqAppBar(title: 'Settings'),
+      appBar: const EqAppBar(title: 'Settings', withBranding: true),
       body: ListView(
         padding: const EdgeInsets.all(EqSpacing.md),
         children: [
@@ -61,6 +63,30 @@ class SettingsScreen extends ConsumerWidget {
               onChanged: (v) => ref
                   .read(designVersionNotifierProvider.notifier)
                   .set(v),
+            ),
+          ),
+          const SizedBox(height: EqSpacing.lg),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: EqSpacing.sm),
+            child: Text('Legal', style: EqTypography.label),
+          ),
+          const SizedBox(height: EqSpacing.sm),
+          EqCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                _LegalRow(
+                  icon: Icons.privacy_tip_outlined,
+                  label: 'Privacy Policy',
+                  onTap: () => context.push(Routes.privacyPolicy),
+                ),
+                const Divider(height: 1),
+                _LegalRow(
+                  icon: Icons.gavel_outlined,
+                  label: 'Terms of Use',
+                  onTap: () => context.push(Routes.termsOfUse),
+                ),
+              ],
             ),
           ),
         ],
@@ -233,6 +259,36 @@ class _DesignPicker extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+class _LegalRow extends StatelessWidget {
+  const _LegalRow({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(EqSpacing.md),
+        child: Row(
+          children: [
+            Icon(icon, color: EqColours.ink),
+            const SizedBox(width: EqSpacing.md),
+            Expanded(child: Text(label, style: EqTypography.bodyL)),
+            const Icon(Icons.chevron_right, color: EqColours.grey),
+          ],
+        ),
+      ),
     );
   }
 }

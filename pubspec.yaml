@@ -31,8 +31,11 @@ dependencies:
   shared_preferences: ^2.2.0
 
   # Photos (architecture §11.2). image_picker handles both camera (mobile) and
-  # file dialog (web) — image_cropper removed in Phase 1, unused.
+  # file dialog (web). image_cropper re-added 2026-04-29 — lets the user
+  # frame the licence card before OCR (better extraction quality + smaller
+  # uploads).
   image_picker: ^1.1.0
+  image_cropper: ^9.0.0
   flutter_image_compress: ^2.3.0
 
   # OCR — on-device (architecture §16 Q3 starting position)
@@ -60,6 +63,11 @@ dependencies:
   # Annotations (`@visibleForTesting` etc.) — used by repository helpers
   meta: ^1.10.0
 
+  # Markdown rendering for in-app Privacy Policy + Terms screens.
+  # flutter_markdown was discontinued; flutter_markdown_plus is the
+  # community-maintained successor with the same API surface.
+  flutter_markdown_plus: ^1.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -86,10 +94,13 @@ flutter:
   # Bundled assets — launcher source PNGs are consumed by
   # flutter_launcher_icons at icon-generation time. The in-app preview in
   # lib/core/design/app_icon_preview.dart also loads launcher.png via
-  # Image.asset for the Linear variant.
+  # Image.asset for the Linear variant. Legal markdown is loaded by
+  # `LegalDocumentScreen` via rootBundle.
   assets:
     - assets/icon/launcher.png
     - assets/icon/launcher_foreground.png
+    - assets/legal/privacy-policy.md
+    - assets/legal/terms-of-use.md
 
   # Plus Jakarta Sans — architecture §7.3.
   # Using the single variable font from Google's official repo. Flutter

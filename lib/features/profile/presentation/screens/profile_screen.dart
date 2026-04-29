@@ -26,6 +26,7 @@ class ProfileScreen extends ConsumerWidget {
     return Scaffold(
       appBar: EqAppBar(
         title: 'Profile',
+        withBranding: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_outlined),

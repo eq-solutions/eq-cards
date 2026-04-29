@@ -67,7 +67,35 @@ class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: EqSpacing.xxl),
-              Text("What's your mobile?", style: EqTypography.headingXL),
+              // EQ launcher mark — first-impression branding on the only
+              // screen an unsigned-in user sees.
+              Center(
+                child: Image.asset(
+                  'assets/icon/launcher.png',
+                  width: 80,
+                  height: 80,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                ),
+              ),
+              const SizedBox(height: EqSpacing.md),
+              Center(
+                child: Text(
+                  'EQ Cards',
+                  style: EqTypography.headingL.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: EqColours.deep,
+                  ),
+                ),
+              ),
+              const SizedBox(height: EqSpacing.xs),
+              Center(
+                child: Text(
+                  'Your tradie wallet.',
+                  style: EqTypography.bodyM.copyWith(color: EqColours.grey),
+                ),
+              ),
+              const SizedBox(height: EqSpacing.xxl),
+              Text("What's your mobile?", style: EqTypography.headingL),
               const SizedBox(height: EqSpacing.sm),
               Text(
                 "We'll send you a code to sign in.",

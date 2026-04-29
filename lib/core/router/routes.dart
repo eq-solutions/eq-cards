@@ -11,6 +11,8 @@ abstract class Routes {
   static const licenceDetail = '/licences/:id';
   static const licenceEdit = '/licences/:id/edit';
   static const settings = '/settings';
+  static const privacyPolicy = '/legal/privacy';
+  static const termsOfUse = '/legal/terms';
 
   /// URL builders for path-parameter routes. Use these instead of hand-rolled
   /// string interpolation so the route shapes stay in one place.

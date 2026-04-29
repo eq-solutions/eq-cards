@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 import '../../../../core/design/design_version.dart';
 import '../../../../core/error/user_messages.dart';
@@ -34,6 +37,7 @@ class LicencesListScreen extends ConsumerWidget {
     return Scaffold(
       appBar: EqAppBar(
         title: 'Licences',
+        withBranding: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -150,37 +154,195 @@ class LicencesListScreen extends ConsumerWidget {
     );
     if (picked == null || !context.mounted) return;
 
-    final rawBytes = await picked.readAsBytes();
+    // Cropping step — let the user frame the licence card before we
+    // upload + OCR. Smaller upload (faster, cheaper Anthropic call) and
+    // higher OCR accuracy (less background noise).
+    final cropped = await _cropImage(context, picked);
+    if (cropped == null || !context.mounted) return;
 
-    // Strip EXIF on web before anything leaves the device. Mobile already
-    // strips inside PhotoUpload at storage-write time, but the web OCR path
-    // sends the image to an external Edge Function before storage — so we
-    // strip up-front. Architecture §11.2.
-    Uint8List bytes = rawBytes;
+    final rawBytes = await cropped.readAsBytes();
+    final pickedMime = picked.mimeType;
+
+    if (!context.mounted) return;
+    // Show a non-dismissable loading dialog while OCR runs. The Edge
+    // Function round-trip can take 3-8s; without this the user thinks
+    // nothing is happening and may pick the photo again.
+    final loadingDialog = showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const _OcrLoadingDialog(),
+    );
+
+    unawaited(
+      Sentry.addBreadcrumb(
+        Breadcrumb(
+          category: 'ocr',
+          message: 'capture_flow_started',
+          data: {
+            'platform': kIsWeb ? 'web' : 'mobile',
+            'mime_picked': pickedMime ?? 'unknown',
+            'raw_bytes': rawBytes.length,
+          },
+          level: SentryLevel.info,
+        ),
+      ),
+    );
+
+    // Convert + EXIF-strip on web before anything leaves the device. iPhone
+    // photos are often HEIC, which Anthropic Vision rejects. The browser
+    // can natively decode HEIC; flutter_image_compress's web path uses a
+    // canvas which produces a JPEG output. If that fails we fall through
+    // to raw bytes and the Edge Function returns a clearer error.
+    var bytes = rawBytes;
+    const mime = 'image/jpeg';
     if (kIsWeb) {
       try {
         bytes = await stripExifAndCompress(rawBytes);
-      } catch (_) {
-        // Strip failure shouldn't block OCR — fall through with raw bytes.
+        unawaited(
+          Sentry.addBreadcrumb(
+            Breadcrumb(
+              category: 'ocr',
+              message: 'compress_succeeded',
+              data: {'output_bytes': bytes.length},
+            ),
+          ),
+        );
+      } catch (e, st) {
+        unawaited(
+          Sentry.addBreadcrumb(
+            Breadcrumb(
+              category: 'ocr',
+              message: 'compress_failed',
+              data: {'error': e.toString()},
+              level: SentryLevel.warning,
+            ),
+          ),
+        );
+        unawaited(Sentry.captureException(e, stackTrace: st));
         bytes = rawBytes;
       }
     }
 
     OcrExtraction? extraction;
+    String? userVisibleError;
     try {
       final ocr = ref.read(ocrServiceProvider);
       extraction = kIsWeb
-          ? await ocr.extractFromBytesViaEdgeFunction(bytes)
-          : await ocr.extractFromFile(File(picked.path));
-    } catch (_) {
-      // OCR failure is non-fatal — fall through to manual edit with photo.
+          ? await ocr.extractFromBytesViaEdgeFunction(bytes, mimeType: mime)
+          : await ocr.extractFromFile(File(cropped.path));
+      unawaited(
+        Sentry.addBreadcrumb(
+          Breadcrumb(
+            category: 'ocr',
+            message: 'extract_succeeded',
+            data: {
+              'has_number': extraction.numberCandidate != null,
+              'has_type': extraction.licenceTypeCandidate != null,
+              'has_state': extraction.stateCandidate != null,
+              'has_expiry': extraction.expiryDateCandidate != null,
+            },
+          ),
+        ),
+      );
+    } catch (e, st) {
+      // Capture for our own debugging, then surface a friendly message so
+      // the user knows OCR didn't fire and can fall back to manual entry.
+      unawaited(Sentry.captureException(e, stackTrace: st));
+      userVisibleError = _ocrErrorMessage(e);
     }
 
+    // Dismiss the loading dialog before navigating.
+    if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
+    unawaited(loadingDialog);
+
     if (!context.mounted) return;
+    if (userVisibleError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "OCR didn't run: $userVisibleError. You can still fill the "
+            'licence in manually.',
+          ),
+          duration: const Duration(seconds: 6),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: EqColours.ink,
+        ),
+      );
+    }
     context.go(
       Routes.licenceCreate,
       extra: LicencePrefill(photoBytes: bytes, ocr: extraction),
     );
+  }
+
+  /// Opens the image cropper UI on the picked file. Returns the cropped
+  /// `XFile`-shaped result, or `null` if the user cancelled. Cropping is
+  /// optional but encouraged: tighter crops mean smaller uploads, faster
+  /// OCR round-trip, and better extraction accuracy (less background noise
+  /// for Claude Vision to ignore).
+  Future<XFile?> _cropImage(BuildContext context, XFile picked) async {
+    try {
+      final cropped = await ImageCropper().cropImage(
+        sourcePath: picked.path,
+        // ID-1 card aspect ratio (CR80, ISO/IEC 7810) is the default
+        // suggestion since most licences fit it. The user can override.
+        aspectRatio: const CropAspectRatio(ratioX: 1.586, ratioY: 1),
+        compressFormat: ImageCompressFormat.jpg,
+        compressQuality: 85,
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Frame your licence',
+            toolbarColor: const Color(0xFF3DA8D8), // EqColours.sky
+            toolbarWidgetColor: const Color(0xFFFFFFFF),
+            initAspectRatio: CropAspectRatioPreset.original,
+            lockAspectRatio: false,
+          ),
+          IOSUiSettings(
+            title: 'Frame your licence',
+            doneButtonTitle: 'Done',
+            cancelButtonTitle: 'Cancel',
+          ),
+          WebUiSettings(
+            context: context,
+            presentStyle: WebPresentStyle.dialog,
+            size: const CropperSize(width: 520, height: 380),
+          ),
+        ],
+      );
+      if (cropped == null) return null;
+      return XFile(cropped.path);
+    } catch (e, st) {
+      // Cropper failure shouldn't block the flow — fall through with the
+      // original picked file. We still log it so we know if real users
+      // hit issues with the cropper widget itself.
+      unawaited(Sentry.captureException(e, stackTrace: st));
+      return picked;
+    }
+  }
+
+  /// Maps an OCR-pipeline error to a one-line user-visible explanation.
+  /// Errors land in Sentry verbatim (above); this is the friendly version.
+  static String _ocrErrorMessage(Object e) {
+    final s = e.toString().toLowerCase();
+    if (s.contains('unsupported_mime_type')) {
+      return 'photo format not supported (try a JPEG/PNG)';
+    }
+    if (s.contains('unauthorized') || s.contains('401')) {
+      return 'sign-in expired';
+    }
+    if (s.contains('anthropic_upstream_error') || s.contains('502')) {
+      return 'OCR service is temporarily unavailable';
+    }
+    if (s.contains('failed host lookup') ||
+        s.contains('socketexception') ||
+        s.contains('clientexception') ||
+        s.contains('typeerror: failed to fetch')) {
+      return 'network unreachable';
+    }
+    if (s.contains('timeout')) {
+      return 'OCR took too long';
+    }
+    return 'an unexpected error occurred';
   }
 }
 
@@ -215,10 +377,17 @@ class _IllustrationEmpty extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Icon(
-            Icons.badge_outlined,
-            size: 64,
-            color: EqColours.grey,
+          // EQ launcher mark — first impression for a new user opening the
+          // wallet for the first time.
+          Image.asset(
+            'assets/icon/launcher.png',
+            width: 96,
+            height: 96,
+            errorBuilder: (_, __, ___) => const Icon(
+              Icons.badge_outlined,
+              size: 64,
+              color: EqColours.grey,
+            ),
           ),
           const SizedBox(height: EqSpacing.md),
           Text(
@@ -556,6 +725,49 @@ class _SkeletonBox extends StatelessWidget {
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(4),
+      ),
+    );
+  }
+}
+
+/// Modal shown while the OCR Edge Function processes an uploaded photo.
+/// Non-dismissable to prevent the user picking the same photo twice while
+/// the round-trip is in flight (3-8s typical on Sonnet vision).
+class _OcrLoadingDialog extends StatelessWidget {
+  const _OcrLoadingDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      child: Dialog(
+        backgroundColor: EqColours.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(EqSpacing.xl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(
+                width: 40,
+                height: 40,
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  color: EqColours.sky,
+                ),
+              ),
+              const SizedBox(height: EqSpacing.md),
+              Text('Reading your licence…', style: EqTypography.bodyL),
+              const SizedBox(height: EqSpacing.xs),
+              Text(
+                'A few seconds. Hold tight.',
+                style: EqTypography.label.copyWith(color: EqColours.grey),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
