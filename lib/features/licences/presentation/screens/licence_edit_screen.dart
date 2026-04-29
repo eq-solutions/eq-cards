@@ -15,6 +15,7 @@ import '../../../../core/theme/eq_colours.dart';
 import '../../../../core/theme/eq_spacing.dart';
 import '../../../../core/theme/eq_typography.dart';
 import '../../../../core/utils/photo_upload.dart';
+import '../../../../core/validators/input_validators.dart';
 import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_button.dart';
 import '../../../../core/widgets/eq_text_field.dart';
@@ -340,6 +341,7 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
               EqTextField(
                 controller: _number,
                 label: 'Licence number',
+                validator: validateLicenceNumber,
               ),
               const SizedBox(height: EqSpacing.md),
               _DateField(
@@ -357,6 +359,7 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
               EqTextField(
                 controller: _state,
                 label: 'State (NSW, VIC, etc.)',
+                validator: validateAuState,
               ),
               const SizedBox(height: EqSpacing.md),
               EqTextField(

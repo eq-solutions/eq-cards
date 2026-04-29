@@ -12,6 +12,7 @@ import '../../../../core/error/user_messages.dart';
 import '../../../../core/theme/eq_colours.dart';
 import '../../../../core/theme/eq_spacing.dart';
 import '../../../../core/theme/eq_typography.dart';
+import '../../../../core/validators/input_validators.dart';
 import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_button.dart';
 import '../../../../core/widgets/eq_text_field.dart';
@@ -268,12 +269,14 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                 controller: _mobile,
                 label: 'Mobile',
                 keyboardType: TextInputType.phone,
+                validator: validateMobile,
               ),
               const SizedBox(height: EqSpacing.md),
               EqTextField(
                 controller: _email,
                 label: 'Email',
                 keyboardType: TextInputType.emailAddress,
+                validator: validateEmail,
               ),
               const SizedBox(height: EqSpacing.lg),
               _SectionHeader('Address'),
@@ -287,6 +290,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                     child: EqTextField(
                       controller: _state,
                       label: 'State',
+                      validator: validateAuState,
                     ),
                   ),
                   const SizedBox(width: EqSpacing.md),
@@ -295,6 +299,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                       controller: _postcode,
                       label: 'Postcode',
                       keyboardType: TextInputType.number,
+                      validator: validatePostcode,
                     ),
                   ),
                 ],
@@ -312,6 +317,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                 controller: _emergencyMobile,
                 label: 'Mobile',
                 keyboardType: TextInputType.phone,
+                validator: validateMobile,
               ),
               const SizedBox(height: EqSpacing.xl),
               if (_error != null)

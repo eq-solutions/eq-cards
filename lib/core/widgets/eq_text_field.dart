@@ -16,6 +16,7 @@ class EqTextField extends StatelessWidget {
     this.onSubmitted,
     this.textInputAction,
     this.autofocus = false,
+    this.validator,
   });
 
   final TextEditingController? controller;
@@ -29,18 +30,12 @@ class EqTextField extends StatelessWidget {
   final TextInputAction? textInputAction;
   final bool autofocus;
 
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      keyboardType: keyboardType,
-      obscureText: obscureText,
-      onChanged: onChanged,
-      onSubmitted: onSubmitted,
-      textInputAction: textInputAction,
-      autofocus: autofocus,
-      style: EqTypography.bodyL,
-      decoration: InputDecoration(
+  /// Field-level validator. When non-null, the widget renders as a
+  /// `TextFormField` so the parent `Form` picks it up. Use the validators
+  /// from `core/validators/input_validators.dart` for consistency.
+  final FormFieldValidator<String>? validator;
+
+  InputDecoration _decoration() => InputDecoration(
         labelText: label,
         hintText: hint,
         errorText: errorText,
@@ -63,7 +58,35 @@ class EqTextField extends StatelessWidget {
           borderRadius: BorderRadius.circular(6),
           borderSide: const BorderSide(color: EqColours.error, width: 2),
         ),
-      ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    if (validator != null) {
+      return TextFormField(
+        controller: controller,
+        keyboardType: keyboardType,
+        obscureText: obscureText,
+        onChanged: onChanged,
+        onFieldSubmitted: onSubmitted,
+        textInputAction: textInputAction,
+        autofocus: autofocus,
+        style: EqTypography.bodyL,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        validator: validator,
+        decoration: _decoration(),
+      );
+    }
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      obscureText: obscureText,
+      onChanged: onChanged,
+      onSubmitted: onSubmitted,
+      textInputAction: textInputAction,
+      autofocus: autofocus,
+      style: EqTypography.bodyL,
+      decoration: _decoration(),
     );
   }
 }

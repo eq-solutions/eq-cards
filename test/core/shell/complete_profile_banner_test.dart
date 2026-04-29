@@ -79,15 +79,13 @@ void main() {
       expect(find.text('Complete your profile'), findsOneWidget);
     });
 
-    testWidgets('shown when profile missing emergency contact',
-        (tester) async {
+    testWidgets('shown when profile missing emergency contact', (tester) async {
       final partial = _completeProfile().copyWith(emergencyContactName: null);
       await _pump(tester, partial);
       expect(find.text('Complete your profile'), findsOneWidget);
     });
 
-    testWidgets('Finish button navigates to /profile/edit',
-        (tester) async {
+    testWidgets('Finish button navigates to /profile/edit', (tester) async {
       await _pump(tester, null);
       expect(find.text('Finish'), findsOneWidget);
       await tester.tap(find.text('Finish'));

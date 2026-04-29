@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -11,6 +12,10 @@ import '../../../../core/theme/eq_typography.dart';
 import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_card.dart';
 import '../../../auth/auth.dart';
+import '../../../licences/data/models/licence.dart';
+import '../../../licences/presentation/notifiers/licences_list_notifier.dart';
+import '../../../profile/presentation/notifiers/profile_notifier.dart';
+import '../helpers/data_export.dart';
 import '../notifiers/biometric_settings_notifier.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -27,6 +32,18 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(EqSpacing.md),
         children: [
+          // Wallet stats — quick at-a-glance summary derived from existing
+          // licence data (no new schema). Hidden until the licence list
+          // resolves successfully so the page doesn't flicker on cold load.
+          ref.watch(licencesListNotifierProvider).maybeWhen(
+                data: (licences) => Column(
+                  children: [
+                    _WalletStats(licences: licences),
+                    const SizedBox(height: EqSpacing.md),
+                  ],
+                ),
+                orElse: () => const SizedBox.shrink(),
+              ),
           EqCard(
             padding: EdgeInsets.zero,
             child: Column(
@@ -86,8 +103,59 @@ class SettingsScreen extends ConsumerWidget {
                   label: 'Terms of Use',
                   onTap: () => context.push(Routes.termsOfUse),
                 ),
+                const Divider(height: 1),
+                _LegalRow(
+                  icon: Icons.download_outlined,
+                  label: 'Export my data',
+                  onTap: () => _exportData(context, ref),
+                ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Per Privacy Policy §9 access right — show every personal-data field
+  /// we hold. JSON copied to clipboard + displayed in a dialog so the user
+  /// can also screenshot or paste into a doc. v1.1 may add a proper native
+  /// share-sheet via share_plus.
+  Future<void> _exportData(BuildContext context, WidgetRef ref) async {
+    final profileAsync = ref.read(profileNotifierProvider);
+    final licencesAsync = ref.read(licencesListNotifierProvider);
+    final profile = profileAsync.valueOrNull;
+    final licences = licencesAsync.valueOrNull ?? const <Licence>[];
+
+    final payload = buildExportPayload(
+      profile: profile,
+      licences: licences,
+      now: DateTime.now(),
+    );
+    final json = exportPayloadToJsonString(payload);
+
+    await Clipboard.setData(ClipboardData(text: json));
+    if (!context.mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Your data — copied to clipboard'),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 400),
+          child: SingleChildScrollView(
+            child: SelectableText(
+              json,
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Done'),
           ),
         ],
       ),
@@ -258,6 +326,89 @@ class _DesignPicker extends StatelessWidget {
             ),
           ),
         ],
+      ],
+    );
+  }
+}
+
+/// Stats card surfaced at the top of Settings. Derived from licences
+/// already in the store — no new schema. A small "wedge dashboard" hint
+/// for what the Pro-tier admin view will eventually show.
+class _WalletStats extends StatelessWidget {
+  const _WalletStats({required this.licences});
+
+  final List<Licence> licences;
+
+  int get _total => licences.length;
+  int get _expiringSoon =>
+      licences.where((l) => !l.isExpired && l.daysUntilExpiry <= 30).length;
+  int get _expired => licences.where((l) => l.isExpired).length;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_total == 0) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.all(EqSpacing.md),
+      decoration: BoxDecoration(
+        color: EqColours.ice,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: EqColours.border),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _StatCell(
+              value: _total.toString(),
+              label: _total == 1 ? 'Licence' : 'Licences',
+            ),
+          ),
+          Container(width: 1, height: 40, color: EqColours.border),
+          Expanded(
+            child: _StatCell(
+              value: _expiringSoon.toString(),
+              label: 'Expiring 30d',
+              accent:
+                  _expiringSoon > 0 ? EqColours.warning : null,
+            ),
+          ),
+          Container(width: 1, height: 40, color: EqColours.border),
+          Expanded(
+            child: _StatCell(
+              value: _expired.toString(),
+              label: 'Expired',
+              accent: _expired > 0 ? EqColours.error : null,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatCell extends StatelessWidget {
+  const _StatCell({required this.value, required this.label, this.accent});
+
+  final String value;
+  final String label;
+  final Color? accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: EqTypography.headingL.copyWith(
+            fontWeight: FontWeight.w700,
+            color: accent ?? EqColours.deep,
+          ),
+        ),
+        const SizedBox(height: EqSpacing.xs),
+        Text(
+          label,
+          style: EqTypography.label,
+          textAlign: TextAlign.center,
+        ),
       ],
     );
   }

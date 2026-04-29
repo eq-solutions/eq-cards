@@ -110,8 +110,14 @@ void main() {
       // Persistent paths go in the payload; transient signed URLs do not.
       expect(payload['photo_front_url'], 'u1/lic-1/front.jpg');
       expect(payload['photo_back_url'], 'u1/lic-1/back.jpg');
-      expect(payload.values, isNot(contains('https://signed.example.com/front')));
-      expect(payload.values, isNot(contains('https://signed.example.com/back')));
+      expect(
+        payload.values,
+        isNot(contains('https://signed.example.com/front')),
+      );
+      expect(
+        payload.values,
+        isNot(contains('https://signed.example.com/back')),
+      );
     });
   });
 }

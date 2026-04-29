@@ -22,22 +22,11 @@ import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_button.dart';
 import '../../data/models/licence.dart';
 import '../../data/ocr_service.dart';
+import '../helpers/licences_list_helpers.dart';
 import '../notifiers/licence_types_provider.dart';
 import '../notifiers/licences_list_notifier.dart';
 import '../widgets/licence_card.dart';
 import 'licence_edit_screen.dart';
-
-/// Filter chips above the licence list. `all` is the default; the others
-/// are derived from the existing data — no new schema, no migration.
-enum LicenceFilter { all, expiringSoon, expired }
-
-extension on LicenceFilter {
-  String get label => switch (this) {
-        LicenceFilter.all => 'All',
-        LicenceFilter.expiringSoon => 'Expiring soon',
-        LicenceFilter.expired => 'Expired',
-      };
-}
 
 class LicencesListScreen extends ConsumerStatefulWidget {
   const LicencesListScreen({super.key});
@@ -206,30 +195,18 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
     );
   }
 
-  /// Apply search + filter. Pure — no side effects, easy to widget-test.
+  /// Apply search + filter — delegates to the pure helper. Kept as a
+  /// thin instance method so the call site reads cleanly.
   List<Licence> _applyFilters(
     List<Licence> input,
     Map<String, String> typeMap,
-  ) {
-    final q = _query.trim().toLowerCase();
-    return input.where((l) {
-      // Filter bucket.
-      switch (_filter) {
-        case LicenceFilter.all:
-          break;
-        case LicenceFilter.expiringSoon:
-          if (l.isExpired) return false;
-          if (l.daysUntilExpiry > 30) return false;
-        case LicenceFilter.expired:
-          if (!l.isExpired) return false;
-      }
-      // Search.
-      if (q.isEmpty) return true;
-      final label = (typeMap[l.licenceType] ?? l.licenceType).toLowerCase();
-      final num = l.licenceNumber.toLowerCase();
-      return label.contains(q) || num.contains(q);
-    }).toList();
-  }
+  ) =>
+      applyLicenceFilters(
+        input,
+        typeLabels: typeMap,
+        filter: _filter,
+        query: _query,
+      );
 
   /// Long-press quick-actions sheet on a licence card. Shortcuts the
   /// detail-screen → menu → action chain to one tap.
@@ -415,7 +392,7 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
       // Capture for our own debugging, then surface a friendly message so
       // the user knows OCR didn't fire and can fall back to manual entry.
       unawaited(Sentry.captureException(e, stackTrace: st));
-      userVisibleError = _ocrErrorMessage(e);
+      userVisibleError = ocrErrorMessage(e);
     }
 
     // Dismiss the loading dialog before navigating.
@@ -487,30 +464,6 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
     }
   }
 
-  /// Maps an OCR-pipeline error to a one-line user-visible explanation.
-  /// Errors land in Sentry verbatim (above); this is the friendly version.
-  static String _ocrErrorMessage(Object e) {
-    final s = e.toString().toLowerCase();
-    if (s.contains('unsupported_mime_type')) {
-      return 'photo format not supported (try a JPEG/PNG)';
-    }
-    if (s.contains('unauthorized') || s.contains('401')) {
-      return 'sign-in expired';
-    }
-    if (s.contains('anthropic_upstream_error') || s.contains('502')) {
-      return 'OCR service is temporarily unavailable';
-    }
-    if (s.contains('failed host lookup') ||
-        s.contains('socketexception') ||
-        s.contains('clientexception') ||
-        s.contains('typeerror: failed to fetch')) {
-      return 'network unreachable';
-    }
-    if (s.contains('timeout')) {
-      return 'OCR took too long';
-    }
-    return 'an unexpected error occurred';
-  }
 }
 
 class _EmptyState extends StatelessWidget {

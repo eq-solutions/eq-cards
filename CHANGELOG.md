@@ -6,6 +6,75 @@ All notable changes to EQ Cards are documented here. Format follows
 
 ## [Unreleased]
 
+### 2026-04-29 overnight (continued) — Battle-test push + tiered-product framing
+
+Picking up from "I want all of EQ products having the starter package all the way through to enterprise style scale." Continuous work through the night within pause-and-polish boundaries (no schema changes).
+
+#### Tier 1 — iPhone OCR fix + cropping + error UX (commit `1cc0351`)
+- Re-added `image_cropper` ^9.0.0 with cross-platform UI settings. Cropping happens between picker and OCR; ID-1 card aspect ratio (CR80) as the default. Smaller upload + better extraction accuracy.
+- Non-dismissable OCR loading dialog ("Reading your licence…") during the 3-8s Edge Function round-trip.
+- `catch (_)` swallow replaced with `catch (e, st)` → `Sentry.captureException` + a friendly SnackBar via `ocrErrorMessage(e)` mapping HEIC/auth/network/timeout/upstream errors to one-line plain English.
+- Sentry breadcrumb trail across the OCR pipeline: `capture_flow_started` → `compress_succeeded/failed` → `extract_succeeded`.
+
+#### Tier 2 — Search, filter, expiring-soon, long-press, onboarding (commit `fd32ff2`)
+- LicencesListScreen converted from `ConsumerWidget` to `ConsumerStatefulWidget` to manage search query + filter state.
+- Search field above the list (matches type label + licence number, case-insensitive). Hidden until total ≥ 3 to avoid friction on tiny lists.
+- 3 filter chips: All / Expiring soon (≤30d) / Expired. Reuses existing `Licence.isExpired` and `Licence.daysUntilExpiry` getters.
+- Long-press on any LicenceCard opens a quick-actions sheet (Open / Edit). `onLongPress` threaded through all 3 design variants.
+- First-launch tap-to-copy hint via SnackBar, persisted via `shared_preferences`. Shown once-ever on the first list render with ≥1 licence.
+
+#### Tier 3 — iPhone PWA viewport polish (commit `5ad17c8`)
+- `viewport-fit=cover` so the sky AppBar paints into the iPhone notch.
+- `maximum-scale=1.0`, `user-scalable=no` to prevent iOS auto-zoom on input focus.
+- Both `mobile-web-app-capable` and `apple-mobile-web-app-capable` set; status bar style → `default` (sky) instead of black.
+- Three apple-touch-icon sizes for clean Add-to-Home-Screen.
+
+#### Tier 4 — Battle testing (commit `2dddfb8`)
+- OCR Edge Function call retries once on transient failures (5xx / network / timeout) with 1.5s backoff, **never** on 4xx. 30s overall timeout.
+- Sentry breadcrumb trail across the auth pipeline (`send_otp_*`, `verify_otp_*`, `sign_out_*`) and licence repo (`licence_insert/update/delete_started/succeeded/failed`). Phone numbers truncated to last 4 digits in breadcrumbs.
+- Per-tab `_ShellErrorBoundary` around the home shell's navigationShell — build-phase errors render a friendly fallback ("Something broke on this screen — try a different tab") instead of red-screening the app. Resets on tab switch.
+
+#### CSP hotfix (commit `5f3b08e`)
+- Added `blob: data:` to `connect-src` so `image_picker` and `image_cropper` can read picked-photo blob URLs without violating CSP. Caught from Royce's iPhone testing.
+
+#### Tier 5 — Test coverage on new pure helpers
+- New `lib/features/licences/presentation/helpers/licences_list_helpers.dart` extracted from the screen. `applyLicenceFilters` + `ocrErrorMessage` are now pure functions.
+- 20 new tests: filter buckets, search matching (label + number, case-insensitive), combined filter+search, error-message mapping for every documented branch.
+
+#### Tier 6 — Form validators + 39 tests
+- New `lib/core/validators/input_validators.dart` with: `validateMobile` / `validateMobileRequired`, `validateEmail`, `validatePostcode` (4 digits), `validateAuState` (8 valid codes, case-insensitive), `validateDateOfBirth` (≤ today, ≥ 1900), `validateLicenceNumber` (non-empty, alphanumeric+hyphen/space/slash, ≤ 32 chars), `validateIssueDate` (≤ today), `validateExpiryDate` (after issue, ≤ 2100), `validateAddressLine` (≤ 200 chars).
+- `EqTextField` extended with optional `validator:` parameter. When non-null, renders as `TextFormField` so the parent `Form` picks up validation; `autovalidateMode: onUserInteraction` so errors appear as the user types.
+- Wired across profile-edit (mobile, email, state, postcode, emergency mobile) and licence-edit (number, state).
+- 39 unit tests covering every validator's empty/valid/invalid paths.
+
+#### Tier 7 — Wallet stats card on Settings
+- `_WalletStats` widget at the top of Settings shows total licences / expiring-30d / expired with colour accents (warning amber if any expiring, error red if any expired). Hidden when wallet is empty. Pure derived view over existing licence data — no new schema. Hint at where the Pro-tier admin-dashboard view will eventually live.
+
+#### Tier 8 — Data export ("Settings → Export my data")
+- New `lib/features/settings/presentation/helpers/data_export.dart` — pure function `buildExportPayload(profile, licences, now)` returns a versioned JSON-serialisable map (`_format: 'eq-cards-export'`, `_format_version: 1`) with profile + licences. Honours Privacy Policy §9 access right.
+- Settings → Legal → "Export my data" copies the JSON to the clipboard and shows it in a SelectableText dialog. Pragmatic v1; v1.1 may add `share_plus` for native share-sheet downloads.
+- 6 new tests covering the payload shape (header, profile mapping with nested address, licence mapping including metadata + signed URLs, multi-licence ordering, JSON round-trip).
+
+#### Bonus — `docs/PRODUCT-TIERS.md`
+- Strategic doc covering Free / Starter / Pro / Enterprise tiers across the EQ Solutions suite. Specifically captures the constraints Royce articulated:
+  - Tap-to-copy stays free forever
+  - Inductions, SWMS, prestarts and other safety-critical features never paywalled
+- Tier-by-tier breakdown for EQ Cards; sketch of how the same shape applies to EQ Import / Capture / Field / Expenses / Quotes / Ops.
+- Pricing numbers are placeholders pending real-customer-conversation data.
+
+#### Quality after the push
+
+| Metric | Before tonight | After tonight |
+|---|---|---|
+| `flutter analyze` | No issues | No issues |
+| `flutter test` | 129 / 129 | **194 / 194** (+65) |
+| Local commits ahead of `gh repo create` | 1 | 6 |
+| Open Cards bugs caught from real iPhone testing | 1 (silent OCR fail) | 0 (CSP fix shipped) |
+
+#### Untouched (still in pause-and-polish boundaries)
+
+No new tables, no new columns on `profiles`/`licences`, no multi-tenant migration, no share-redeem endpoint, no Twilio production, no custom domain, no native mobile builds. All wait for INTAKE Sprint-1.
+
 ### 2026-04-29 PM — Launcher icons landed
 
 - **`assets/icon/launcher.png`** (1024×1024, sky `#3DA8D8` infinity-loop EQ mark on white) and **`assets/icon/launcher_foreground.png`** (1024×1024, white mark on transparent) committed.
