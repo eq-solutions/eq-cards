@@ -18,12 +18,14 @@ class LicenceCard extends StatelessWidget {
     required this.licence,
     required this.typeLabel,
     this.onTap,
+    this.onLongPress,
     this.version = DesignVersion.linear,
   });
 
   final Licence licence;
   final String typeLabel;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final DesignVersion version;
 
   @override
@@ -41,16 +43,19 @@ class LicenceCard extends StatelessWidget {
             licence: licence,
             typeLabel: typeLabel,
             onTap: onTap,
+            onLongPress: onLongPress,
           ),
         DesignVersion.wallet => _WalletVariant(
             licence: licence,
             typeLabel: typeLabel,
             onTap: onTap,
+            onLongPress: onLongPress,
           ),
         DesignVersion.photoFirst => _PhotoFirstVariant(
             licence: licence,
             typeLabel: typeLabel,
             onTap: onTap,
+            onLongPress: onLongPress,
           ),
       },
     );
@@ -66,17 +71,20 @@ class _LinearVariant extends StatelessWidget {
     required this.licence,
     required this.typeLabel,
     this.onTap,
+    this.onLongPress,
   });
 
   final Licence licence;
   final String typeLabel;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
     final expiryText = DateFormat('d MMM yyyy').format(licence.expiryDate);
     return EqCard(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -128,11 +136,13 @@ class _WalletVariant extends StatelessWidget {
     required this.licence,
     required this.typeLabel,
     this.onTap,
+    this.onLongPress,
   });
 
   final Licence licence;
   final String typeLabel;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -145,6 +155,7 @@ class _WalletVariant extends StatelessWidget {
           color: EqColours.white,
           child: InkWell(
             onTap: onTap,
+            onLongPress: onLongPress,
             child: Stack(
               children: [
                 // Brand stripe header.
@@ -234,11 +245,13 @@ class _PhotoFirstVariant extends StatelessWidget {
     required this.licence,
     required this.typeLabel,
     this.onTap,
+    this.onLongPress,
   });
 
   final Licence licence;
   final String typeLabel;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -252,6 +265,7 @@ class _PhotoFirstVariant extends StatelessWidget {
           color: hasPhoto ? EqColours.ink : EqColours.deep,
           child: InkWell(
             onTap: onTap,
+            onLongPress: onLongPress,
             child: AspectRatio(
               aspectRatio: 1.586, // ID-1 card ratio (CR80, ISO/IEC 7810).
               child: Stack(

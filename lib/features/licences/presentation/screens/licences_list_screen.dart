@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/design/design_version.dart';
 import '../../../../core/error/user_messages.dart';
@@ -19,17 +20,82 @@ import '../../../../core/theme/eq_typography.dart';
 import '../../../../core/utils/photo_upload.dart';
 import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_button.dart';
+import '../../data/models/licence.dart';
 import '../../data/ocr_service.dart';
 import '../notifiers/licence_types_provider.dart';
 import '../notifiers/licences_list_notifier.dart';
 import '../widgets/licence_card.dart';
 import 'licence_edit_screen.dart';
 
-class LicencesListScreen extends ConsumerWidget {
+/// Filter chips above the licence list. `all` is the default; the others
+/// are derived from the existing data — no new schema, no migration.
+enum LicenceFilter { all, expiringSoon, expired }
+
+extension on LicenceFilter {
+  String get label => switch (this) {
+        LicenceFilter.all => 'All',
+        LicenceFilter.expiringSoon => 'Expiring soon',
+        LicenceFilter.expired => 'Expired',
+      };
+}
+
+class LicencesListScreen extends ConsumerStatefulWidget {
   const LicencesListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LicencesListScreen> createState() =>
+      _LicencesListScreenState();
+}
+
+class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
+  static const _hintShownKey = 'eq_cards.hint.tap_to_copy_shown';
+
+  String _query = '';
+  LicenceFilter _filter = LicenceFilter.all;
+  final _searchCtrl = TextEditingController();
+  bool _hintCheckedThisSession = false;
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  /// Once-ever onboarding hint: shown the first time the user lands on the
+  /// licence list with at least one licence. Persisted in shared_preferences
+  /// so it never appears again. Skipped silently on errors so a prefs failure
+  /// never blocks the list rendering.
+  Future<void> _maybeShowTapToCopyHint(BuildContext context) async {
+    if (_hintCheckedThisSession) return;
+    _hintCheckedThisSession = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool(_hintShownKey) ?? false) return;
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            "Tip: tap any field on a licence to copy it. That's the wedge.",
+          ),
+          duration: const Duration(seconds: 8),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: EqColours.deep,
+          action: SnackBarAction(
+            label: 'Got it',
+            textColor: EqColours.white,
+            onPressed: () {},
+          ),
+        ),
+      );
+      await prefs.setBool(_hintShownKey, true);
+    } catch (_) {
+      // shared_preferences unreachable on web in some private-mode browsers;
+      // silently skip rather than crash the list render.
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final asyncLicences = ref.watch(licencesListNotifierProvider);
     final asyncTypes = ref.watch(licenceTypesProvider);
     final designVersion = ref.watch(designVersionNotifierProvider);
@@ -63,6 +129,14 @@ class LicencesListScreen extends ConsumerWidget {
             ],
           ),
           data: (licences) {
+            // Show the once-ever tap-to-copy hint on the next frame if we
+            // have at least one licence. Wrapped in a post-frame callback
+            // so we don't trigger UI changes during build.
+            if (licences.isNotEmpty && !_hintCheckedThisSession) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) unawaited(_maybeShowTapToCopyHint(context));
+              });
+            }
             if (licences.isEmpty) {
               return ListView(
                 children: [
@@ -80,24 +154,117 @@ class LicencesListScreen extends ConsumerWidget {
                 typeMap[t.code] = t.label;
               }
             });
-            return ListView.separated(
+            // Filter + search the licence list. Search matches type label
+            // and licence number (case-insensitive). Filter narrows by
+            // expiry-bucket. Both apply, search first then filter.
+            final filtered = _applyFilters(licences, typeMap);
+            return ListView(
               padding: const EdgeInsets.all(EqSpacing.md),
-              itemCount: licences.length + 1,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: EqSpacing.sm),
-              itemBuilder: (context, index) {
-                if (index == 0) return const CompleteProfileBanner();
-                final licence = licences[index - 1];
-                return LicenceCard(
-                  licence: licence,
-                  typeLabel:
-                      typeMap[licence.licenceType] ?? licence.licenceType,
-                  onTap: () => context.go(Routes.licenceDetailFor(licence.id!)),
-                  version: designVersion,
-                );
-              },
+              children: [
+                const CompleteProfileBanner(),
+                _SearchAndFilterBar(
+                  query: _query,
+                  controller: _searchCtrl,
+                  filter: _filter,
+                  onQueryChanged: (q) => setState(() => _query = q),
+                  onFilterChanged: (f) => setState(() => _filter = f),
+                  totalCount: licences.length,
+                  shownCount: filtered.length,
+                ),
+                const SizedBox(height: EqSpacing.sm),
+                if (filtered.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: EqSpacing.xl,
+                      horizontal: EqSpacing.lg,
+                    ),
+                    child: Text(
+                      'No matches for these filters.',
+                      style: EqTypography.bodyM.copyWith(color: EqColours.grey),
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                else
+                  for (final licence in filtered) ...[
+                    LicenceCard(
+                      licence: licence,
+                      typeLabel: typeMap[licence.licenceType] ??
+                          licence.licenceType,
+                      onTap: () =>
+                          context.go(Routes.licenceDetailFor(licence.id!)),
+                      onLongPress: () =>
+                          _showQuickActions(context, ref, licence),
+                      version: designVersion,
+                    ),
+                    const SizedBox(height: EqSpacing.sm),
+                  ],
+              ],
             );
           },
+        ),
+      ),
+    );
+  }
+
+  /// Apply search + filter. Pure — no side effects, easy to widget-test.
+  List<Licence> _applyFilters(
+    List<Licence> input,
+    Map<String, String> typeMap,
+  ) {
+    final q = _query.trim().toLowerCase();
+    return input.where((l) {
+      // Filter bucket.
+      switch (_filter) {
+        case LicenceFilter.all:
+          break;
+        case LicenceFilter.expiringSoon:
+          if (l.isExpired) return false;
+          if (l.daysUntilExpiry > 30) return false;
+        case LicenceFilter.expired:
+          if (!l.isExpired) return false;
+      }
+      // Search.
+      if (q.isEmpty) return true;
+      final label = (typeMap[l.licenceType] ?? l.licenceType).toLowerCase();
+      final num = l.licenceNumber.toLowerCase();
+      return label.contains(q) || num.contains(q);
+    }).toList();
+  }
+
+  /// Long-press quick-actions sheet on a licence card. Shortcuts the
+  /// detail-screen → menu → action chain to one tap.
+  Future<void> _showQuickActions(
+    BuildContext context,
+    WidgetRef ref,
+    Licence licence,
+  ) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: EqColours.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.open_in_new_outlined),
+              title: const Text('Open'),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                context.go(Routes.licenceDetailFor(licence.id!));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('Edit'),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                context.go(Routes.licenceEditFor(licence.id!));
+              },
+            ),
+          ],
         ),
       ),
     );
@@ -726,6 +893,96 @@ class _SkeletonBox extends StatelessWidget {
         color: color,
         borderRadius: BorderRadius.circular(4),
       ),
+    );
+  }
+}
+
+/// Search input + filter chips above the licence list. Pure presentational —
+/// state lives in [_LicencesListScreenState]. Hidden when the list is so
+/// short that filtering would be friction (≤2 licences).
+class _SearchAndFilterBar extends StatelessWidget {
+  const _SearchAndFilterBar({
+    required this.query,
+    required this.controller,
+    required this.filter,
+    required this.onQueryChanged,
+    required this.onFilterChanged,
+    required this.totalCount,
+    required this.shownCount,
+  });
+
+  final String query;
+  final TextEditingController controller;
+  final LicenceFilter filter;
+  final ValueChanged<String> onQueryChanged;
+  final ValueChanged<LicenceFilter> onFilterChanged;
+  final int totalCount;
+  final int shownCount;
+
+  @override
+  Widget build(BuildContext context) {
+    if (totalCount <= 2) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          controller: controller,
+          onChanged: onQueryChanged,
+          decoration: InputDecoration(
+            hintText: 'Search licences',
+            prefixIcon: const Icon(Icons.search, color: EqColours.grey),
+            suffixIcon: query.isEmpty
+                ? null
+                : IconButton(
+                    icon: const Icon(Icons.clear, color: EqColours.grey),
+                    onPressed: () {
+                      controller.clear();
+                      onQueryChanged('');
+                    },
+                  ),
+            filled: true,
+            fillColor: EqColours.ice,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: EqSpacing.md,
+              vertical: EqSpacing.sm,
+            ),
+          ),
+        ),
+        const SizedBox(height: EqSpacing.sm),
+        Row(
+          children: [
+            for (final f in LicenceFilter.values) ...[
+              ChoiceChip(
+                label: Text(f.label),
+                selected: filter == f,
+                onSelected: (_) => onFilterChanged(f),
+                selectedColor: EqColours.sky,
+                backgroundColor: EqColours.ice,
+                labelStyle: TextStyle(
+                  color: filter == f ? EqColours.white : EqColours.ink,
+                  fontWeight:
+                      filter == f ? FontWeight.w600 : FontWeight.w400,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide.none,
+                ),
+              ),
+              const SizedBox(width: EqSpacing.xs),
+            ],
+            const Spacer(),
+            if (query.isNotEmpty || filter != LicenceFilter.all)
+              Text(
+                '$shownCount of $totalCount',
+                style: EqTypography.label.copyWith(color: EqColours.grey),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }

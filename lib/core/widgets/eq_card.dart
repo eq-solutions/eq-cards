@@ -8,11 +8,13 @@ class EqCard extends StatelessWidget {
     super.key,
     required this.child,
     this.onTap,
+    this.onLongPress,
     this.padding = const EdgeInsets.all(EqSpacing.md),
   });
 
   final Widget child;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final EdgeInsets padding;
 
   @override
@@ -22,6 +24,7 @@ class EqCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: onTap,
+        onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(8),
         child: Padding(padding: padding, child: child),
       ),
