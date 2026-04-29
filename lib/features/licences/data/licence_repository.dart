@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:meta/meta.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/error/failure.dart';
@@ -52,19 +55,40 @@ class LicenceRepository {
   Future<Licence> upsert(Licence licence) async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) throw const NotAuthenticatedFailure();
+    final isInsert = licence.id == null;
+    unawaited(
+      _breadcrumb(
+        isInsert ? 'licence_insert_started' : 'licence_update_started',
+        {'licence_type': licence.licenceType},
+      ),
+    );
     try {
       final row = await _client
           .from('licences')
           .upsert(licenceToUpsertPayload(licence, userId))
           .select()
           .single();
-      return _withSignedUrls(Licence.fromJson(row));
+      final saved = await _withSignedUrls(Licence.fromJson(row));
+      unawaited(
+        _breadcrumb(
+          isInsert ? 'licence_insert_succeeded' : 'licence_update_succeeded',
+          {'licence_id': saved.id ?? '', 'type': saved.licenceType},
+        ),
+      );
+      return saved;
     } catch (e) {
+      unawaited(
+        _breadcrumb(
+          isInsert ? 'licence_insert_failed' : 'licence_update_failed',
+          {'error': e.toString()},
+        ),
+      );
       throw mapSupabaseError(e);
     }
   }
 
   Future<void> softDelete(String id) async {
+    unawaited(_breadcrumb('licence_delete_started', {'licence_id': id}));
     try {
       await _client
           .from('licences')
@@ -72,9 +96,17 @@ class LicenceRepository {
             'deleted_at': DateTime.now().toUtc().toIso8601String(),
           })
           .eq('id', id);
+      unawaited(_breadcrumb('licence_delete_succeeded'));
     } catch (e) {
+      unawaited(_breadcrumb('licence_delete_failed', {'error': e.toString()}));
       throw mapSupabaseError(e);
     }
+  }
+
+  Future<void> _breadcrumb(String message, [Map<String, dynamic>? data]) {
+    return Sentry.addBreadcrumb(
+      Breadcrumb(category: 'licence', message: message, data: data),
+    );
   }
 
   Future<Licence> _withSignedUrls(Licence l) async {

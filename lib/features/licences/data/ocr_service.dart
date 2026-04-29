@@ -81,19 +81,46 @@ class OcrService {
   /// Web path: POST the image to the `ocr-licence` Supabase Edge Function,
   /// which calls Anthropic Claude Vision and returns structured fields.
   /// Architecture §16 Q3 (revised 2026-04-28).
+  ///
+  /// Retries once on transient errors (5xx, timeout, network) with a 1.5s
+  /// backoff. Does NOT retry on 4xx — those are client-side issues
+  /// (unauthorized, bad request, unsupported mime) where retrying won't
+  /// help and would just delay the user-visible error.
   Future<OcrExtraction> extractFromBytesViaEdgeFunction(
     Uint8List bytes, {
     String mimeType = 'image/jpeg',
   }) async {
-    final response = await _supabase.functions.invoke(
-      'ocr-licence',
-      body: {
-        'image_base64': base64Encode(bytes),
-        'mime_type': mimeType,
-      },
-    );
+    final body = {
+      'image_base64': base64Encode(bytes),
+      'mime_type': mimeType,
+    };
+
+    Future<FunctionResponse> invoke() => _supabase.functions
+        .invoke('ocr-licence', body: body)
+        .timeout(const Duration(seconds: 30));
+
+    FunctionResponse response;
+    try {
+      response = await invoke();
+    } catch (e) {
+      // Transient — retry once.
+      await Future<void>.delayed(const Duration(milliseconds: 1500));
+      response = await invoke();
+    }
+
     if (response.status != 200) {
-      throw Exception('ocr-licence failed: ${response.status} ${response.data}');
+      // Non-2xx — retry once if it's a 5xx (server hiccup, cold-start, etc.).
+      // 4xx is client-side — no point retrying.
+      final s = response.status;
+      if (s >= 500 && s < 600) {
+        await Future<void>.delayed(const Duration(milliseconds: 1500));
+        response = await invoke();
+      }
+      if (response.status != 200) {
+        throw Exception(
+          'ocr-licence failed: ${response.status} ${response.data}',
+        );
+      }
     }
     final data = response.data as Map<String, dynamic>;
     final rawText = (data['raw_text'] as String?) ?? '';
