@@ -1,0 +1,40 @@
+# Netlify _headers — security headers applied to every response.
+# Per the EQ Intake bundle's standing rules: "All Netlify/CF Pages apps need
+# _headers file with security headers."
+#
+# This file is processed by Netlify only. flutter build web copies it
+# verbatim into build/web/ because the entry is anything not starting with
+# a Flutter-managed name (index.html, main.dart.js, etc.).
+
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(self), microphone=(), geolocation=(), interest-cohort=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-XSS-Protection: 0
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Resource-Policy: same-origin
+
+# Content-Security-Policy. Tight enough to block injection; loose enough
+# that the production app actually works. Domains explicitly enumerated:
+#   - 'self' for the Netlify origin
+#   - https://www.gstatic.com — Flutter CanvasKit renderer (loaded at runtime)
+#   - https://fonts.gstatic.com — Roboto font fetched by CanvasKit
+#   - https://fonts.googleapis.com — Google Fonts CSS shim
+#   - hshvnjzczdytfiklhojz.supabase.co — Supabase REST/RPC/storage/edge fn
+#   - https://eu.i.posthog.com / eu-assets — PostHog ingest + SDK helpers
+#   - https://*.sentry.io — Sentry envelope ingestion (US/EU regions)
+#
+# 'unsafe-inline' on script-src is required by Flutter's bootstrap (inline
+# script injects flutter_bootstrap.js). 'unsafe-eval' is required by DDC in
+# debug builds and by CanvasKit; release builds still need it for CanvasKit.
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://eu.i.posthog.com https://eu-assets.i.posthog.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' blob: data: https://www.gstatic.com https://hshvnjzczdytfiklhojz.supabase.co; connect-src 'self' https://www.gstatic.com https://fonts.gstatic.com https://fonts.googleapis.com https://hshvnjzczdytfiklhojz.supabase.co wss://hshvnjzczdytfiklhojz.supabase.co https://eu.i.posthog.com https://eu-assets.i.posthog.com https://*.sentry.io; manifest-src 'self'; worker-src 'self' blob:; frame-ancestors 'none'
+
+# Cache the Flutter bundle aggressively — it's content-addressed.
+/main.dart.js
+  Cache-Control: public, max-age=31536000, immutable
+/flutter_service_worker.js
+  Cache-Control: public, max-age=0, must-revalidate
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate

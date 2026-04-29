@@ -1,0 +1,57 @@
+# Launcher icon configuration. Regenerate platform icons with:
+#
+#   dart run flutter_launcher_icons
+#
+# This reads assets/icon/launcher.png (1024x1024 PNG, no transparency, no
+# rounded corners — the OS adds those). It writes:
+#   - ios/Runner/Assets.xcassets/AppIcon.appiconset/*.png
+#   - android/app/src/main/res/mipmap-*/ic_launcher.png (legacy)
+#   - android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml (adaptive)
+#   - web/icons/Icon-192.png, Icon-512.png, plus maskable versions
+#   - windows/runner/resources/app_icon.ico
+#   - macos/Runner/Assets.xcassets/AppIcon.appiconset/*.png
+#
+# The default icon direction is **Linear** — solid sky background with the
+# "EQ" wordmark in white. Picked because (a) it reads at any size, (b) it's
+# a universal brand mark not tied to any one product surface, and (c) the
+# in-app design picker (Settings → Design) lets users see the other two
+# directions inside the app even though the launcher icon stays the same.
+#
+# See STATUS.md and lib/core/design/app_icon_preview.dart for the design
+# spec the source PNG should match.
+#
+# To swap to a different direction later, replace assets/icon/launcher.png
+# and re-run the command. Source-of-truth design lives in the AppIconPreview
+# widget — render it via `flutter test --update-goldens` against a
+# dedicated golden test if you want a code-derived PNG.
+
+flutter_launcher_icons:
+  android: 'ic_launcher'
+  ios: true
+  remove_alpha_ios: true
+
+  # The source PNG. 1024x1024 — EQ infinity-loop mark in #3DA8D8 sky on a
+  # white background. Drives iOS, web, Windows, and Android legacy.
+  image_path: 'assets/icon/launcher.png'
+
+  # Android 8+ adaptive icon. The foreground is the SAME mark but rendered
+  # in WHITE on a transparent background, composited over a solid sky
+  # adaptive background. Two visual variants of the same mark by platform:
+  #   - iOS / web / Windows: sky mark on white (image_path)
+  #   - Android adaptive: white mark on sky (this layered pair)
+  # Both are unmistakably the EQ logo; the platform difference is the whole
+  # point of adaptive icons (launcher decides shape + parallax).
+  adaptive_icon_background: '#3DA8D8'
+  adaptive_icon_foreground: 'assets/icon/launcher_foreground.png'
+  min_sdk_android: 21
+
+  web:
+    generate: true
+    image_path: 'assets/icon/launcher.png'
+    background_color: '#FFFFFF'
+    theme_color: '#3DA8D8'
+
+  windows:
+    generate: true
+    image_path: 'assets/icon/launcher.png'
+    icon_size: 256

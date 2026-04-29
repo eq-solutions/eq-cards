@@ -1,0 +1,31 @@
+include: package:very_good_analysis/analysis_options.yaml
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+  errors:
+    invalid_annotation_target: ignore
+
+linter:
+  rules:
+    public_member_api_docs: false
+    lines_longer_than_80_chars: false
+    # Pubspec is intentionally grouped semantically (state, models, routing,
+    # backend, etc.) rather than alphabetised. Architecture §1 is the contract.
+    sort_pub_dependencies: false
+    # Project convention: relative imports within `lib/`. Easier to refactor
+    # folder structure without rewriting every import.
+    always_use_package_imports: false
+    # `super.key` first in constructors is the modern Flutter convention,
+    # even though it's optional. Trying to enforce required-first reorders
+    # against the grain of every flutter_create-generated widget.
+    always_put_required_named_parameters_first: false
+    # Cosmetic-preference lints disabled for v1. Re-enable individually if a
+    # specific pattern becomes a problem. None of these catch real bugs.
+    avoid_redundant_argument_values: false
+    cascade_invocations: false
+    omit_local_variable_types: false
+    unnecessary_lambdas: false
+    prefer_const_literals_to_create_immutables: false
+    prefer_const_constructors: false

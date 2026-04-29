@@ -1,0 +1,101 @@
+name: eq_cards
+description: EQ Cards — wallet for tradies. Tap-to-copy profile and licence fields.
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+  flutter: ">=3.24.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State (architecture §1)
+  flutter_riverpod: ^2.5.0
+  riverpod_annotation: ^2.5.0
+
+  # Models (architecture §5)
+  freezed_annotation: ^2.4.0
+  json_annotation: ^4.9.0
+
+  # Routing (architecture §6)
+  go_router: ^14.0.0
+
+  # Backend (architecture §4)
+  supabase_flutter: ^2.5.0
+  dio: ^5.4.0
+
+  # Local storage (architecture §11.1)
+  flutter_secure_storage: ^9.2.0
+  shared_preferences: ^2.2.0
+
+  # Photos (architecture §11.2). image_picker handles both camera (mobile) and
+  # file dialog (web) — image_cropper removed in Phase 1, unused.
+  image_picker: ^1.1.0
+  flutter_image_compress: ^2.3.0
+
+  # OCR — on-device (architecture §16 Q3 starting position)
+  google_mlkit_text_recognition: ^0.13.0
+
+  # QR generation (Phase 1)
+  qr_flutter: ^4.1.0
+
+  # Push (architecture §16 Q1 — FCM-only assumed)
+  firebase_core: ^3.0.0
+  firebase_messaging: ^15.0.0
+  flutter_local_notifications: ^17.0.0
+  timezone: ^0.9.0
+
+  # Analytics + crash
+  posthog_flutter: ^4.7.0
+  sentry_flutter: ^8.0.0
+
+  # Biometric (architecture §11.4)
+  local_auth: ^2.2.0
+
+  # Date formatting
+  intl: ^0.19.0
+
+  # Annotations (`@visibleForTesting` etc.) — used by repository helpers
+  meta: ^1.10.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Lint (architecture §1)
+  very_good_analysis: ^6.0.0
+
+  # Codegen (architecture §1)
+  build_runner: ^2.4.0
+  riverpod_generator: ^2.4.0
+  freezed: ^2.5.0
+  json_serializable: ^6.8.0
+
+  # Launcher icon generation. Source PNG lives at assets/icon/launcher.png
+  # (1024x1024). Run `dart run flutter_launcher_icons` after replacing the
+  # source to regenerate iOS .iconset and Android mipmap-* PNGs. Default
+  # direction is Linear ("EQ" wordmark on sky) — see STATUS.md for the
+  # design-decision context.
+  flutter_launcher_icons: ^0.14.0
+
+flutter:
+  uses-material-design: true
+
+  # Bundled assets — launcher source PNGs are consumed by
+  # flutter_launcher_icons at icon-generation time. The in-app preview in
+  # lib/core/design/app_icon_preview.dart also loads launcher.png via
+  # Image.asset for the Linear variant.
+  assets:
+    - assets/icon/launcher.png
+    - assets/icon/launcher_foreground.png
+
+  # Plus Jakarta Sans — architecture §7.3.
+  # Using the single variable font from Google's official repo. Flutter
+  # selects the right weight from the variable axis at runtime, so we
+  # don't need separate Regular/Medium/SemiBold/Bold .ttf files.
+  fonts:
+    - family: PlusJakartaSans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-Variable.ttf

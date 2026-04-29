@@ -1,0 +1,11 @@
+# Netlify _redirects — SPA fallback.
+# Flutter web uses hash routing by default (#/auth/phone), so SPA fallback
+# isn't strictly required, but pasting a deep link or refreshing on a
+# sub-route otherwise 404s. The catch-all rewrites any unknown path to
+# index.html with a 200 so the Flutter router takes over client-side.
+#
+# Static files (assets/, icons/, canvaskit/, *.js, *.json, *.png, etc.) are
+# served as files because Netlify checks the literal path before applying
+# the rewrite — only paths that don't match a real file fall through here.
+
+/*    /index.html   200
