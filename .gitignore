@@ -69,3 +69,10 @@ supabase/.branches/
 # Claude Code per-machine settings (project-wide settings.json IS committed,
 # but settings.local.json is the personal-machine override and is not).
 .claude/settings.local.json
+
+# Golden-test failure scratch — produced by `flutter test` when a goldens
+# mismatch is detected. Useful for debugging locally; never committed.
+**/failures/
+
+# Stray write-check scratch from earlier test runs.
+/test_write_check

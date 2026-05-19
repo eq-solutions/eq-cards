@@ -169,7 +169,7 @@ You can request deletion of your account at any time — see §9.
 
 Under the Australian Privacy Principles you may:
 
-- **Access** the personal information we hold about you. The app already shows you everything we hold; you can also request a machine-readable export by emailing the privacy contact above.
+- **Access** the personal information we hold about you. The app already shows you everything we hold. You can also generate a machine-readable JSON export of your profile + licences in-app via **Settings → Export my data**, or request the same by emailing the privacy contact above.
 - **Correct** inaccurate information. Edit the relevant field in the app, or email the privacy contact.
 - **Delete your account.** Settings → Sign out → email the privacy contact requesting deletion. We will hard-delete all data within 30 days and confirm by email. Note: deleting the account does not retroactively scrub analytics events that were generated under your distinct user ID — those are anonymised but retained per the table in §8. You may separately request the anonymised analytics record be deleted; we will comply within 30 days.
 - **Object** to processing for analytics or crash reporting. You can disable each in Settings → Privacy (planned for v1.1). Until that ships, email the privacy contact and we will exclude your account.
