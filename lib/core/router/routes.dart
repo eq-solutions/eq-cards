@@ -1,6 +1,6 @@
 abstract class Routes {
   static const splash = '/';
-  static const phoneEntry = '/auth/phone';
+  static const emailEntry = '/auth/email';
   static const otp = '/auth/otp';
   static const home = '/home';
   static const profile = '/profile';

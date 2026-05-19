@@ -11,20 +11,20 @@ class AuthFlowNotifier extends _$AuthFlowNotifier {
   @override
   AuthFlowState build() => const AuthFlowIdle();
 
-  Future<void> sendOtp(String phone) async {
+  Future<void> sendOtp(String email) async {
     state = const AuthFlowSendingOtp();
     try {
-      await ref.read(authRepositoryProvider).sendOtp(phone);
-      state = AuthFlowAwaitingOtp(phone);
+      await ref.read(authRepositoryProvider).sendOtp(email);
+      state = AuthFlowAwaitingOtp(email);
     } on Failure catch (f) {
       state = AuthFlowError(_messageFor(f));
     }
   }
 
-  Future<void> verifyOtp(String phone, String code) async {
+  Future<void> verifyOtp(String email, String code) async {
     state = const AuthFlowVerifying();
     try {
-      await ref.read(authRepositoryProvider).verifyOtp(phone, code);
+      await ref.read(authRepositoryProvider).verifyOtp(email, code);
       // Success: authStateChangesProvider emits authenticated, router redirects to home.
       state = const AuthFlowIdle();
     } on Failure catch (f) {

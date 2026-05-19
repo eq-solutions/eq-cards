@@ -8,20 +8,20 @@ import '../../../../core/router/routes.dart';
 import '../../../../core/theme/eq_colours.dart';
 import '../../../../core/theme/eq_spacing.dart';
 import '../../../../core/theme/eq_typography.dart';
+import '../../../../core/validators/input_validators.dart';
 import '../../../../core/widgets/eq_button.dart';
 import '../../../../core/widgets/eq_text_field.dart';
-import '../../data/aus_phone.dart';
 import '../../domain/auth_flow_state.dart';
 import '../notifiers/auth_flow_notifier.dart';
 
-class PhoneEntryScreen extends ConsumerStatefulWidget {
-  const PhoneEntryScreen({super.key});
+class EmailEntryScreen extends ConsumerStatefulWidget {
+  const EmailEntryScreen({super.key});
 
   @override
-  ConsumerState<PhoneEntryScreen> createState() => _PhoneEntryScreenState();
+  ConsumerState<EmailEntryScreen> createState() => _EmailEntryScreenState();
 }
 
-class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
+class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
   final _controller = TextEditingController();
   String? _validationError;
 
@@ -32,21 +32,21 @@ class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
   }
 
   Future<void> _submit() async {
-    final raw = _controller.text;
-    final normalised = normaliseAusMobile(raw);
-    if (normalised == null || !isValidAusMobile(normalised)) {
-      setState(() => _validationError = 'Enter a valid Australian mobile');
+    final raw = _controller.text.trim().toLowerCase();
+    final err = validateEmail(raw);
+    if (raw.isEmpty || err != null) {
+      setState(() => _validationError = err ?? 'Enter your email address');
       return;
     }
     setState(() => _validationError = null);
 
     final notifier = ref.read(authFlowNotifierProvider.notifier);
-    await notifier.sendOtp(normalised);
+    await notifier.sendOtp(raw);
 
     if (!mounted) return;
     final state = ref.read(authFlowNotifierProvider);
     if (state is AuthFlowAwaitingOtp) {
-      unawaited(context.push(Routes.otp, extra: normalised));
+      unawaited(context.push(Routes.otp, extra: raw));
     }
   }
 
@@ -95,18 +95,19 @@ class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
                 ),
               ),
               const SizedBox(height: EqSpacing.xxl),
-              Text("What's your mobile?", style: EqTypography.headingL),
+              Text("What's your email?", style: EqTypography.headingL),
               const SizedBox(height: EqSpacing.sm),
               Text(
-                "We'll send you a code to sign in.",
+                "We'll send you a 6-digit code to sign in. New accounts are "
+                'created on first sign-in.',
                 style: EqTypography.bodyM.copyWith(color: EqColours.grey),
               ),
               const SizedBox(height: EqSpacing.xl),
               EqTextField(
                 controller: _controller,
-                label: 'Mobile number',
-                hint: '0412 345 678',
-                keyboardType: TextInputType.phone,
+                label: 'Email address',
+                hint: 'you@example.com',
+                keyboardType: TextInputType.emailAddress,
                 errorText: errorText,
                 autofocus: true,
                 textInputAction: TextInputAction.send,

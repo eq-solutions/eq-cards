@@ -36,8 +36,8 @@ It does **not** cover:
 We collect only what's needed to operate the wallet.
 
 ### 3.1 Account information
-- Mobile phone number — used as the unique sign-in identifier
-- One-time codes sent to that number (consumed at sign-in, not stored)
+- Email address — used as the unique sign-in identifier
+- One-time codes sent to that email (consumed at sign-in, not stored)
 
 ### 3.2 Profile information
 - Full name
@@ -46,7 +46,7 @@ We collect only what's needed to operate the wallet.
 - Postal/residential address (street, suburb, state, postcode)
 - Emergency contact (name, relationship, mobile)
 
-You decide which of these to enter. None are mandatory beyond the mobile number used for sign-in.
+You decide which of these to enter. None are mandatory beyond the email address used for sign-in.
 
 ### 3.3 Licence and certificate information
 - Licence type (e.g. White Card, driver licence, HLTAID first aid)
@@ -84,7 +84,7 @@ By uploading these, **you give us your express consent** to collect and store th
 
 | Information | Purpose |
 |---|---|
-| Mobile + OTP | Authenticate you as the account owner |
+| Email + OTP | Authenticate you as the account owner |
 | Profile fields | Render the wallet; tap-to-copy onto induction forms; emergency contact display |
 | Licence data + photos | Display your licences; share with sites/employers when you choose to |
 | Sensitive info (Medicare etc.) | Same as licence data — only because you've added it to your wallet |
@@ -121,8 +121,7 @@ We use third-party processors. Each is bound by their own contractual obligation
 
 | Service | Data | Location | Transferred outside Australia? |
 |---|---|---|---|
-| **Supabase** (database, storage, auth) | Profile, licences, photos, audit log | Sydney (Australia) — `ap-southeast-2` region | No — data resides in AU |
-| **Twilio** (SMS for OTP) | Mobile phone number, OTP code | United States | Yes |
+| **Supabase** (database, storage, auth, transactional email for sign-in OTPs) | Profile, licences, photos, audit log, email + OTP | Sydney (Australia) — `ap-southeast-2` region for app data; Supabase Auth's transactional mailer routes the OTP email via their infrastructure | No — primary data in AU; the OTP-delivery mail server hop is operated by Supabase |
 | **Anthropic Claude Vision** (OCR) | Licence photo bytes (transient) | United States | Yes — photo sent for OCR processing, not retained |
 | **PostHog** (analytics) | Event names, properties, anonymous device ID, signed-in user UUID | Frankfurt, Germany (EU region) | Yes |
 | **Sentry** (crash reporting) | Stack traces, occasional URL/screen context | Frankfurt, Germany (EU region) | Yes |
@@ -141,7 +140,7 @@ We have taken reasonable steps (contractual review of each provider's privacy an
 - **Row-level security:** every database row is scoped to the authenticated user; RLS policies enforce this in the database layer, not just the app layer.
 - **Photo URLs:** licence photos are served via 1-hour signed URLs, not public links.
 - **EXIF stripping:** GPS/location metadata is removed from photos before upload.
-- **Authentication:** phone-OTP via Twilio. We do not store passwords.
+- **Authentication:** email + 6-digit OTP via Supabase Auth. We do not store passwords.
 - **Biometric unlock:** optional Face ID / fingerprint gate on the app itself (mobile only).
 - **Access controls:** internally, only the named directors (Royce Milmlow, Emma Curth) have administrative access to the production Supabase project. Access is logged.
 

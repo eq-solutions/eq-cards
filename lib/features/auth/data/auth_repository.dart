@@ -13,10 +13,10 @@ class AuthRepository {
   AuthRepository(this._client);
   final SupabaseClient _client;
 
-  Future<void> sendOtp(String phone) async {
-    unawaited(_breadcrumb('send_otp_started', {'phone_prefix': _prefix(phone)}));
+  Future<void> sendOtp(String email) async {
+    unawaited(_breadcrumb('send_otp_started', {'email_hint': _hint(email)}));
     try {
-      await _client.auth.signInWithOtp(phone: phone);
+      await _client.auth.signInWithOtp(email: email);
       unawaited(_breadcrumb('send_otp_succeeded'));
     } catch (e) {
       unawaited(_breadcrumb('send_otp_failed', {'error': e.toString()}));
@@ -24,13 +24,13 @@ class AuthRepository {
     }
   }
 
-  Future<void> verifyOtp(String phone, String code) async {
+  Future<void> verifyOtp(String email, String code) async {
     unawaited(_breadcrumb('verify_otp_started'));
     try {
       await _client.auth.verifyOTP(
-        phone: phone,
+        email: email,
         token: code,
-        type: OtpType.sms,
+        type: OtpType.email,
       );
       unawaited(_breadcrumb('verify_otp_succeeded'));
     } catch (e) {
@@ -49,12 +49,16 @@ class AuthRepository {
     }
   }
 
-  /// Last 4 digits of the phone — enough for cross-checking against
-  /// support tickets ("did the user fail to OTP?") without storing the
-  /// full number in the breadcrumb trail.
-  String _prefix(String phone) {
-    if (phone.length < 4) return '****';
-    return '...${phone.substring(phone.length - 4)}';
+  /// Masked email hint (first char + domain) for breadcrumb diagnostics —
+  /// enough to cross-reference a support ticket without writing the full
+  /// address into the Sentry trail.
+  /// `royce@example.com` -> `r***@example.com`
+  String _hint(String email) {
+    final at = email.indexOf('@');
+    if (at <= 0) return '***';
+    final firstChar = email.substring(0, 1);
+    final domain = email.substring(at);
+    return '$firstChar***$domain';
   }
 
   Future<void> _breadcrumb(String message, [Map<String, dynamic>? data]) {

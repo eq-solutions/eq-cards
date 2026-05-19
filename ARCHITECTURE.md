@@ -98,7 +98,7 @@ lib/
 │   ├── auth/
 │   │   ├── data/
 │   │   │   ├── auth_repository.dart
-│   │   │   └── aus_phone.dart     # E.164 normaliser + AUS-mobile validator
+│   │   │   └── aus_phone.dart     # E.164 normaliser + AUS-mobile validator (profile mobile field only — auth uses email since 2026-05-20)
 │   │   ├── domain/
 │   │   │   ├── auth_state.dart
 │   │   │   └── auth_flow_state.dart  # sealed UI flow state
@@ -107,7 +107,7 @@ lib/
 │   │   │   │   ├── auth_state_provider.dart   # Stream<AuthState>
 │   │   │   │   └── auth_flow_notifier.dart    # send/verify/clearError
 │   │   │   └── screens/
-│   │   │       ├── phone_entry_screen.dart
+│   │   │       ├── email_entry_screen.dart
 │   │   │       └── otp_screen.dart
 │   │   └── auth.dart              # Barrel export
 │   │
@@ -331,7 +331,7 @@ Single source of truth in `core/router/app_router.dart`. Routes defined as const
 ```dart
 abstract class Routes {
   static const splash = '/';
-  static const phoneEntry = '/auth/phone';
+  static const emailEntry = '/auth/email';
   static const otp = '/auth/otp';
   static const home = '/home';                       // legacy alias; redirects to licencesList
   static const profile = '/profile';
@@ -352,7 +352,7 @@ The shell has 3 tabs implemented via `StatefulShellRoute.indexedStack`:
 
 ### 6.1 Auth guard
 
-A `redirect` function checks `Supabase.instance.client.auth.currentSession` (sync). A `_AuthRouterNotifier` (`ChangeNotifier`) is bumped via `ref.listen(authStateChangesProvider, ...)` to re-evaluate the redirect when the auth stream fires. Unauthenticated users are bounced to `phoneEntry`. Authenticated users on auth routes are bounced to `licencesList`.
+A `redirect` function checks `Supabase.instance.client.auth.currentSession` (sync). A `_AuthRouterNotifier` (`ChangeNotifier`) is bumped via `ref.listen(authStateChangesProvider, ...)` to re-evaluate the redirect when the auth stream fires. Unauthenticated users are bounced to `emailEntry`. Authenticated users on auth routes are bounced to `licencesList`.
 
 ### 6.2 Rules
 
@@ -482,7 +482,7 @@ class UnknownFailure extends Failure { const UnknownFailure(this.error); final O
 | Event | Properties | Why |
 |---|---|---|
 | `app_opened` | `is_first_open: bool`, `platform: 'ios'\|'android'\|'web'` | Daily active baseline + platform mix |
-| `signup_completed` | `method: 'phone'` | Conversion funnel |
+| `signup_completed` | `method: 'email'` | Conversion funnel |
 | `profile_field_filled` | `field: string` | Which fields people actually fill |
 | `licence_added` | `licence_type: string`, `via_ocr: bool` | Adoption + OCR efficacy |
 | `licence_deleted` | — | Churn signal |
@@ -630,7 +630,7 @@ The following are explicitly deferred:
 1. **Push notifications: FCM-only, or APNs direct?** v1 ships local notifs only (mobile). Server push (FCM) deferred to v1.1+ when boss-side dashboards or shared expiry triggers exist.
 2. ~~Drift cache or skip?~~ **Decided 2026-04-27: defer to v1.1.** v1 read path uses Supabase + skeletons + HTTP image cache. See §4.3.
 3. ~~OCR: on-device only or cloud fallback?~~ **Decided 2026-04-27 (mobile), revised 2026-04-28 (web).** Mobile: on-device ML Kit (private, free, offline). Web: Anthropic Claude Vision via Supabase Edge Function `ocr-licence` (image leaves device, ~$3-5 per 1000 calls, returns structured fields directly — no regex post-processing). Both paths produce a unified `OcrExtraction` result. The Edge Function requires `ANTHROPIC_API_KEY` set via `supabase secrets set` before deploy. Image is base64-encoded client-side and EXIF-stripped via `flutter_image_compress` (mobile path) — web path passes raw bytes; add EXIF strip on web before upload if licence sensitivity becomes a concern.
-4. ~~Phone OTP: Supabase native or Twilio Verify direct?~~ **Decided 2026-04-27: Supabase native with Twilio configured as the SMS sender in Supabase Auth settings.** Single auth surface; deliverability via Twilio. Re-evaluate if rate-limit hits become user-visible.
+4. ~~Phone OTP: Supabase native or Twilio Verify direct?~~ **Decided 2026-04-27: Supabase native with Twilio configured as the SMS sender in Supabase Auth settings.** **Superseded 2026-05-20: switched to email OTP via Supabase's built-in mailer** to remove the Twilio dependency and SMS cost for the pilot. Phone-as-identity model retired; mobile is now a profile field, not an auth identifier. Re-evaluate adding phone-OTP back as an alternative sign-in method post-pilot if user feedback demands it.
 5. ~~Web hosting: Cloudflare Pages or Netlify?~~ **Decided 2026-04-28: Netlify.** Matches the existing EQ Solutions / SKS deploy pattern (eq-solves-field.netlify.app, sks-nsw-labour.netlify.app, eq-solves-service.netlify.app). Single dashboard for all sites, GitHub-push auto-deploy. Cards site target: `cards.eq.solutions` via Netlify custom domain.
 6. **PWA brand polish (icons, install prompt, theme color)** — v1.1 work.
 
@@ -640,7 +640,7 @@ The following are explicitly deferred:
 
 | Feature | iOS | Android | Web |
 |---|---|---|---|
-| Phone OTP auth | ✓ | ✓ | ✓ |
+| Email OTP auth | ✓ | ✓ | ✓ |
 | Profile view + edit + tap-to-copy | ✓ | ✓ | ✓ |
 | Licence list + detail + tap-to-copy | ✓ | ✓ | ✓ |
 | Licence add (manual entry) | ✓ | ✓ | ✓ |

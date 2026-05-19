@@ -11,8 +11,8 @@ class AuthFlowSendingOtp extends AuthFlowState {
 }
 
 class AuthFlowAwaitingOtp extends AuthFlowState {
-  const AuthFlowAwaitingOtp(this.phone);
-  final String phone;
+  const AuthFlowAwaitingOtp(this.email);
+  final String email;
 }
 
 class AuthFlowVerifying extends AuthFlowState {

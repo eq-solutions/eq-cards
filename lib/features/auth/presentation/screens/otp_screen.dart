@@ -12,16 +12,9 @@ import '../../domain/auth_flow_state.dart';
 import '../notifiers/auth_flow_notifier.dart';
 
 class OtpScreen extends ConsumerStatefulWidget {
-  const OtpScreen({super.key, required this.phone});
+  const OtpScreen({super.key, required this.email});
 
-  final String phone;
-
-  /// Set to `true` via `--dart-define=PILOT_MODE=true` during the closed
-  /// SKS pilot. Shows a banner explaining the code is relayed by Royce
-  /// rather than arriving by SMS. Auto-disappears when Twilio production
-  /// is wired and the dart-define is dropped.
-  static const _pilotMode =
-      bool.fromEnvironment('PILOT_MODE', defaultValue: false);
+  final String email;
 
   @override
   ConsumerState<OtpScreen> createState() => _OtpScreenState();
@@ -31,7 +24,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   final _controller = TextEditingController();
 
   // 30s (was 60s). Per Agent 2 UX audit — 60s feels broken when the
-  // user is expecting a real SMS. 30s is the modern OTP-app norm.
+  // user is expecting a real code. 30s is the modern OTP-app norm.
   static const _resendCooldownSeconds = 30;
   int _secondsLeft = _resendCooldownSeconds;
   Timer? _timer;
@@ -66,12 +59,12 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     if (code.length != 6) return;
     await ref
         .read(authFlowNotifierProvider.notifier)
-        .verifyOtp(widget.phone, code);
+        .verifyOtp(widget.email, code);
     // Success path: authStateChangesProvider fires, router redirects to /home.
   }
 
   Future<void> _resend() async {
-    await ref.read(authFlowNotifierProvider.notifier).sendOtp(widget.phone);
+    await ref.read(authFlowNotifierProvider.notifier).sendOtp(widget.email);
     _startCooldown();
   }
 
@@ -98,15 +91,13 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
               Text('Enter code', style: EqTypography.headingXL),
               const SizedBox(height: EqSpacing.sm),
               Text(
-                OtpScreen._pilotMode
-                    ? 'Pilot users: your code comes from Royce directly, '
-                        'not by SMS. Check your messages from him.'
-                    : 'Sent to ${widget.phone}',
-                style: EqTypography.bodyM.copyWith(
-                  color: OtpScreen._pilotMode
-                      ? EqColours.deep
-                      : EqColours.grey,
-                ),
+                'Sent to ${widget.email}',
+                style: EqTypography.bodyM.copyWith(color: EqColours.grey),
+              ),
+              const SizedBox(height: EqSpacing.xs),
+              Text(
+                'Check your inbox (and spam folder). The code expires in 60 minutes.',
+                style: EqTypography.bodyM.copyWith(color: EqColours.grey),
               ),
               const SizedBox(height: EqSpacing.xl),
               EqTextField(

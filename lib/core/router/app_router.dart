@@ -32,15 +32,15 @@ GoRouter appRouter(AppRouterRef ref) {
         builder: (context, state) => const _SplashScreen(),
       ),
       GoRoute(
-        path: Routes.phoneEntry,
-        builder: (context, state) => const PhoneEntryScreen(),
+        path: Routes.emailEntry,
+        builder: (context, state) => const EmailEntryScreen(),
       ),
       GoRoute(
         path: Routes.otp,
         builder: (context, state) {
-          final phone = state.extra as String?;
-          if (phone == null) return const _MissingPhoneScreen();
-          return OtpScreen(phone: phone);
+          final email = state.extra as String?;
+          if (email == null) return const _MissingEmailScreen();
+          return OtpScreen(email: email);
         },
       ),
       // Legal documents — top-level routes outside the shell so they can be
@@ -139,10 +139,10 @@ String? _redirect(BuildContext context, GoRouterState state) {
   final isLegalRoute = loc.startsWith('/legal/');
 
   if (loc == Routes.splash || loc == Routes.home) {
-    return isSignedIn ? Routes.licencesList : Routes.phoneEntry;
+    return isSignedIn ? Routes.licencesList : Routes.emailEntry;
   }
   if (isSignedIn && isAuthRoute) return Routes.licencesList;
-  if (!isSignedIn && !isAuthRoute && !isLegalRoute) return Routes.phoneEntry;
+  if (!isSignedIn && !isAuthRoute && !isLegalRoute) return Routes.emailEntry;
   return null;
 }
 
@@ -158,12 +158,12 @@ class _SplashScreen extends StatelessWidget {
   }
 }
 
-class _MissingPhoneScreen extends StatelessWidget {
-  const _MissingPhoneScreen();
+class _MissingEmailScreen extends StatelessWidget {
+  const _MissingEmailScreen();
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      body: Center(child: Text('Missing phone parameter')),
+      body: Center(child: Text('Missing email parameter')),
     );
   }
 }

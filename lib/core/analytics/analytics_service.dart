@@ -36,7 +36,7 @@ abstract class AnalyticsService {
         case AuthChangeEvent.signedIn:
           if (user != null) {
             unawaited(identify(user.id));
-            unawaited(track('signup_completed', const {'method': 'phone'}));
+            unawaited(track('signup_completed', const {'method': 'email'}));
           }
         case AuthChangeEvent.initialSession:
           if (user != null) unawaited(identify(user.id));

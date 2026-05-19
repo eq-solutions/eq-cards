@@ -34,8 +34,8 @@ If you are using the wallet on behalf of an employer, you represent that you hav
 ## 4. Your account
 
 - One account per person.
-- Sign in by Australian mobile number + one-time SMS code.
-- Keep your phone secure. We treat anyone with access to your phone number and OTP as you.
+- Sign in by email + one-time 6-digit code emailed to you.
+- Keep your email account secure. We treat anyone with access to your inbox and the OTP it receives as you.
 - You are responsible for the accuracy of the data you enter. Tap-to-copy works on what you've entered; if your licence number is wrong in the wallet, the form you copy onto will be wrong too.
 
 ---
@@ -62,7 +62,7 @@ You retain ownership of everything you enter — your profile, your licences, yo
 
 - Store them on your behalf
 - Display them back to you
-- Transmit them to the third-party processors listed in the [Privacy Policy](PRIVACY-POLICY.md) §6 for the purposes described there (sign-in SMS, OCR, analytics, crash reporting)
+- Transmit them to the third-party processors listed in the [Privacy Policy](PRIVACY-POLICY.md) §6 for the purposes described there (sign-in email OTP, OCR, analytics, crash reporting)
 - Generate derived data (e.g. parsed licence-number text from a photo) for your use
 
 We do not claim ownership. We do not sell or relicense your content. The licence ends when you delete the content or delete your account.
@@ -71,7 +71,7 @@ We do not claim ownership. We do not sell or relicense your content. The licence
 
 ## 7. Service availability
 
-We aim to keep EQ Cards available, but we do not guarantee uninterrupted access. The service may be unavailable due to maintenance, outages of third-party providers (Supabase, Twilio, Anthropic, PostHog, Sentry, Netlify), or events outside our reasonable control.
+We aim to keep EQ Cards available, but we do not guarantee uninterrupted access. The service may be unavailable due to maintenance, outages of third-party providers (Supabase, Anthropic, PostHog, Sentry, Netlify), or events outside our reasonable control.
 
 We do not back up your data outside Supabase's own redundancy. **You should keep the original physical licences as the system of record.**
 
