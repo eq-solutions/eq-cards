@@ -338,7 +338,11 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
     // canvas which produces a JPEG output. If that fails we fall through
     // to raw bytes and the Edge Function returns a clearer error.
     var bytes = rawBytes;
-    const mime = 'image/jpeg';
+    // Default to JPEG after a successful compression; only fall back to
+    // the actual picked mime when compression fails. Sending HEIC bytes
+    // labelled as JPEG (the old behaviour) was the silent-iPhone-OCR-fail
+    // pathway — Anthropic rejected the lie with an opaque error.
+    var mime = 'image/jpeg';
     if (kIsWeb) {
       try {
         bytes = await stripExifAndCompress(rawBytes);
@@ -364,6 +368,13 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
         );
         unawaited(Sentry.captureException(e, stackTrace: st));
         bytes = rawBytes;
+        // Use the picker's reported mime — if it's HEIC, we'll let the
+        // Edge Function 400 with `unsupported_mime_type` which the user
+        // sees as a clear "photo format not supported" SnackBar, instead
+        // of an opaque upstream failure.
+        if (pickedMime != null && pickedMime.isNotEmpty) {
+          mime = pickedMime;
+        }
       }
     }
 
@@ -395,8 +406,14 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
       userVisibleError = ocrErrorMessage(e);
     }
 
-    // Dismiss the loading dialog before navigating.
-    if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
+    // Dismiss the loading dialog before navigating. Wrapped in try so a
+    // double-pop (e.g. user already tapped the post-8s Cancel) doesn't
+    // throw — only one dismiss happens, whichever wins.
+    try {
+      if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
+    } catch (_) {
+      // Already dismissed by the user's Cancel — fine.
+    }
     unawaited(loadingDialog);
 
     if (!context.mounted) return;
@@ -913,7 +930,8 @@ class _SearchAndFilterBar extends StatelessWidget {
                 label: Text(f.label),
                 selected: filter == f,
                 onSelected: (_) => onFilterChanged(f),
-                selectedColor: EqColours.sky,
+                // Deep for contrast against white text (sky failed WCAG).
+                selectedColor: EqColours.deep,
                 backgroundColor: EqColours.ice,
                 labelStyle: TextStyle(
                   color: filter == f ? EqColours.white : EqColours.ink,
@@ -941,15 +959,39 @@ class _SearchAndFilterBar extends StatelessWidget {
 }
 
 /// Modal shown while the OCR Edge Function processes an uploaded photo.
-/// Non-dismissable to prevent the user picking the same photo twice while
-/// the round-trip is in flight (3-8s typical on Sonnet vision).
-class _OcrLoadingDialog extends StatelessWidget {
+/// Initially non-dismissable to prevent the user picking the same photo
+/// twice while the round-trip is in flight (3-8s typical on Sonnet vision).
+/// After 8 seconds a Cancel button appears so a user can escape if the
+/// network has stalled. Anything longer than 8s is past the median p95.
+class _OcrLoadingDialog extends StatefulWidget {
   const _OcrLoadingDialog();
+
+  @override
+  State<_OcrLoadingDialog> createState() => _OcrLoadingDialogState();
+}
+
+class _OcrLoadingDialogState extends State<_OcrLoadingDialog> {
+  bool _allowCancel = false;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer(const Duration(seconds: 8), () {
+      if (mounted) setState(() => _allowCancel = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: false,
+      canPop: _allowCancel,
       child: Dialog(
         backgroundColor: EqColours.white,
         shape: RoundedRectangleBorder(
@@ -972,9 +1014,21 @@ class _OcrLoadingDialog extends StatelessWidget {
               Text('Reading your licence…', style: EqTypography.bodyL),
               const SizedBox(height: EqSpacing.xs),
               Text(
-                'A few seconds. Hold tight.',
+                _allowCancel
+                    ? 'Still working — slow network?'
+                    : 'A few seconds. Hold tight.',
                 style: EqTypography.label.copyWith(color: EqColours.grey),
               ),
+              if (_allowCancel) ...[
+                const SizedBox(height: EqSpacing.md),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(
+                    'Skip OCR, fill manually',
+                    style: EqTypography.bodyM.copyWith(color: EqColours.deep),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

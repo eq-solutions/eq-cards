@@ -341,7 +341,7 @@ class _WalletStats extends StatelessWidget {
 
   int get _total => licences.length;
   int get _expiringSoon =>
-      licences.where((l) => !l.isExpired && l.daysUntilExpiry <= 30).length;
+      licences.where((l) => l.isExpiringWithin(days: 30)).length;
   int get _expired => licences.where((l) => l.isExpired).length;
 
   @override

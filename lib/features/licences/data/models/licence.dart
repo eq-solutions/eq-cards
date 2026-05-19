@@ -74,5 +74,17 @@ class Licence with _$Licence {
   /// True if not expired and within the 90-day reminder window. Drives the
   /// orange `ExpiryBadge` styling and matches the local-notification
   /// schedule in `AlertsScheduler` (90/30/7-day reminders).
+  ///
+  /// Note: the licence-list filter "Expiring soon" and the wallet-stats
+  /// card on Settings use a tighter 30-day window via [isExpiringWithin].
+  /// The 90-day band drives visual cues; the 30-day band drives "action
+  /// needed" surfaces.
   bool get isExpiringSoon => !isExpired && daysUntilExpiry <= 90;
+
+  /// Parameterised version — `isExpiringWithin(days: 30)` returns true if
+  /// the licence is valid today AND will expire within the next [days]
+  /// days. Use this anywhere a hard-coded "expiring soon" threshold would
+  /// otherwise mismatch [isExpiringSoon]'s 90-day band.
+  bool isExpiringWithin({required int days}) =>
+      !isExpired && daysUntilExpiry <= days;
 }

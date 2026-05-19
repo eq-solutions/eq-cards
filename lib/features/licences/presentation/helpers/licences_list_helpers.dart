@@ -32,8 +32,7 @@ List<Licence> applyLicenceFilters(
       case LicenceFilter.all:
         break;
       case LicenceFilter.expiringSoon:
-        if (l.isExpired) return false;
-        if (l.daysUntilExpiry > 30) return false;
+        if (!l.isExpiringWithin(days: 30)) return false;
       case LicenceFilter.expired:
         if (!l.isExpired) return false;
     }

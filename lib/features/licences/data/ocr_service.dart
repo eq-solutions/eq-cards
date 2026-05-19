@@ -95,32 +95,37 @@ class OcrService {
       'mime_type': mimeType,
     };
 
+    // Single retry policy — total time budget capped at ~32s so the
+    // non-dismissable loading dialog can't trap the user for 93s in the
+    // worst case (which the old compound-retry path could reach).
     Future<FunctionResponse> invoke() => _supabase.functions
         .invoke('ocr-licence', body: body)
-        .timeout(const Duration(seconds: 30));
+        .timeout(const Duration(seconds: 14));
 
     FunctionResponse response;
+    var retried = false;
     try {
       response = await invoke();
     } catch (e) {
-      // Transient — retry once.
+      // Transient — single retry attempt.
       await Future<void>.delayed(const Duration(milliseconds: 1500));
+      retried = true;
       response = await invoke();
     }
 
-    if (response.status != 200) {
-      // Non-2xx — retry once if it's a 5xx (server hiccup, cold-start, etc.).
-      // 4xx is client-side — no point retrying.
+    // Only retry on 5xx if we haven't already retried after a thrown
+    // error. 4xx is client-side — never retry. Cap at one total retry.
+    if (response.status != 200 && !retried) {
       final s = response.status;
       if (s >= 500 && s < 600) {
         await Future<void>.delayed(const Duration(milliseconds: 1500));
         response = await invoke();
       }
-      if (response.status != 200) {
-        throw Exception(
-          'ocr-licence failed: ${response.status} ${response.data}',
-        );
-      }
+    }
+    if (response.status != 200) {
+      throw Exception(
+        'ocr-licence failed: ${response.status} ${response.data}',
+      );
     }
     final data = response.data as Map<String, dynamic>;
     final rawText = (data['raw_text'] as String?) ?? '';

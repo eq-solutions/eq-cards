@@ -25,6 +25,7 @@ import '../../data/models/licence_type.dart';
 import '../../data/ocr_service.dart';
 import '../notifiers/licence_types_provider.dart';
 import '../notifiers/licences_list_notifier.dart';
+import 'licence_detail_screen.dart';
 
 class LicencePrefill {
   const LicencePrefill({this.photoBytes, this.ocr});
@@ -292,6 +293,12 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
       }
 
       ref.invalidate(licencesListNotifierProvider);
+      // Also invalidate the detail provider for this licence so the next
+      // detail-screen render sees the fresh row (signed URLs, fields, etc.)
+      // instead of a cached pre-save version.
+      if (saved.id != null) {
+        ref.invalidate(licenceDetailProvider(saved.id!));
+      }
       if (mounted) context.go(Routes.licencesList);
     } catch (e) {
       if (mounted) {

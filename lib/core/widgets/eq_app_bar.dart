@@ -28,7 +28,10 @@ class EqAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: EqColours.sky,
+      // Use `deep` (#2986B4) for the AppBar fill so white text passes
+      // WCAG AA large-text contrast (3.6:1). The brighter `sky` (#3DA8D8)
+      // against white was 2.4:1 — below the 3:1 minimum.
+      backgroundColor: EqColours.deep,
       foregroundColor: EqColours.white,
       elevation: 0,
       title: withBranding ? _BrandedTitle(title: title) : _PlainTitle(title: title),

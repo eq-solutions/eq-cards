@@ -41,12 +41,19 @@ class LicenceRepository {
 
   Future<Licence> getById(String id) async {
     try {
+      // Filter `deleted_at` so the detail screen never renders a
+      // soft-deleted row a user might land on via browser history or a
+      // stale share link.
       final row = await _client
           .from('licences')
           .select()
           .eq('id', id)
-          .single();
+          .filter('deleted_at', 'is', null)
+          .maybeSingle();
+      if (row == null) throw const NotFoundFailure();
       return _withSignedUrls(Licence.fromJson(row));
+    } on Failure {
+      rethrow;
     } catch (e) {
       throw mapSupabaseError(e);
     }

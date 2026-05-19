@@ -125,7 +125,12 @@ GoRouter appRouter(AppRouterRef ref) {
 }
 
 String? _redirect(BuildContext context, GoRouterState state) {
-  final isSignedIn = Supabase.instance.client.auth.currentSession != null;
+  // Treat an expired session the same as no session. Without this, an
+  // offline user whose token expired (and `tokenRefreshed` never fired)
+  // stays on signed-in routes while every Supabase call returns 401 —
+  // confusing data-loading errors with no path to re-auth.
+  final session = Supabase.instance.client.auth.currentSession;
+  final isSignedIn = session != null && !session.isExpired;
   final loc = state.matchedLocation;
   final isAuthRoute = loc.startsWith('/auth/');
   // Legal documents are reachable without sign-in so users can review the

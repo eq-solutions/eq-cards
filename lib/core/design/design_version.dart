@@ -54,18 +54,28 @@ class DesignVersionNotifier extends _$DesignVersionNotifier {
   }
 
   Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_prefsKey);
-    if (raw == null) return;
-    final match = DesignVersion.values
-        .where((v) => v.name == raw)
-        .firstOrNull;
-    if (match != null && match != state) state = match;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_prefsKey);
+      if (raw == null) return;
+      final match = DesignVersion.values
+          .where((v) => v.name == raw)
+          .firstOrNull;
+      if (match != null && match != state) state = match;
+    } catch (_) {
+      // shared_preferences unreachable on web private mode in some
+      // browsers; keep the in-memory default rather than crashing.
+    }
   }
 
   Future<void> set(DesignVersion version) async {
     state = version;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsKey, version.name);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_prefsKey, version.name);
+    } catch (_) {
+      // Persist-failure is non-fatal; state still updates in-memory for
+      // the rest of the session.
+    }
   }
 }

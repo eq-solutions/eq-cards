@@ -229,9 +229,17 @@ Deno.serve(async (req) => {
   });
 
   if (!upstream.ok) {
+    // Log full upstream body to Edge Function logs only — never leak Anthropic
+    // request signatures, prompt details, or WAF fingerprints back to the
+    // browser. The 7-iteration debug chain in CHANGELOG benefited from
+    // returning the body; production should not.
     const text = await upstream.text();
+    console.error('anthropic_upstream', {
+      status: upstream.status,
+      body: text,
+    });
     return jsonResponse(
-      { error: 'anthropic_upstream_error', status: upstream.status, body: text },
+      { error: 'anthropic_upstream_error', status: upstream.status },
       502,
     );
   }

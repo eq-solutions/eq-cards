@@ -31,7 +31,7 @@ class LicenceDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncLicence = ref.watch(_licenceProvider(licenceId));
+    final asyncLicence = ref.watch(licenceDetailProvider(licenceId));
     final asyncTypes = ref.watch(licenceTypesProvider);
 
     return Scaffold(
@@ -166,7 +166,7 @@ class LicenceDetailScreen extends ConsumerWidget {
   }
 }
 
-final _licenceProvider =
+final licenceDetailProvider =
     FutureProvider.family<Licence, String>((ref, id) async {
   return ref.read(licenceRepositoryProvider).getById(id);
 });
