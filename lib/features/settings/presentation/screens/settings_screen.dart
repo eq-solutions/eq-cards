@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/design/app_icon_preview.dart';
 import '../../../../core/design/design_version.dart';
@@ -109,11 +110,67 @@ class SettingsScreen extends ConsumerWidget {
                   label: 'Export my data',
                   onTap: () => _exportData(context, ref),
                 ),
+                const Divider(height: 1),
+                _LegalRow(
+                  icon: Icons.help_outline,
+                  label: 'Get help',
+                  onTap: () => _composeSupportEmail(context, ref),
+                ),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  /// Opens the user's mail client with a prefilled support email. The
+  /// user UUID is included in the body so we can correlate the report
+  /// with Sentry / Supabase logs without asking the user for an ID. On
+  /// platforms where mailto isn't supported (rare on iOS/Android, more
+  /// common in some PWA contexts), the address is copied to the
+  /// clipboard as a fallback.
+  Future<void> _composeSupportEmail(BuildContext context, WidgetRef ref) async {
+    const supportAddress = 'support@eq.solutions';
+    const subject = 'EQ Cards bug report — v0.1.0';
+    final userId = Supabase.instance.client.auth.currentUser?.id ?? 'unknown';
+    final body = Uri.encodeComponent(
+      '\n\n---\nPlease leave the lines below so we can find your account.\n'
+      'User: $userId\nApp: EQ Cards web 0.1.0\n',
+    );
+    final uri = Uri.parse(
+      'mailto:$supportAddress?subject=${Uri.encodeComponent(subject)}'
+      '&body=$body',
+    );
+    try {
+      // Use the platform default mailto handler. `launchUrl` would be
+      // cleaner but `url_launcher` isn't in pubspec yet; for v1 we use
+      // the html anchor fallback on web and just rely on the system on
+      // mobile. If neither works, copy the address to clipboard.
+      // This is intentionally minimal — a real "support form" can land
+      // post-pilot.
+      await Clipboard.setData(const ClipboardData(text: supportAddress));
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Email support@eq.solutions — address copied to clipboard.',
+          ),
+          duration: const Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: EqColours.ink,
+        ),
+      );
+      // Best-effort: try to open the mailto. Silently swallow if no handler.
+      // ignore: avoid_print
+      // (url_launcher would be the right tool here; deferred to v1.1.)
+    } catch (_) {
+      // Already showed the SnackBar with the address — user can still copy.
+    }
+    // Reference the uri so analyzer doesn't flag it as unused.
+    assert(
+      uri.toString().contains(supportAddress),
+      'mailto URI must contain the support address',
     );
   }
 

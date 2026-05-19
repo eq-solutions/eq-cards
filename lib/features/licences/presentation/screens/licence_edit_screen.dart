@@ -335,6 +335,40 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
           child: ListView(
             padding: const EdgeInsets.all(EqSpacing.md),
             children: [
+              // OCR-prefill verify banner — when fields were populated from
+              // a Claude Vision response, prompt the user to double-check
+              // before saving. Without this users assume OCR is correct
+              // and a misread "0" → "O" stays in the wallet forever.
+              if (widget.prefill?.ocr != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(EqSpacing.md),
+                  decoration: BoxDecoration(
+                    color: EqColours.ice,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: EqColours.sky, width: 1),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.auto_awesome_outlined,
+                        size: 20,
+                        color: EqColours.deep,
+                      ),
+                      const SizedBox(width: EqSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          'We read these fields from your photo. '
+                          'Double-check before saving — OCR can misread '
+                          'small digits.',
+                          style: EqTypography.bodyM,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: EqSpacing.md),
+              ],
               asyncTypes.when(
                 loading: () => const LinearProgressIndicator(),
                 error: (e, _) => Text('Could not load types: $e'),

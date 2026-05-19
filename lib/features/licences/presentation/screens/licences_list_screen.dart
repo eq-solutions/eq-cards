@@ -534,8 +534,18 @@ class _IllustrationEmpty extends StatelessWidget {
           ),
           const SizedBox(height: EqSpacing.sm),
           Text(
-            'Add your first licence — White Card, Driver Licence, First Aid, whatever you carry on site.',
+            'Add your first licence — White Card, Driver Licence, First Aid, '
+            'whatever you carry on site.',
             style: EqTypography.bodyM.copyWith(color: EqColours.grey),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: EqSpacing.xs),
+          Text(
+            'Then tap any field to copy it straight onto an induction form.',
+            style: EqTypography.bodyM.copyWith(
+              color: EqColours.deep,
+              fontWeight: FontWeight.w600,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: EqSpacing.xl),
@@ -569,6 +579,15 @@ class _ActionGridEmpty extends StatelessWidget {
           Text(
             'Three ways to add a licence. Pick whatever fits.',
             style: EqTypography.bodyM.copyWith(color: EqColours.grey),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: EqSpacing.xs),
+          Text(
+            'Once added, tap any field to copy it onto an induction form.',
+            style: EqTypography.bodyM.copyWith(
+              color: EqColours.deep,
+              fontWeight: FontWeight.w600,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: EqSpacing.xl),
