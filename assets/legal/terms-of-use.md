@@ -149,9 +149,10 @@ These Terms are governed by the laws of **New South Wales, Australia**. Any disp
 ## 15. Contact
 
 CDC Solutions Pty Ltd (trading as EQ Solutions)
-ABN: _[TO INSERT]_
-Email: _[TO INSERT]_
-Address: _[TO INSERT]_
+ACN: 651 962 935
+ABN: 40 651 962 935
+Email: contact@eq.solutions
+Address: 173 Chuter Ave, Sans Souci NSW 2219
 
 ---
 

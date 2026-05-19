@@ -26,7 +26,7 @@ alter policy "users_update_own_licences" on public.licences
   using (user_id = auth.uid())
   with check (user_id = auth.uid());
 
-alter policy "users_update_own_custom_licence_types" on public.licence_types
+alter policy "users_update_own_custom" on public.licence_types
   using (is_custom = true and user_id = auth.uid())
   with check (is_custom = true and user_id = auth.uid());
 

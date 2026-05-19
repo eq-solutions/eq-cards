@@ -11,10 +11,11 @@
 
 EQ Cards is a product of **CDC Solutions Pty Ltd** (trading as **EQ Solutions**).
 
-- **ABN:** _[TO INSERT]_
-- **Registered office:** _[TO INSERT]_
+- **ACN:** 651 962 935
+- **ABN:** 40 651 962 935
+- **Registered office:** 173 Chuter Ave, Sans Souci NSW 2219
 - **Directors:** Royce Milmlow, Emma Curth
-- **Privacy contact:** _[TO INSERT — e.g. privacy@eq.solutions]_
+- **Privacy contact:** contact@eq.solutions
 
 We are an APP entity under the Australian Privacy Act 1988 (Cth) and we comply with the 13 Australian Privacy Principles.
 
@@ -219,11 +220,12 @@ We may update this policy. The "Effective date" at the top changes when we do. F
 Questions or requests:
 
 **EQ Solutions — Privacy**
-_[email TO INSERT]_
+contact@eq.solutions
 
 CDC Solutions Pty Ltd
-ABN: _[TO INSERT]_
-_[Registered address TO INSERT]_
+ACN: 651 962 935
+ABN: 40 651 962 935
+173 Chuter Ave, Sans Souci NSW 2219
 
 ---
 
