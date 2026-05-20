@@ -229,6 +229,17 @@ void main() {
   });
 
   group('ocrErrorMessage — error → user message mapping', () {
+    test('maps 429 / rate_limit_exceeded to magic-scans hint', () {
+      expect(
+        ocrErrorMessage(Exception('429 rate_limit_exceeded')),
+        contains('magic-scans'),
+      );
+      expect(
+        ocrErrorMessage(Exception('rate_limit_exceeded')),
+        contains('magic-scans'),
+      );
+    });
+
     test('maps unsupported_mime_type to format hint', () {
       expect(
         ocrErrorMessage(Exception('unsupported_mime_type')),

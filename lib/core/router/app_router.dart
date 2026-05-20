@@ -9,6 +9,9 @@ import '../../features/licences/licences.dart';
 import '../../features/profile/profile.dart';
 import '../../features/settings/settings.dart';
 import '../shell/home_shell_screen.dart';
+import '../theme/eq_colours.dart';
+import '../theme/eq_spacing.dart';
+import '../theme/eq_typography.dart';
 import 'routes.dart';
 
 part 'app_router.g.dart';
@@ -154,7 +157,45 @@ class _SplashScreen extends StatelessWidget {
   const _SplashScreen();
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    // Branded splash — the first frame an unsigned-in user sees while the
+    // redirect logic decides where to send them. Plain spinner felt
+    // generic; show the launcher mark + name so the user sees the EQ
+    // identity immediately even on slow connections.
+    return Scaffold(
+      backgroundColor: EqColours.white,
+      body: SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset(
+                'assets/icon/launcher.png',
+                width: 96,
+                height: 96,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+              const SizedBox(height: EqSpacing.lg),
+              Text(
+                'EQ Cards',
+                style: EqTypography.headingL.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: EqColours.deep,
+                ),
+              ),
+              const SizedBox(height: EqSpacing.xl),
+              const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: EqColours.sky,
+                  strokeWidth: 2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

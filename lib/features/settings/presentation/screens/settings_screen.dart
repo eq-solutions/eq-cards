@@ -18,6 +18,7 @@ import '../../../licences/presentation/notifiers/licences_list_notifier.dart';
 import '../../../profile/presentation/notifiers/profile_notifier.dart';
 import '../helpers/data_export.dart';
 import '../notifiers/biometric_settings_notifier.dart';
+import '../notifiers/privacy_settings_notifier.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -86,6 +87,43 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: EqSpacing.lg),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: EqSpacing.sm),
+            child: Text('Privacy', style: EqTypography.label),
+          ),
+          const SizedBox(height: EqSpacing.sm),
+          EqCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                _PrivacyToggleRow(
+                  icon: Icons.insights_outlined,
+                  label: 'Send anonymous analytics',
+                  subtitle:
+                      'Helps us see which features work and which break. '
+                      'Never includes the values of your fields.',
+                  // Switch is "opt-IN", notifier stores "opt-OUT" — invert.
+                  value: !ref.watch(analyticsOptOutNotifierProvider),
+                  onChanged: (v) => ref
+                      .read(analyticsOptOutNotifierProvider.notifier)
+                      .set(value: !v),
+                ),
+                const Divider(height: 1),
+                _PrivacyToggleRow(
+                  icon: Icons.bug_report_outlined,
+                  label: 'Send crash reports',
+                  subtitle:
+                      'Stack traces only — no personal data. Helps us '
+                      'diagnose bugs you hit.',
+                  value: !ref.watch(crashReportsOptOutNotifierProvider),
+                  onChanged: (v) => ref
+                      .read(crashReportsOptOutNotifierProvider.notifier)
+                      .set(value: !v),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: EqSpacing.lg),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: EqSpacing.sm),
             child: Text('Legal', style: EqTypography.label),
           ),
           const SizedBox(height: EqSpacing.sm),
@@ -110,11 +148,42 @@ class SettingsScreen extends ConsumerWidget {
                   label: 'Export my data',
                   onTap: () => _exportData(context, ref),
                 ),
-                const Divider(height: 1),
+              ],
+            ),
+          ),
+          const SizedBox(height: EqSpacing.lg),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: EqSpacing.sm),
+            child: Text('Help & feedback', style: EqTypography.label),
+          ),
+          const SizedBox(height: EqSpacing.sm),
+          EqCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
                 _LegalRow(
                   icon: Icons.help_outline,
                   label: 'Get help',
-                  onTap: () => _composeSupportEmail(context, ref),
+                  onTap: () => _composeContactEmail(
+                    context,
+                    ref,
+                    subject: 'EQ Cards — I need help',
+                    bodyHint:
+                        "Describe what you're stuck on. Screenshots help.",
+                  ),
+                ),
+                const Divider(height: 1),
+                _LegalRow(
+                  icon: Icons.feedback_outlined,
+                  label: 'Send feedback',
+                  onTap: () => _composeContactEmail(
+                    context,
+                    ref,
+                    subject: 'EQ Cards — pilot feedback',
+                    bodyHint:
+                        'What worked? What was confusing? What was missing? '
+                        'Anything goes.',
+                  ),
                 ),
               ],
             ),
@@ -124,53 +193,55 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  /// Opens the user's mail client with a prefilled support email. The
-  /// user UUID is included in the body so we can correlate the report
-  /// with Sentry / Supabase logs without asking the user for an ID. On
-  /// platforms where mailto isn't supported (rare on iOS/Android, more
-  /// common in some PWA contexts), the address is copied to the
-  /// clipboard as a fallback.
-  Future<void> _composeSupportEmail(BuildContext context, WidgetRef ref) async {
-    const supportAddress = 'support@eq.solutions';
-    const subject = 'EQ Cards bug report — v0.1.0';
+  /// Opens the user's mail client with a prefilled contact email — used
+  /// for both Get help and Send feedback rows (different subject/body per
+  /// caller).
+  ///
+  /// The user UUID is appended so we can correlate the report with Sentry
+  /// / Supabase logs without asking the user for an ID. On platforms where
+  /// mailto isn't supported (rare on iOS/Android, more common in some PWA
+  /// contexts), the address is copied to the clipboard as a fallback so
+  /// the user always has a path forward.
+  ///
+  /// Address matches the Privacy Policy contact (`contact@eq.solutions`)
+  /// — both flow into the same EQ Solutions inbox.
+  Future<void> _composeContactEmail(
+    BuildContext context,
+    WidgetRef ref, {
+    required String subject,
+    required String bodyHint,
+  }) async {
+    const address = 'contact@eq.solutions';
     final userId = Supabase.instance.client.auth.currentUser?.id ?? 'unknown';
     final body = Uri.encodeComponent(
-      '\n\n---\nPlease leave the lines below so we can find your account.\n'
+      '$bodyHint\n\n\n---\n'
+      'Please leave the lines below so we can find your account.\n'
       'User: $userId\nApp: EQ Cards web 0.1.0\n',
     );
     final uri = Uri.parse(
-      'mailto:$supportAddress?subject=${Uri.encodeComponent(subject)}'
-      '&body=$body',
+      'mailto:$address?subject=${Uri.encodeComponent(subject)}&body=$body',
     );
     try {
-      // Use the platform default mailto handler. `launchUrl` would be
-      // cleaner but `url_launcher` isn't in pubspec yet; for v1 we use
-      // the html anchor fallback on web and just rely on the system on
-      // mobile. If neither works, copy the address to clipboard.
-      // This is intentionally minimal — a real "support form" can land
-      // post-pilot.
-      await Clipboard.setData(const ClipboardData(text: supportAddress));
+      await Clipboard.setData(const ClipboardData(text: address));
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text(
-            'Email support@eq.solutions — address copied to clipboard.',
+            'Email contact@eq.solutions — address copied to clipboard.',
           ),
           duration: const Duration(seconds: 4),
           behavior: SnackBarBehavior.floating,
           backgroundColor: EqColours.ink,
         ),
       );
-      // Best-effort: try to open the mailto. Silently swallow if no handler.
-      // ignore: avoid_print
-      // (url_launcher would be the right tool here; deferred to v1.1.)
     } catch (_) {
-      // Already showed the SnackBar with the address — user can still copy.
+      // SnackBar already showed; the user can still copy from the row.
     }
-    // Reference the uri so analyzer doesn't flag it as unused.
+    // Reference the uri so analyzer doesn't flag it as unused — it's
+    // available for a future url_launcher rollout without a code rewrite.
     assert(
-      uri.toString().contains(supportAddress),
-      'mailto URI must contain the support address',
+      uri.toString().contains(address),
+      'mailto URI must contain the contact address',
     );
   }
 
@@ -225,7 +296,7 @@ class SettingsScreen extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('Sign out?'),
         content: const Text(
-          "You'll need to verify your phone again next time.",
+          "You'll need to verify your email again next time.",
         ),
         actions: [
           TextButton(
@@ -467,6 +538,50 @@ class _StatCell extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
       ],
+    );
+  }
+}
+
+class _PrivacyToggleRow extends StatelessWidget {
+  const _PrivacyToggleRow({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(EqSpacing.md),
+      child: Row(
+        children: [
+          Icon(icon, color: EqColours.ink),
+          const SizedBox(width: EqSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: EqTypography.bodyL),
+                const SizedBox(height: EqSpacing.xs),
+                Text(subtitle, style: EqTypography.label),
+              ],
+            ),
+          ),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeThumbColor: EqColours.sky,
+          ),
+        ],
+      ),
     );
   }
 }

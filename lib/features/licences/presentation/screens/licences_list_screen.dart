@@ -11,6 +11,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/design/design_version.dart';
+import '../../../../core/error/failure.dart';
 import '../../../../core/error/user_messages.dart';
 import '../../../../core/router/routes.dart';
 import '../../../../core/shell/complete_profile_banner.dart';
@@ -20,6 +21,7 @@ import '../../../../core/theme/eq_typography.dart';
 import '../../../../core/utils/photo_upload.dart';
 import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_button.dart';
+import '../../../auth/auth.dart';
 import '../../data/models/licence.dart';
 import '../../data/ocr_service.dart';
 import '../helpers/licences_list_helpers.dart';
@@ -111,8 +113,14 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
               const CompleteProfileBanner(),
               Padding(
                 padding: const EdgeInsets.all(EqSpacing.lg),
-                child: Text(
-                  'Could not load licences.\n${userMessageForError(e)}',
+                child: _ListErrorState(
+                  error: e,
+                  onRetry: () => ref
+                      .read(licencesListNotifierProvider.notifier)
+                      .refresh(),
+                  onSignInAgain: () => ref
+                      .read(authRepositoryProvider)
+                      .signOut(),
                 ),
               ),
             ],
@@ -1034,8 +1042,11 @@ class _OcrLoadingDialogState extends State<_OcrLoadingDialog> {
               const SizedBox(height: EqSpacing.xs),
               Text(
                 _allowCancel
-                    ? 'Still working — slow network?'
-                    : 'A few seconds. Hold tight.',
+                    ? 'Still working — slow network? Tap below to enter the '
+                        'details yourself instead.'
+                    : 'First scan of the day may take a few seconds while we '
+                        'warm up the magic-scanner.',
+                textAlign: TextAlign.center,
                 style: EqTypography.label.copyWith(color: EqColours.grey),
               ),
               if (_allowCancel) ...[
@@ -1052,6 +1063,59 @@ class _OcrLoadingDialogState extends State<_OcrLoadingDialog> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Error state for the licences list — shows a friendly message plus an
+/// action that fits the cause. For a NotAuthenticatedFailure (in-session
+/// 401, expired refresh token, etc.) the right path is sign-out — which
+/// triggers the router redirect to the email-entry screen. For everything
+/// else, retry is the right CTA.
+class _ListErrorState extends StatelessWidget {
+  const _ListErrorState({
+    required this.error,
+    required this.onRetry,
+    required this.onSignInAgain,
+  });
+
+  final Object error;
+  final Future<void> Function() onRetry;
+  final Future<void> Function() onSignInAgain;
+
+  bool get _isAuthError =>
+      error is NotAuthenticatedFailure ||
+      error.toString().toLowerCase().contains('jwt');
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Icon(
+          _isAuthError ? Icons.lock_outline : Icons.cloud_off_outlined,
+          size: 48,
+          color: EqColours.grey,
+        ),
+        const SizedBox(height: EqSpacing.md),
+        Text(
+          _isAuthError ? 'Sign in again' : "We couldn't load your licences",
+          style: EqTypography.headingL,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: EqSpacing.sm),
+        Text(
+          userMessageForError(error),
+          style: EqTypography.bodyM.copyWith(color: EqColours.grey),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: EqSpacing.xl),
+        EqButton(
+          label: _isAuthError ? 'Sign in again' : 'Try again',
+          onPressed: _isAuthError ? onSignInAgain : onRetry,
+          fullWidth: true,
+        ),
+      ],
     );
   }
 }

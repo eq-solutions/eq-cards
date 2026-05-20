@@ -170,6 +170,50 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'unauthorized' }, 401);
   }
 
+  // Per-user rate-limit check (atomic in Postgres via SECURITY DEFINER RPC).
+  // 20 OCRs/hour/user. Returns true if allowed (and records the call);
+  // false if the user is over the limit. See migration 0005_ocr_rate_limit.
+  //
+  // We do this BEFORE the Anthropic call so a rate-limited user incurs zero
+  // upstream cost. If the RPC itself fails (network, etc.), fail-open with
+  // a warning — preferring user UX over strict cost protection on a degraded
+  // backend is the right trade for a 5-tester pilot.
+  try {
+    const rpcResp = await fetch(
+      `${supabaseUrl}/rest/v1/rpc/check_and_record_ocr_usage`,
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'authorization': authHeader,
+          'apikey': supabaseAnonKey,
+        },
+        body: JSON.stringify({ p_limit: 20, p_window: '1 hour' }),
+      },
+    );
+    if (rpcResp.ok) {
+      const allowed = await rpcResp.json();
+      if (allowed === false) {
+        return jsonResponse(
+          {
+            error: 'rate_limit_exceeded',
+            message:
+              "You've used your 20 magic-scans for this hour. Try again later, or add the licence manually.",
+            retry_after_seconds: 3600,
+          },
+          429,
+        );
+      }
+    } else {
+      console.warn('rate_limit_rpc_unreachable', {
+        status: rpcResp.status,
+        body: await rpcResp.text().catch(() => ''),
+      });
+    }
+  } catch (e) {
+    console.warn('rate_limit_rpc_error', { error: String(e) });
+  }
+
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
   if (!apiKey) {
     return jsonResponse({ error: 'anthropic_api_key_missing' }, 500);

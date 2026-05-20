@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
 import 'core/analytics/analytics_service.dart';
+import 'core/privacy/privacy_prefs.dart';
 
 const _supabaseUrl = String.fromEnvironment('SUPABASE_URL');
 const _supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
@@ -39,6 +40,11 @@ Future<void> main() async {
 
       await Supabase.initialize(url: _supabaseUrl, anonKey: _supabaseAnonKey);
 
+      // Load user privacy opt-out flags before initialising analytics +
+      // crash reporting so the user's stored choice gates the very first
+      // event of the session.
+      await PrivacyPrefs.hydrate();
+
       if (_posthogApiKey.isNotEmpty) {
         // posthog_flutter 4.x: `host` is a settable property on PostHogConfig,
         // not a constructor named parameter.
@@ -58,6 +64,13 @@ Future<void> main() async {
           SentryFlutter.init((options) {
             options.dsn = _sentryDsn;
             options.tracesSampleRate = 0.1;
+            // beforeSend reads the static PrivacyPrefs cache on every
+            // event. Toggling the Settings → Privacy switch updates the
+            // cache, so opt-out takes effect for the very next event.
+            options.beforeSend = (event, hint) {
+              if (PrivacyPrefs.crashReportsOptOut) return null;
+              return event;
+            };
           }),
         );
       }

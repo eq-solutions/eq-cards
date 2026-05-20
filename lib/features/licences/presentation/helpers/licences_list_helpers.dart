@@ -49,6 +49,9 @@ List<Licence> applyLicenceFilters(
 /// to unit-test against the documented error contract.
 String ocrErrorMessage(Object e) {
   final s = e.toString().toLowerCase();
+  if (s.contains('rate_limit_exceeded') || s.contains('429')) {
+    return "you've used your 20 magic-scans for the hour";
+  }
   if (s.contains('unsupported_mime_type')) {
     return 'photo format not supported (try a JPEG/PNG)';
   }
