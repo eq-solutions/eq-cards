@@ -1,0 +1,16 @@
+# Netlify config for eq-cards.netlify.app.
+#
+# Deploys are manual zip-drop OR `netlify deploy --prod` from a local build.
+# There is no GitHub auto-deploy wired up — production releases are gated
+# by an explicit step (per global EQ rules: "Never deploy without explicit
+# instruction").
+#
+# Site ID: c1bf4b4d-3131-4dd6-977f-2c0dd5cc4d72
+
+[build]
+  publish = "build/web"
+  # No build command — we build locally with the right --dart-defines and
+  # upload the artifact. A CI build here would need the dart-defines file
+  # set as Netlify env vars, which we don't want to do until production
+  # secrets are reviewed.
+  command = ""

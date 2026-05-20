@@ -76,3 +76,4 @@ supabase/.branches/
 
 # Stray write-check scratch from earlier test runs.
 /test_write_check
+.netlify/
