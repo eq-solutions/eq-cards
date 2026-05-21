@@ -1,3 +1,16 @@
+// Cards Unit 4 (2026-05-21) — Cards Flutter now talks to eq-canonical
+// (jvknxcmbtrfnxfrwfimn). Reads + writes go through public.eq_cards_*
+// RPCs which bridge the column rename (user_id -> staff_id,
+// photo_*_url -> photo_*_path, deleted_at -> active=false).
+//
+// The Licence Flutter model is unchanged — the RPC bridge preserves
+// the legacy column shape in its return rows.
+//
+// Photo storage paths now start with the tenant_id (first segment is
+// what canonical's licence-photos RLS checks against
+// app_metadata.tenant_id). New uploads use
+// `{tenant_id}/{staff_id}/{licence_id}/front.jpg`.
+
 import 'dart:async';
 
 import 'package:meta/meta.dart';
@@ -20,38 +33,30 @@ class LicenceRepository {
   static const _signedUrlSeconds = 3600;
 
   Future<List<Licence>> getAllForCurrentUser() async {
-    final userId = _client.auth.currentUser?.id;
-    if (userId == null) throw const NotAuthenticatedFailure();
+    if (_client.auth.currentUser == null) {
+      throw const NotAuthenticatedFailure();
+    }
     try {
-      final rows = await _client
-          .from('licences')
-          .select()
-          .eq('user_id', userId)
-          .filter('deleted_at', 'is', null)
-          .order('expiry_date');
-      final licences = (rows as List)
+      final rows = await _client.rpc<List<dynamic>>('eq_cards_list_my_licences');
+      final list = rows
           .cast<Map<String, dynamic>>()
           .map(Licence.fromJson)
           .toList();
-      return Future.wait(licences.map(_withSignedUrls));
+      return Future.wait(list.map(_withSignedUrls));
     } catch (e) {
       throw mapSupabaseError(e);
     }
   }
 
   Future<Licence> getById(String id) async {
+    // No dedicated single-row RPC — list + filter is acceptable for the
+    // tiny per-user dataset (a wallet typically has <30 licences). If
+    // performance shows up as a problem add eq_cards_get_my_licence(uuid).
     try {
-      // Filter `deleted_at` so the detail screen never renders a
-      // soft-deleted row a user might land on via browser history or a
-      // stale share link.
-      final row = await _client
-          .from('licences')
-          .select()
-          .eq('id', id)
-          .filter('deleted_at', 'is', null)
-          .maybeSingle();
-      if (row == null) throw const NotFoundFailure();
-      return _withSignedUrls(Licence.fromJson(row));
+      final all = await getAllForCurrentUser();
+      final match = all.where((l) => l.id == id).toList();
+      if (match.isEmpty) throw const NotFoundFailure();
+      return match.first;
     } on Failure {
       rethrow;
     } catch (e) {
@@ -60,8 +65,9 @@ class LicenceRepository {
   }
 
   Future<Licence> upsert(Licence licence) async {
-    final userId = _client.auth.currentUser?.id;
-    if (userId == null) throw const NotAuthenticatedFailure();
+    if (_client.auth.currentUser == null) {
+      throw const NotAuthenticatedFailure();
+    }
     final isInsert = licence.id == null;
     unawaited(
       _breadcrumb(
@@ -70,12 +76,15 @@ class LicenceRepository {
       ),
     );
     try {
-      final row = await _client
-          .from('licences')
-          .upsert(licenceToUpsertPayload(licence, userId))
-          .select()
-          .single();
-      final saved = await _withSignedUrls(Licence.fromJson(row));
+      final rows = await _client.rpc<List<dynamic>>(
+        'eq_cards_upsert_my_licence',
+        params: {'p_payload': licenceToUpsertPayload(licence)},
+      );
+      final list = rows.cast<Map<String, dynamic>>();
+      if (list.isEmpty) {
+        throw const NotFoundFailure();
+      }
+      final saved = await _withSignedUrls(Licence.fromJson(list.first));
       unawaited(
         _breadcrumb(
           isInsert ? 'licence_insert_succeeded' : 'licence_update_succeeded',
@@ -97,12 +106,10 @@ class LicenceRepository {
   Future<void> softDelete(String id) async {
     unawaited(_breadcrumb('licence_delete_started', {'licence_id': id}));
     try {
-      await _client
-          .from('licences')
-          .update({
-            'deleted_at': DateTime.now().toUtc().toIso8601String(),
-          })
-          .eq('id', id);
+      await _client.rpc<void>(
+        'eq_cards_soft_delete_my_licence',
+        params: {'p_licence_id': id},
+      );
       unawaited(_breadcrumb('licence_delete_succeeded'));
     } catch (e) {
       unawaited(_breadcrumb('licence_delete_failed', {'error': e.toString()}));
@@ -135,20 +142,19 @@ class LicenceRepository {
   }
 }
 
-/// Builds the JSON payload for an upsert. Pure — no Supabase client involved
-/// — so it's unit-testable without faking the data source.
+/// Builds the JSON payload sent to eq_cards_upsert_my_licence. Pure —
+/// no Supabase client involved — so it's unit-testable.
 ///
-/// `user_id` always comes from the authenticated session (parameter), never
-/// from the model — RLS would reject any other value anyway, but this makes
-/// the contract explicit.
+/// `user_id` is NOT in the payload. The RPC auto-resolves it from the
+/// JWT app_metadata. This matches the Phase 1.F security stance —
+/// server-derived tenancy / identity, never client-supplied.
 ///
-/// Transient signed URLs (`photoFrontSignedUrl`, `photoBackSignedUrl`) are
-/// excluded from JSON via `@JsonKey(includeToJson: false)` on the model and
-/// also are never written here. Only persistent paths are sent.
+/// Transient signed URLs (`photoFrontSignedUrl`, `photoBackSignedUrl`)
+/// are excluded from JSON via `@JsonKey(includeToJson: false)` on the
+/// model and also are never written here.
 @visibleForTesting
-Map<String, dynamic> licenceToUpsertPayload(Licence l, String userId) {
+Map<String, dynamic> licenceToUpsertPayload(Licence l) {
   final payload = <String, dynamic>{
-    'user_id': userId,
     'licence_type': l.licenceType,
     'licence_number': l.licenceNumber,
     'issue_date': _isoDate(l.issueDate),

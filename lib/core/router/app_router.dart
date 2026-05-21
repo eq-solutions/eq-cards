@@ -19,8 +19,6 @@ part 'app_router.g.dart';
 @riverpod
 GoRouter appRouter(AppRouterRef ref) {
   // Bridge: Riverpod auth-state changes -> ChangeNotifier -> GoRouter refresh.
-  // ref.listen (not ref.watch) — we re-evaluate the redirect via
-  // refreshListenable rather than rebuilding the router on every auth event.
   final notifier = _AuthRouterNotifier();
   ref.listen(authStateChangesProvider, (_, __) => notifier.bump());
   ref.onDispose(notifier.dispose);
@@ -34,21 +32,15 @@ GoRouter appRouter(AppRouterRef ref) {
         path: Routes.splash,
         builder: (context, state) => const _SplashScreen(),
       ),
+      // Cards Unit 4 (2026-05-21) — sole auth entry point. Reads
+      // #sh=<jwt> from the URL hash and calls Supabase.auth.setSession.
       GoRoute(
-        path: Routes.emailEntry,
-        builder: (context, state) => const EmailEntryScreen(),
-      ),
-      GoRoute(
-        path: Routes.otp,
-        builder: (context, state) {
-          final email = state.extra as String?;
-          if (email == null) return const _MissingEmailScreen();
-          return OtpScreen(email: email);
-        },
+        path: Routes.handoff,
+        builder: (context, state) => const IframeHandoffScreen(),
       ),
       // Legal documents — top-level routes outside the shell so they can be
-      // reached from anywhere (Settings, signup flow, share sheet, etc.) and
-      // present as full-screen single-document views.
+      // reached from anywhere (Settings, share sheet, etc.) and present as
+      // full-screen single-document views.
       GoRoute(
         path: Routes.privacyPolicy,
         builder: (context, state) => LegalDocumentScreen.privacy(),
@@ -68,8 +60,6 @@ GoRouter appRouter(AppRouterRef ref) {
                 path: Routes.licencesList,
                 builder: (context, state) => const LicencesListScreen(),
                 routes: [
-                  // Static-segment route ('new') BEFORE wildcard (':id') so
-                  // GoRouter matches it before falling through to detail.
                   GoRoute(
                     path: 'new',
                     builder: (context, state) {
@@ -137,15 +127,14 @@ String? _redirect(BuildContext context, GoRouterState state) {
   final loc = state.matchedLocation;
   final isAuthRoute = loc.startsWith('/auth/');
   // Legal documents are reachable without sign-in so users can review the
-  // Privacy Policy and Terms before creating an account. They still appear
-  // in Settings once signed in via the same routes.
+  // Privacy Policy and Terms before sign-in.
   final isLegalRoute = loc.startsWith('/legal/');
 
   if (loc == Routes.splash || loc == Routes.home) {
-    return isSignedIn ? Routes.licencesList : Routes.emailEntry;
+    return isSignedIn ? Routes.licencesList : Routes.handoff;
   }
   if (isSignedIn && isAuthRoute) return Routes.licencesList;
-  if (!isSignedIn && !isAuthRoute && !isLegalRoute) return Routes.emailEntry;
+  if (!isSignedIn && !isAuthRoute && !isLegalRoute) return Routes.handoff;
   return null;
 }
 
@@ -157,10 +146,6 @@ class _SplashScreen extends StatelessWidget {
   const _SplashScreen();
   @override
   Widget build(BuildContext context) {
-    // Branded splash — the first frame an unsigned-in user sees while the
-    // redirect logic decides where to send them. Plain spinner felt
-    // generic; show the launcher mark + name so the user sees the EQ
-    // identity immediately even on slow connections.
     return Scaffold(
       backgroundColor: EqColours.white,
       body: SafeArea(
@@ -195,16 +180,6 @@ class _SplashScreen extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _MissingEmailScreen extends StatelessWidget {
-  const _MissingEmailScreen();
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text('Missing email parameter')),
     );
   }
 }

@@ -275,12 +275,16 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
         );
       }
 
-      // Step 2: upload photos if user picked new ones.
+      // Step 2: upload photos if user picked new ones. `staffId` is
+      // taken from the saved licence row's user_id field — the RPC
+      // bridge returns the canonical staff_id under that legacy key.
       String? frontPath = saved.photoFrontPath;
       String? backPath = saved.photoBackPath;
+      final staffId = saved.userId;
       if (_pendingFront != null) {
         frontPath = await uploader.uploadLicencePhotoBytes(
           licenceId: saved.id!,
+          staffId: staffId,
           slot: 'front',
           bytes: _pendingFront!,
         );
@@ -288,6 +292,7 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
       if (_pendingBack != null) {
         backPath = await uploader.uploadLicencePhotoBytes(
           licenceId: saved.id!,
+          staffId: staffId,
           slot: 'back',
           bytes: _pendingBack!,
         );

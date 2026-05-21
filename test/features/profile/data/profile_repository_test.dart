@@ -4,10 +4,14 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('profileToUpsertPayload', () {
-    test('always includes id', () {
+    // Cards Unit 4 (2026-05-21) — id is NOT in the payload. The RPC
+    // bridge (eq_cards_upsert_my_profile) resolves the target staff
+    // row from the JWT app_metadata, so sending an id from the client
+    // is meaningless and a deliberate guard against cross-row writes.
+    test('never includes id (RPC resolves staff_id from JWT)', () {
       const p = Profile(id: 'user-1');
       final payload = profileToUpsertPayload(p);
-      expect(payload['id'], 'user-1');
+      expect(payload.containsKey('id'), false);
     });
 
     test('omits null optional fields', () {
