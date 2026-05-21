@@ -6,6 +6,35 @@ All notable changes to EQ Cards are documented here. Format follows
 
 ## [Unreleased]
 
+### 2026-05-21 — Onboarding-walkthrough polish (merge `94fd7c5`, branch commit `6c10d53`)
+
+Six fixes flagged by Royce after watching a real user upload a licence
+mid-onboarding and look for a "Scan" button that wasn't there. Schema
+untouched.
+
+- **Cropper button now reads "Scan licence"** on web + iOS so the
+  OCR-trigger intent is obvious. (Previous default was "Crop"/"Done".)
+  Cropper config extracted to `lib/features/licences/presentation/helpers/licence_crop.dart`
+  and reused on the edit screen, so photo replacements also go through
+  crop + JPEG-85 compression. Edit-screen `_pickPhoto` no longer ships
+  raw uncompressed photos to storage.
+- **Skip-OCR cancel actually short-circuits the flow.** Previously the
+  cancel button just dismissed the dialog while OCR kept running
+  invisibly, then auto-navigated 5-10s later with the prefill the user
+  had asked to skip. Now races OCR vs cancel via `Future.any`; user-skip
+  navigates immediately with photo-only.
+- **Privacy Policy + Terms of Use linked from the sign-up screen** as a
+  Privacy Act collection notice. Layout wrapped in `SingleChildScrollView`
+  so the column survives small viewports.
+- **Get help / Send feedback** now opens a real composer dialog
+  (formatted To/Subject/Body + "Copy email" button) instead of dropping
+  a `mailto:` URI on the floor.
+- **QR-share sheet copy** softened to be honest about the placeholder
+  URL — Phase 2 share-redeem endpoint isn't live, so onboarding demos
+  no longer set up a dead-URL surprise.
+
+Quality after the merge: `flutter analyze` clean, `flutter test` 196/196.
+
 ### 2026-04-29 overnight (continued) — Battle-test push + tiered-product framing
 
 Picking up from "I want all of EQ products having the starter package all the way through to enterprise style scale." Continuous work through the night within pause-and-polish boundaries (no schema changes).
