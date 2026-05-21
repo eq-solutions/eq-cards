@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -23,6 +23,7 @@ import '../../data/licence_repository.dart';
 import '../../data/models/licence.dart';
 import '../../data/models/licence_type.dart';
 import '../../data/ocr_service.dart';
+import '../helpers/licence_crop.dart';
 import '../notifiers/licence_types_provider.dart';
 import '../notifiers/licences_list_notifier.dart';
 import 'licence_detail_screen.dart';
@@ -193,12 +194,23 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
 
   Future<void> _pickPhoto({required bool front}) async {
     final picker = ImagePicker();
+    // Web doesn't have a hardware camera tied to ImageSource.camera in most
+    // browsers, so fall through to gallery / file picker there.
     final picked = await picker.pickImage(
-      source: ImageSource.camera,
+      source: kIsWeb ? ImageSource.gallery : ImageSource.camera,
       preferredCameraDevice: CameraDevice.rear,
     );
-    if (picked == null) return;
-    final bytes = await picked.readAsBytes();
+    if (picked == null || !mounted) return;
+    // Crop after pick so saved photos are framed + JPEG-compressed, even on
+    // the edit path. No OCR here — the user is editing known fields and
+    // we don't want to clobber their corrections with a fresh extraction.
+    final cropped = await cropLicencePhoto(
+      context,
+      picked,
+      actionLabel: 'Use photo',
+    );
+    if (cropped == null || !mounted) return;
+    final bytes = await cropped.readAsBytes();
     setState(() {
       if (front) {
         _pendingFront = bytes;
