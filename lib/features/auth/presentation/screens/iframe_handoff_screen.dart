@@ -77,12 +77,25 @@ class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
     setState(() => _hasToken = true);
 
     try {
-      await Supabase.instance.client.auth.setSession(token);
+      // gotrue's setSession is (refreshToken, {accessToken}). The shell
+      // mints an HS256 access token, NOT a refresh token. Passing it
+      // ONLY as positional arg would hit _callRefreshToken which POSTs
+      // /token?grant_type=refresh_token and 400s. Passing it as BOTH
+      // hits the "accessToken provided + not expired" branch which
+      // decodes the JWT, calls getUser(accessToken) to validate (the
+      // auth.users row exists, mirrored to shell_control.users), and
+      // constructs a Session directly — no /token round-trip.
+      // The refreshToken slot will never be used because we never call
+      // .refreshSession(); the JWT-cache is renewed by the shell.
+      await Supabase.instance.client.auth.setSession(
+        token,
+        accessToken: token,
+      );
       HandoffPlatform.replaceHashWithCleanPath();
     } catch (e) {
       setState(
         () => _error =
-            'EQ Field rejected the sign-in handoff. Sign out and back in at your tenant shell, then retry.\n\n$e',
+            'EQ Cards rejected the sign-in handoff. Sign out and back in at your tenant shell, then retry.\n\n$e',
       );
     }
   }

@@ -25,10 +25,19 @@ class AuthRepository {
 
   /// Apply a shell-minted JWT as the active Supabase session.
   /// Throws a mapped Failure on rejection.
+  ///
+  /// The shell-minted token IS the access token (HS256 signed with the
+  /// canonical project JWT secret); there's no separate refresh token.
+  /// gotrue's setSession(refreshToken, {accessToken}) uses the access-
+  /// token branch when both are supplied — no /token grant_type=refresh
+  /// round-trip, just a getUser(accessToken) validation. We pass the
+  /// same token in both slots; the refreshToken slot is stored on the
+  /// Session but never used (we re-mint via the shell instead of
+  /// refreshing).
   Future<void> acceptHandoff(String accessToken) async {
     unawaited(_breadcrumb('handoff_accept_started'));
     try {
-      await _client.auth.setSession(accessToken);
+      await _client.auth.setSession(accessToken, accessToken: accessToken);
       unawaited(_breadcrumb('handoff_accept_succeeded'));
     } catch (e) {
       unawaited(_breadcrumb('handoff_accept_failed', {'error': e.toString()}));
