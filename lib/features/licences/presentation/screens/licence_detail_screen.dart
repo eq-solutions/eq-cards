@@ -102,8 +102,10 @@ class LicenceDetailScreen extends ConsumerWidget {
               Text('Share this licence', style: EqTypography.headingM),
               const SizedBox(height: EqSpacing.sm),
               Text(
-                'Scan with another EQ Solutions app or import on a desktop. '
-                'You’ll get a consent prompt before any data is shared.',
+                'Preview — the import endpoint goes live with the next '
+                'release. For now the QR encodes a placeholder URL so we '
+                'can validate the flow end-to-end. Tap "Copy link" to grab '
+                'it for testing.',
                 style: EqTypography.bodyM.copyWith(color: EqColours.grey),
               ),
               const SizedBox(height: EqSpacing.lg),

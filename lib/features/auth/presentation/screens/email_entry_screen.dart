@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -60,8 +61,11 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
 
     return Scaffold(
       backgroundColor: EqColours.white,
+      // Use a scrolling layout so the form survives a software keyboard
+      // popping up on short phones and the collection-notice doesn't tip
+      // the Column past the viewport on the smallest test/iPhone SE sizes.
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(EqSpacing.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -122,10 +126,50 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
                 isLoading: isLoading,
                 fullWidth: true,
               ),
+              const SizedBox(height: EqSpacing.md),
+              // Privacy Act collection notice — surfaced at the point of
+              // sign-up so the user can review what we collect and what
+              // we do with it before creating an account.
+              Center(
+                child: _LegalLinks(),
+              ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _LegalLinks extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final base = EqTypography.label.copyWith(color: EqColours.grey);
+    final link = EqTypography.label.copyWith(
+      color: EqColours.deep,
+      decoration: TextDecoration.underline,
+    );
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(text: 'By continuing you agree to our ', style: base),
+          TextSpan(
+            text: 'Privacy Policy',
+            style: link,
+            recognizer: TapGestureRecognizer()
+              ..onTap = () => context.push(Routes.privacyPolicy),
+          ),
+          TextSpan(text: ' and ', style: base),
+          TextSpan(
+            text: 'Terms of Use',
+            style: link,
+            recognizer: TapGestureRecognizer()
+              ..onTap = () => context.push(Routes.termsOfUse),
+          ),
+          TextSpan(text: '.', style: base),
+        ],
+      ),
+      textAlign: TextAlign.center,
     );
   }
 }

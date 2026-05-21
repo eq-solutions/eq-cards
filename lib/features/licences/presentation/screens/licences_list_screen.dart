@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,6 +23,7 @@ import '../../../../core/widgets/eq_button.dart';
 import '../../../auth/auth.dart';
 import '../../data/models/licence.dart';
 import '../../data/ocr_service.dart';
+import '../helpers/licence_crop.dart';
 import '../helpers/licences_list_helpers.dart';
 import '../notifiers/licence_types_provider.dart';
 import '../notifiers/licences_list_notifier.dart';
@@ -309,17 +309,24 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
     // Cropping step — let the user frame the licence card before we
     // upload + OCR. Smaller upload (faster, cheaper Anthropic call) and
     // higher OCR accuracy (less background noise).
-    final cropped = await _cropImage(context, picked);
+    final cropped = await cropLicencePhoto(
+      context,
+      picked,
+      actionLabel: 'Scan licence',
+    );
     if (cropped == null || !context.mounted) return;
 
     final rawBytes = await cropped.readAsBytes();
     final pickedMime = picked.mimeType;
 
     if (!context.mounted) return;
-    // Show a non-dismissable loading dialog while OCR runs. The Edge
-    // Function round-trip can take 3-8s; without this the user thinks
-    // nothing is happening and may pick the photo again.
-    final loadingDialog = showDialog<void>(
+    // Show a loading dialog while OCR runs. The Edge Function round-trip
+    // can take 3-8s; without this the user thinks nothing is happening and
+    // may pick the photo again. After 8s the dialog exposes a "Skip OCR"
+    // button which pops the dialog with `true` — we race that against the
+    // OCR future so a cancel actually short-circuits the flow instead of
+    // silently waiting for OCR to finish in the background.
+    final loadingDialog = showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (_) => const _OcrLoadingDialog(),
@@ -388,44 +395,83 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
 
     OcrExtraction? extraction;
     String? userVisibleError;
-    try {
-      final ocr = ref.read(ocrServiceProvider);
-      extraction = kIsWeb
-          ? await ocr.extractFromBytesViaEdgeFunction(bytes, mimeType: mime)
-          : await ocr.extractFromFile(File(cropped.path));
+    var cancelled = false;
+
+    // Race the OCR call against the user tapping "Skip OCR". Whichever
+    // resolves first drives the flow; the loser's future still settles
+    // harmlessly in the background.
+    final ocr = ref.read(ocrServiceProvider);
+    final ocrCall = (kIsWeb
+            ? ocr.extractFromBytesViaEdgeFunction(bytes, mimeType: mime)
+            : ocr.extractFromFile(File(cropped.path)))
+        .then<void>((r) {
+      extraction = r;
       unawaited(
         Sentry.addBreadcrumb(
           Breadcrumb(
             category: 'ocr',
             message: 'extract_succeeded',
             data: {
-              'has_number': extraction.numberCandidate != null,
-              'has_type': extraction.licenceTypeCandidate != null,
-              'has_state': extraction.stateCandidate != null,
-              'has_expiry': extraction.expiryDateCandidate != null,
+              'has_number': r.numberCandidate != null,
+              'has_type': r.licenceTypeCandidate != null,
+              'has_state': r.stateCandidate != null,
+              'has_expiry': r.expiryDateCandidate != null,
             },
           ),
         ),
       );
-    } catch (e, st) {
-      // Capture for our own debugging, then surface a friendly message so
-      // the user knows OCR didn't fire and can fall back to manual entry.
+    }).catchError((Object e, StackTrace st) {
       unawaited(Sentry.captureException(e, stackTrace: st));
       userVisibleError = ocrErrorMessage(e);
-    }
+    });
 
-    // Dismiss the loading dialog before navigating. Wrapped in try so a
-    // double-pop (e.g. user already tapped the post-8s Cancel) doesn't
-    // throw — only one dismiss happens, whichever wins.
-    try {
-      if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
-    } catch (_) {
-      // Already dismissed by the user's Cancel — fine.
+    final cancelCall = loadingDialog.then<void>((result) {
+      // result is `true` only when the user tapped "Skip OCR". A `null`
+      // (system back) or `false` is treated as not-a-deliberate-cancel.
+      if (result ?? false) cancelled = true;
+    });
+
+    await Future.any<void>([ocrCall, cancelCall]);
+
+    if (cancelled) {
+      unawaited(
+        Sentry.addBreadcrumb(
+          Breadcrumb(
+            category: 'ocr',
+            message: 'user_skipped',
+            level: SentryLevel.info,
+          ),
+        ),
+      );
+    } else {
+      // OCR finished first — dismiss the dialog before navigating. Wrapped
+      // in try so a near-simultaneous tap on Skip doesn't double-pop.
+      try {
+        if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
+      } catch (_) {
+        // Already dismissed — fine.
+      }
     }
+    // Let the dialog and OCR futures settle in the background regardless
+    // of who won the race. Without this, an OCR future that resolves
+    // *after* the user cancelled would surface as an unhandled async
+    // error in debug builds.
     unawaited(loadingDialog);
+    unawaited(ocrCall);
 
     if (!context.mounted) return;
-    if (userVisibleError != null) {
+    if (cancelled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'OCR skipped — fill in the licence manually.',
+          ),
+          duration: const Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: EqColours.ink,
+        ),
+      );
+    } else if (userVisibleError != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -440,53 +486,13 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
     }
     context.go(
       Routes.licenceCreate,
-      extra: LicencePrefill(photoBytes: bytes, ocr: extraction),
+      extra: LicencePrefill(
+        photoBytes: bytes,
+        // On cancel, drop the OCR result even if it raced in just before
+        // the user tapped Skip — they explicitly asked to fill manually.
+        ocr: cancelled ? null : extraction,
+      ),
     );
-  }
-
-  /// Opens the image cropper UI on the picked file. Returns the cropped
-  /// `XFile`-shaped result, or `null` if the user cancelled. Cropping is
-  /// optional but encouraged: tighter crops mean smaller uploads, faster
-  /// OCR round-trip, and better extraction accuracy (less background noise
-  /// for Claude Vision to ignore).
-  Future<XFile?> _cropImage(BuildContext context, XFile picked) async {
-    try {
-      final cropped = await ImageCropper().cropImage(
-        sourcePath: picked.path,
-        // ID-1 card aspect ratio (CR80, ISO/IEC 7810) is the default
-        // suggestion since most licences fit it. The user can override.
-        aspectRatio: const CropAspectRatio(ratioX: 1.586, ratioY: 1),
-        compressFormat: ImageCompressFormat.jpg,
-        compressQuality: 85,
-        uiSettings: [
-          AndroidUiSettings(
-            toolbarTitle: 'Frame your licence',
-            toolbarColor: const Color(0xFF3DA8D8), // EqColours.sky
-            toolbarWidgetColor: const Color(0xFFFFFFFF),
-            initAspectRatio: CropAspectRatioPreset.original,
-            lockAspectRatio: false,
-          ),
-          IOSUiSettings(
-            title: 'Frame your licence',
-            doneButtonTitle: 'Done',
-            cancelButtonTitle: 'Cancel',
-          ),
-          WebUiSettings(
-            context: context,
-            presentStyle: WebPresentStyle.dialog,
-            size: const CropperSize(width: 520, height: 380),
-          ),
-        ],
-      );
-      if (cropped == null) return null;
-      return XFile(cropped.path);
-    } catch (e, st) {
-      // Cropper failure shouldn't block the flow — fall through with the
-      // original picked file. We still log it so we know if real users
-      // hit issues with the cropper widget itself.
-      unawaited(Sentry.captureException(e, stackTrace: st));
-      return picked;
-    }
   }
 
 }
@@ -1052,7 +1058,10 @@ class _OcrLoadingDialogState extends State<_OcrLoadingDialog> {
               if (_allowCancel) ...[
                 const SizedBox(height: EqSpacing.md),
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  // Pop with `true` so the _captureFlow race-handler knows
+                  // this was a user-initiated skip, not the dialog being
+                  // dismissed because OCR finished.
+                  onPressed: () => Navigator.of(context).pop(true),
                   child: Text(
                     'Skip OCR, fill manually',
                     style: EqTypography.bodyM.copyWith(color: EqColours.deep),

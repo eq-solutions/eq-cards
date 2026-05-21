@@ -193,15 +193,16 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  /// Opens the user's mail client with a prefilled contact email — used
-  /// for both Get help and Send feedback rows (different subject/body per
-  /// caller).
+  /// Shows a copy-ready composer dialog the user can paste into their mail
+  /// client. We don't open a `mailto:` URI directly — that needs
+  /// `url_launcher`, which isn't wired in, and on a PWA-installed instance
+  /// the OS handler is often unreliable anyway. The dialog presents the
+  /// address, subject, and a pre-filled body in one SelectableText block,
+  /// plus a "Copy email" action that puts the entire block on the
+  /// clipboard so the user can paste it into Gmail / Outlook / whatever.
   ///
-  /// The user UUID is appended so we can correlate the report with Sentry
-  /// / Supabase logs without asking the user for an ID. On platforms where
-  /// mailto isn't supported (rare on iOS/Android, more common in some PWA
-  /// contexts), the address is copied to the clipboard as a fallback so
-  /// the user always has a path forward.
+  /// The user UUID is appended so a reply can be correlated with Sentry
+  /// / Supabase logs without asking the user for an ID.
   ///
   /// Address matches the Privacy Policy contact (`contact@eq.solutions`)
   /// — both flow into the same EQ Solutions inbox.
@@ -213,35 +214,66 @@ class SettingsScreen extends ConsumerWidget {
   }) async {
     const address = 'contact@eq.solutions';
     final userId = Supabase.instance.client.auth.currentUser?.id ?? 'unknown';
-    final body = Uri.encodeComponent(
-      '$bodyHint\n\n\n---\n'
-      'Please leave the lines below so we can find your account.\n'
-      'User: $userId\nApp: EQ Cards web 0.1.0\n',
-    );
-    final uri = Uri.parse(
-      'mailto:$address?subject=${Uri.encodeComponent(subject)}&body=$body',
-    );
-    try {
-      await Clipboard.setData(const ClipboardData(text: address));
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(
-            'Email contact@eq.solutions — address copied to clipboard.',
+    final body = '$bodyHint\n\n\n---\n'
+        'Please leave the lines below so we can find your account.\n'
+        'User: $userId\nApp: EQ Cards web 0.1.0\n';
+    final composed = 'To: $address\nSubject: $subject\n\n$body';
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Email us'),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 400, maxWidth: 480),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Paste this into your mail app — we read every reply.',
+                  style: EqTypography.bodyM.copyWith(color: EqColours.grey),
+                ),
+                const SizedBox(height: EqSpacing.md),
+                Container(
+                  padding: const EdgeInsets.all(EqSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: EqColours.ice,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: SelectableText(
+                    composed,
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          duration: const Duration(seconds: 4),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: EqColours.ink,
         ),
-      );
-    } catch (_) {
-      // SnackBar already showed; the user can still copy from the row.
-    }
-    // Reference the uri so analyzer doesn't flag it as unused — it's
-    // available for a future url_launcher rollout without a code rewrite.
-    assert(
-      uri.toString().contains(address),
-      'mailto URI must contain the contact address',
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: composed));
+              if (!ctx.mounted) return;
+              ScaffoldMessenger.of(ctx).showSnackBar(
+                const SnackBar(
+                  content: Text('Copied. Paste into your mail app.'),
+                  duration: Duration(seconds: 3),
+                  behavior: SnackBarBehavior.floating,
+                  backgroundColor: EqColours.ink,
+                ),
+              );
+            },
+            child: const Text('Copy email'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Done'),
+          ),
+        ],
+      ),
     );
   }
 
