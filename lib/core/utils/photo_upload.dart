@@ -10,6 +10,7 @@
 // the RLS check, staff_id second so a future "all licences for a
 // tenant" admin tool can prefix-list by tenant cleanly.
 
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -21,6 +22,31 @@ import '../error/failure.dart';
 import '../supabase/supabase_client_provider.dart';
 
 part 'photo_upload.g.dart';
+
+/// Decode the JWT payload to extract claims that aren't surfaced via
+/// `currentUser.appMetadata` — that field comes from
+/// `auth.users.raw_app_meta_data` on the server, NOT from the JWT.
+/// Our shell-minted JWT carries tenant_id in its app_metadata claim
+/// but the auth.users row only has {"provider":"email"} — so we read
+/// it directly from the token instead.
+///
+/// Returns null on any decode failure (malformed JWT, missing claim).
+String? _tenantIdFromJwt(String? jwt) {
+  if (jwt == null || jwt.isEmpty) return null;
+  final parts = jwt.split('.');
+  if (parts.length != 3) return null;
+  try {
+    var payload = parts[1];
+    // base64url padding fix
+    payload = payload.padRight(payload.length + (4 - payload.length % 4) % 4, '=');
+    final decoded = utf8.decode(base64Url.decode(payload));
+    final json = jsonDecode(decoded) as Map<String, dynamic>;
+    final appMeta = json['app_metadata'] as Map<String, dynamic>?;
+    return appMeta?['tenant_id'] as String?;
+  } catch (_) {
+    return null;
+  }
+}
 
 class PhotoUpload {
   PhotoUpload(this._client);
@@ -58,7 +84,11 @@ class PhotoUpload {
     required String slot,
     required Uint8List bytes,
   }) async {
-    final tenantId = _client.auth.currentUser?.appMetadata['tenant_id'] as String?;
+    // tenant_id lives in the JWT app_metadata, NOT in auth.users.
+    // currentUser.appMetadata reads from auth.users.raw_app_meta_data
+    // which we deliberately don't populate (the JWT is the truth).
+    final tenantId =
+        _tenantIdFromJwt(_client.auth.currentSession?.accessToken);
     if (tenantId == null || tenantId.isEmpty) {
       throw const NotAuthenticatedFailure();
     }
