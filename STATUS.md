@@ -1,7 +1,44 @@
 # EQ Cards — Current Status
 
-**Last updated:** 2026-04-29 PM (overnight push)
+**Last updated:** 2026-05-21 (post-onboarding-walkthrough polish)
 **Posture:** Pause-and-polish + reauthorized UX/robustness work. Schema still frozen.
+
+---
+
+## Latest (2026-05-21) — Onboarding-walkthrough polish
+
+Single merge commit `94fd7c5` (branch commit `6c10d53`). Royce walked
+a real user through licence onboarding, caught a "scan button missing"
+moment, and authorised a broader sweep of the same flow. Six items, all
+in `lib/features/{auth,licences,settings}/presentation/`:
+
+- **Cropper action button labelled "Scan licence"** on web + iOS (Android
+  uses the checkmark icon + "Frame your licence" toolbar title). Cropper
+  config extracted to `lib/features/licences/presentation/helpers/licence_crop.dart`
+  and reused by both the OCR-scan flow (list screen) and the photo-replace
+  flow (edit screen). Edit-screen photos now go through the same JPEG-85
+  + crop path so storage stays tidy.
+- **Skip-OCR actually skips.** Previously the "Skip OCR, fill manually"
+  button just dismissed the dialog while OCR kept running invisibly, then
+  auto-navigated 5-10s later with the prefill the user had asked to skip.
+  Now races OCR vs cancel via `Future.any`; user-skip immediately
+  navigates with photo-only (no prefill) and shows a confirming snackbar.
+- **Privacy Act collection notice** wired into the email entry screen as
+  tappable Privacy Policy + Terms of Use links below the Send code button.
+  Switched the Padding to `SingleChildScrollView` so the column survives
+  small viewports (fixed a 5px overflow that broke 6 widget tests).
+- **Get help / Send feedback** previously built a `mailto:` URI then
+  dropped it on the floor. User got a snackbar telling them to email an
+  address with no compositional help. Replaced with a copy-ready composer
+  dialog showing To/Subject/Body in a monospaced block + a "Copy email"
+  action. No new dependency added (deliberately avoiding `url_launcher`
+  until that's a thumbs-up).
+- **QR-share copy softened** to reflect Phase 2 status — was promising
+  "Scan with another EQ Solutions app" when the share-redeem endpoint
+  doesn't exist yet. Onboarding demos no longer set up a dead-URL surprise.
+
+**Quality after the merge:** `flutter analyze` No issues · `flutter test`
+196/196 passing.
 
 ---
 
