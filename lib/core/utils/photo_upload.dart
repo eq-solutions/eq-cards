@@ -1,3 +1,15 @@
+// Cards Unit 4 (2026-05-21) — storage path convention changed.
+//
+// Pre-canonical: paths were `{auth.uid()}/{licenceId}/{slot}.jpg`,
+// where the first segment matched `auth.uid()` (Cards' own auth.user)
+// and that's what the RLS checked.
+//
+// Post-canonical: the canonical licence-photos bucket RLS checks the
+// first segment against `app_metadata.tenant_id`. Paths are now
+// `{tenant_id}/{staff_id}/{licenceId}/{slot}.jpg` — tenant first for
+// the RLS check, staff_id second so a future "all licences for a
+// tenant" admin tool can prefix-list by tenant cleanly.
+
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -19,12 +31,14 @@ class PhotoUpload {
   /// Mobile convenience overload — reads bytes from a `File` then delegates.
   Future<String> uploadLicencePhoto({
     required String licenceId,
+    required String staffId,
     required String slot,
     required File source,
   }) async {
     final bytes = await source.readAsBytes();
     return uploadLicencePhotoBytes(
       licenceId: licenceId,
+      staffId: staffId,
       slot: slot,
       bytes: bytes,
     );
@@ -32,16 +46,25 @@ class PhotoUpload {
 
   /// Cross-platform path. Mobile and web both call this via bytes from
   /// `XFile.readAsBytes()`. The helper strips EXIF, resizes, and re-encodes.
+  ///
+  /// `staffId` is the canonical staff_id for the current user (resolved
+  /// via the eq_cards_current_staff RPC at startup). It's passed in so
+  /// the caller can decide whether to upload to "my staff" or (future)
+  /// to an admin-elected staff_id without this helper re-querying every
+  /// call.
   Future<String> uploadLicencePhotoBytes({
     required String licenceId,
+    required String staffId,
     required String slot,
     required Uint8List bytes,
   }) async {
-    final userId = _client.auth.currentUser?.id;
-    if (userId == null) throw const NotAuthenticatedFailure();
+    final tenantId = _client.auth.currentUser?.appMetadata['tenant_id'] as String?;
+    if (tenantId == null || tenantId.isEmpty) {
+      throw const NotAuthenticatedFailure();
+    }
 
     final processed = await _stripExifAndCompress(bytes);
-    final path = '$userId/$licenceId/$slot.jpg';
+    final path = '$tenantId/$staffId/$licenceId/$slot.jpg';
 
     await _client.storage.from(_bucket).uploadBinary(
           path,

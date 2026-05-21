@@ -1,3 +1,15 @@
+// Cards Unit 4 (2026-05-21) — calls public.eq_cards_current_staff +
+// public.eq_cards_upsert_my_profile on eq-canonical. These RPCs bridge
+// the column rename (Cards profiles -> canonical staff): the response
+// shape matches what Profile.fromJson expects, so the model is
+// unchanged.
+//
+// The `id` returned IS the canonical staff_id. Cards uses it as the
+// "current user identifier" throughout the app (the first segment of
+// photo storage paths used to be auth.uid(); post-flip it should be
+// the tenant_id, with staff_id as the second segment — see
+// LicenceRepository for path generation).
+
 import 'package:meta/meta.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -14,16 +26,15 @@ class ProfileRepository {
   final SupabaseClient _client;
 
   Future<Profile?> getCurrent() async {
-    final userId = _client.auth.currentUser?.id;
-    if (userId == null) throw const NotAuthenticatedFailure();
+    // The RPC reads JWT claims; no need to pass user_id explicitly.
+    if (_client.auth.currentUser == null) {
+      throw const NotAuthenticatedFailure();
+    }
     try {
-      final row = await _client
-          .from('profiles')
-          .select()
-          .eq('id', userId)
-          .filter('deleted_at', 'is', null)
-          .maybeSingle();
-      return row == null ? null : Profile.fromJson(row);
+      final rows = await _client.rpc<List<dynamic>>('eq_cards_current_staff');
+      final list = rows.cast<Map<String, dynamic>>();
+      if (list.isEmpty) return null;
+      return Profile.fromJson(list.first);
     } catch (e) {
       throw mapSupabaseError(e);
     }
@@ -31,26 +42,31 @@ class ProfileRepository {
 
   Future<Profile> upsert(Profile profile) async {
     try {
-      final row = await _client
-          .from('profiles')
-          .upsert(profileToUpsertPayload(profile))
-          .select()
-          .single();
-      return Profile.fromJson(row);
+      final rows = await _client.rpc<List<dynamic>>(
+        'eq_cards_upsert_my_profile',
+        params: {'p_payload': profileToUpsertPayload(profile)},
+      );
+      final list = rows.cast<Map<String, dynamic>>();
+      if (list.isEmpty) {
+        throw const NotFoundFailure();
+      }
+      return Profile.fromJson(list.first);
     } catch (e) {
       throw mapSupabaseError(e);
     }
   }
 }
 
-/// Builds the JSON payload for an upsert. Pure — no Supabase client involved
-/// — so it's unit-testable without faking the data source.
+/// Builds the JSON payload sent to eq_cards_upsert_my_profile. Pure —
+/// no Supabase client — so unit-testable.
 ///
-/// Server-managed columns (`created_at`, `updated_at`, `deleted_at`) are
-/// deliberately omitted; Postgres triggers and defaults populate them.
+/// Note: `id` is NOT sent. The RPC auto-resolves the target staff row
+/// from the JWT. Sending an `id` here is meaningless and the RPC
+/// ignores it anyway. This is a deliberate guard against a client
+/// trying to write to a different staff row.
 @visibleForTesting
 Map<String, dynamic> profileToUpsertPayload(Profile p) {
-  final payload = <String, dynamic>{'id': p.id};
+  final payload = <String, dynamic>{};
   if (p.fullName != null) payload['full_name'] = p.fullName;
   if (p.dateOfBirth != null) {
     payload['date_of_birth'] = _isoDate(p.dateOfBirth!);

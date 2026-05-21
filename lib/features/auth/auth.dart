@@ -3,5 +3,7 @@ export 'data/auth_repository.dart'
 export 'domain/auth_state.dart' show AuthState;
 export 'presentation/notifiers/auth_state_provider.dart'
     show authStateChangesProvider;
-export 'presentation/screens/email_entry_screen.dart' show EmailEntryScreen;
-export 'presentation/screens/otp_screen.dart' show OtpScreen;
+// Cards Unit 4 (2026-05-21) — iframe handoff replaces email-OTP.
+// Old EmailEntryScreen + OtpScreen are deleted in this revision.
+export 'presentation/screens/iframe_handoff_screen.dart'
+    show IframeHandoffScreen;
