@@ -26,14 +26,15 @@
 #   - https://www.gstatic.com — Flutter CanvasKit renderer (loaded at runtime)
 #   - https://fonts.gstatic.com — Roboto font fetched by CanvasKit
 #   - https://fonts.googleapis.com — Google Fonts CSS shim
-#   - hshvnjzczdytfiklhojz.supabase.co — Supabase REST/RPC/storage/edge fn
+#   - jvknxcmbtrfnxfrwfimn.supabase.co — eq-canonical Supabase (production, post-Unit-4)
+#   - hshvnjzczdytfiklhojz.supabase.co — legacy Cards Supabase (kept for rollback)
 #   - https://eu.i.posthog.com / eu-assets — PostHog ingest + SDK helpers
 #   - https://*.sentry.io — Sentry envelope ingestion (US/EU regions)
 #
 # 'unsafe-inline' on script-src is required by Flutter's bootstrap (inline
 # script injects flutter_bootstrap.js). 'unsafe-eval' is required by DDC in
 # debug builds and by CanvasKit; release builds still need it for CanvasKit.
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://eu.i.posthog.com https://eu-assets.i.posthog.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' blob: data: https://www.gstatic.com https://hshvnjzczdytfiklhojz.supabase.co; connect-src 'self' blob: data: https://www.gstatic.com https://fonts.gstatic.com https://fonts.googleapis.com https://hshvnjzczdytfiklhojz.supabase.co wss://hshvnjzczdytfiklhojz.supabase.co https://eu.i.posthog.com https://eu-assets.i.posthog.com https://*.sentry.io; manifest-src 'self'; worker-src 'self' blob:; frame-ancestors 'self' https://*.eq.solutions
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://eu.i.posthog.com https://eu-assets.i.posthog.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' blob: data: https://www.gstatic.com https://hshvnjzczdytfiklhojz.supabase.co https://jvknxcmbtrfnxfrwfimn.supabase.co; connect-src 'self' blob: data: https://www.gstatic.com https://fonts.gstatic.com https://fonts.googleapis.com https://hshvnjzczdytfiklhojz.supabase.co wss://hshvnjzczdytfiklhojz.supabase.co https://jvknxcmbtrfnxfrwfimn.supabase.co wss://jvknxcmbtrfnxfrwfimn.supabase.co https://eu.i.posthog.com https://eu-assets.i.posthog.com https://*.sentry.io; manifest-src 'self'; worker-src 'self' blob:; frame-ancestors 'self' https://*.eq.solutions
 
 # Cache the Flutter bundle aggressively — it's content-addressed.
 /main.dart.js
