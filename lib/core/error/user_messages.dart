@@ -21,6 +21,12 @@ String userMessageForError(Object error) {
     return error.message;
   }
   if (error is ServerFailure) {
+    final msg = error.message.toLowerCase();
+    if (msg.contains('jwt') ||
+        msg.contains('tenant') ||
+        msg.contains('token')) {
+      return 'Your session needs to be refreshed. Sign in again to continue.';
+    }
     return error.message.isNotEmpty
         ? error.message
         : 'Server error (${error.code}). Try again in a moment.';

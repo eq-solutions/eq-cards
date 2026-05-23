@@ -1092,9 +1092,16 @@ class _ListErrorState extends StatelessWidget {
   final Future<void> Function() onRetry;
   final Future<void> Function() onSignInAgain;
 
-  bool get _isAuthError =>
-      error is NotAuthenticatedFailure ||
-      error.toString().toLowerCase().contains('jwt');
+  bool get _isAuthError {
+    if (error is NotAuthenticatedFailure) return true;
+    if (error is ServerFailure) {
+      final msg = (error as ServerFailure).message.toLowerCase();
+      return msg.contains('jwt') ||
+          msg.contains('tenant') ||
+          msg.contains('token');
+    }
+    return false;
+  }
 
   @override
   Widget build(BuildContext context) {
