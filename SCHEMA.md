@@ -4,20 +4,17 @@
 **Owner:** Royce Milmlow
 **Last updated:** 2026-05-24 (migration note added)
 
-> **⚠ Unit 3 + 4 migration (2026-05-21).** The schema below describes the legacy
-> per-module Supabase project (`hshvnjzczdytfiklhojz`). As of Unit 4, Cards data lives
-> in eq-canonical (`jvknxcmbtrfnxfrwfimn`) in the `app_data` schema, with column renames
-> (`user_id` → `staff_id`, `photo_*_url` → `photo_*_path`, `deleted_at` → `active=false`).
-> Flutter models are unchanged; the `eq_cards_*` bridge RPCs handle the translation.
+> **⚠ Unit 3 + 4 migration (2026-05-21). Legacy project decommissioned 2026-05-24.**
+> The schema below describes the original per-module schema. As of Unit 4, Cards data
+> lives in eq-canonical (`jvknxcmbtrfnxfrwfimn`) in the `app_data` schema, with column
+> renames (`user_id` → `staff_id`, `photo_*_url` → `photo_*_path`, `deleted_at` →
+> `active=false`). Flutter models are unchanged; the `eq_cards_*` bridge RPCs translate.
 >
-> The canonical schema is managed via Supabase MCP / Studio on eq-canonical. Four
-> migrations were applied directly: `2026_05_21_eq_cards_rpcs`,
-> `2026_05_21_staff_personal_fields_for_cards`,
-> `2026_05_21_eq_cards_profile_rpcs`,
-> `2026_05_21_licence_photos_policies_phase_1f`.
+> The canonical schema is managed via Supabase MCP / Studio on eq-canonical. Migrations
+> `0001`–`0005` were also applied to eq-canonical on 2026-05-24 to provide the base
+> `public.licences`, `public.profiles`, `public.ocr_usage` tables and rate-limit RPC.
 >
-> This document is preserved as the authoritative reference for what was built in
-> Phase 0.5 and for the `0001`–`0005` migrations applied to the legacy project.
+> This document is preserved as the authoritative reference for the Phase 0.5 contract.
 
 This document defines the Supabase schema for EQ Cards v1. Every column, type, index, and RLS predicate listed here is locked. Schema changes require an explicit migration file AND a doc update in the same PR.
 
