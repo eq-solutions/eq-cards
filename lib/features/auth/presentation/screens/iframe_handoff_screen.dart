@@ -102,11 +102,7 @@ class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
 
   void _openShell() {
     if (!kIsWeb) return;
-    final host = HandoffPlatform.currentHostname();
-    final shellOrigin = host.startsWith('cards.')
-        ? 'https://${host.substring('cards.'.length)}'
-        : 'https://core.eq.solutions';
-    HandoffPlatform.redirectTo(shellOrigin);
+    HandoffPlatform.redirectTo('https://core.eq.solutions');
   }
 
   @override
