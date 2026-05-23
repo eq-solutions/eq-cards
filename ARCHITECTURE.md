@@ -655,23 +655,43 @@ The following are explicitly deferred:
 
 ## 18. Cross-module data architecture
 
-> **⚠ RECONCILIATION PENDING (2026-04-29).** A new umbrella architecture — **EQ Intake** — was started in a parallel Cowork session. It introduces a canonical schema spine (Staff / Sites / Assets / SWMS / Prestarts / JSAs / Toolbox / Incidents / ITPs / Schedule) that every EQ surface feeds and every output target consumes. EQ Cards becomes one of the three intake doors (alongside EQ Import desktop and EQ Capture vision).
+> **✓ RECONCILIATION RESOLVED (2026-05-21 — Units 3 + 4).**
 >
-> The framing in this §18 ("each EQ module gets its own Supabase project, no shared DB, share API with consent") is *not* the same architecture as INTAKE's "one canonical spine, multi-tenant by RLS." When INTAKE Sprint-1 lands, this section will be either replaced (Cards data moves to / mirrors the canonical project) or reframed (§18 becomes the module-local cache that federates into the spine).
+> The decision is **Path A: consolidate.** Cards data moved to eq-canonical
+> (`jvknxcmbtrfnxfrwfimn`) via the Unit 3 migration script (`scripts/migrate-to-canonical.ts`)
+> and the Unit 4 canonical flip (`0d14c50`). The module-local cache model (Path B) was rejected.
 >
-> **No action on §18 contradictions until INTAKE Sprint-1 lands.** EQ Cards is in pause-and-polish mode — see `STATUS.md` at repo root.
+> **What changed:**
+> - `§18.1` below described a "no shared database" model between EQ surfaces. That model is
+>   now superseded **for inter-EQ data flows**. Inside EQ, surfaces share data via RLS on
+>   the canonical project — no consent flow, no token exchange.
+> - `§18.2–§18.3` (share-intent URL + redeem endpoint) are preserved as the export profile
+>   for **external consumers** (non-EQ surfaces: e.g. a principal contractor's compliance
+>   portal pulling a tradie's licence wallet). This API is still Phase 2.
+> - Auth: EQ Shell mints a JWT (`app_metadata.tenant_id`) and passes it to Cards via
+>   `#sh=<jwt>` iframe URL hash. Cards calls `setSession` and proceeds. Standalone access
+>   uses email-OTP directly against eq-canonical.
 >
-> The text below remains as the contract that v1 was built against. It is preserved verbatim for archaeology, not because it's load-bearing.
+> The text below describes the original v1 architecture and the external share API contract.
+> §18.1 is archaeology; §18.2–§18.7 remain forward documentation for the external API.
 
 ---
 
 EQ Cards is the first product in a planned EQ Solutions suite (EQ Field, EQ Expenses, EQ Quotes, EQ Ops). When another module needs EQ Cards data — e.g. a tradie joining a job in EQ Field who has profile + licences in EQ Cards — data flows through an explicit consent surface, **not** direct database access.
 
-**Project status (2026-04-28):** the Supabase project `hshvnjzczdytfiklhojz` (originally provisioned as "EQ Assets") is now used **exclusively by EQ Cards**. No other EQ module reads or writes to it. The earlier "needs its own project before launch" note is closed: this project IS the EQ Cards project. When EQ Field / Expenses / Quotes / Ops are built, each will spin up its own dedicated Supabase project per §18.7 — they never touch the Cards project.
+**Project status (2026-04-28, updated 2026-05-21):** ~~the Supabase project `hshvnjzczdytfiklhojz` (originally provisioned as "EQ Assets") is now used **exclusively by EQ Cards**~~ — **this is now the legacy project**. As of Unit 4, Cards reads/writes from eq-canonical (`jvknxcmbtrfnxfrwfimn`) via `eq_cards_*` bridge RPCs. The legacy project (`hshvnjzczdytfiklhojz`) is kept live for the rollback window only.
 
-### 18.1 Decision: independent products + share API (decided 2026-04-28)
+### 18.1 Decision: independent products + share API (decided 2026-04-28; superseded 2026-05-21 for inter-EQ flows)
 
-Each EQ module is its own Supabase project, its own auth pool, its own schema. There is **no shared database**. Cross-module data flows via:
+> **⚠ This decision has been superseded for cross-EQ-surface data flows.** As of
+> Unit 4 (2026-05-21), EQ Cards data lives in the canonical project (`jvknxcmbtrfnxfrwfimn`)
+> alongside every other EQ surface. Inter-EQ access is via RLS on the canonical project,
+> not the share-API flow below.
+>
+> The share API described here is preserved as the contract for **external consumers**
+> (non-EQ third-party apps wanting to read a tradie's wallet). It is still Phase 2.
+
+~~Each EQ module is its own Supabase project, its own auth pool, its own schema. There is **no shared database**.~~ Cross-module data flows (for external consumers) via:
 
 1. **Source** module exposes a share-intent URL.
 2. **Destination** module opens the source URL with desired scopes + a callback.
@@ -771,5 +791,6 @@ Single sign-on across the suite is **not** in scope. If we later decide we want 
 - 2026-04-27 (Phase 1) — Auth, profile, licences, alerts, settings, home shell shipped. §14.2 deliberately relaxed for the brand-new scaffold pass. New `core/shell/` composition layer documented (§2). `Failure implements Exception` added (§9.1). Photo `metadata jsonb` and signed URL pattern committed (§4.2, §5.1). Routes table includes `licenceCreate`; `licenceCapture` deprecated. `flutter_image_compress` and `timezone` added to stack; `image_cropper` removed as unused.
 - 2026-04-27 (Phase 1 — web) — Web companion target added. `kIsWeb` guards on OCR, biometric, local notifications. Photo upload helper exposes `Uint8List` API for cross-platform photos. New §11.5 web considerations + §17 platform parity table.
 - 2026-04-28 (Phase 1 — modules) — §18 added: cross-module data architecture committed to Option B (independent products + share API + explicit consent). Forward documentation only; no code in v1. Settings → Connected apps surface reserved for Phase 2+.
+- 2026-05-21 (Units 3 + 4) — §18 reconciliation resolved. Path A (consolidate to canonical) taken. Cards data moved to eq-canonical (`jvknxcmbtrfnxfrwfimn`) via Unit 3 migration + Unit 4 canonical flip. §18.1 "no shared database" superseded for inter-EQ flows; §18.2–§18.3 share API preserved as the external-consumer contract (Phase 2). §18 RECONCILIATION PENDING block replaced with RESOLVED. Auth model updated: Shell JWT handoff (primary) + email-OTP (standalone).
 
 **End of document.** Update this file when architectural decisions change. Date and signature every revision.

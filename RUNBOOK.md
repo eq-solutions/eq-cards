@@ -1,10 +1,13 @@
 # EQ Cards — First-Morning Runbook
 
-> **Where is EQ Cards right now?** Read [STATUS.md](STATUS.md) first. As of 2026-04-29 the repo is in **pause-and-polish** mode pending EQ Intake Sprint-1; new feature work is on hold. This runbook stays accurate for first-time setup and for the polish-window tasks. New screens / new entities / multi-tenant migration are out of scope until further notice.
+> **Where is EQ Cards right now?** Read [STATUS.md](STATUS.md) first. The app is live at
+> `cards.eq.solutions`, reading/writing from eq-canonical (`jvknxcmbtrfnxfrwfimn`) via
+> `eq_cards_*` bridge RPCs. Auth is two-path: Shell JWT handoff (`#sh=<jwt>`) for the
+> iframe embed; email-OTP for standalone/direct access.
 
-**Status:** Phase 1 setup (paused for INTAKE)
+**Status:** Active — Unit 4 shipped (canonical flip + Shell SSO)
 **Owner:** Royce Milmlow
-**Last updated:** 2026-04-29
+**Last updated:** 2026-05-24
 
 This runbook gets you from a fresh `git clone` to a green `flutter analyze` and a running app on iOS, Android, and Chrome. Follow the steps in order; each is independent.
 
@@ -117,20 +120,27 @@ dart run build_runner build --delete-conflicting-outputs
 
 ## 5. Supabase project + migrations
 
+**Production Supabase project (Unit 4+):** eq-canonical `jvknxcmbtrfnxfrwfimn`.
+The Flutter app talks to this project via `eq_cards_*` bridge RPCs applied via
+Supabase MCP. The `supabase/migrations/` folder contains the legacy per-module
+migrations (0001–0005); canonical schema is managed directly in eq-canonical.
+
+For a fresh dev environment pointing at eq-canonical:
+
 ```bash
-supabase init                          # creates supabase/config.toml
-supabase link --project-ref <YOUR_REF> # find ref in dashboard URL
-supabase db push                        # applies all 3 migrations
+supabase init
+supabase link --project-ref jvknxcmbtrfnxfrwfimn
 ```
 
-Migration `0003_storage_setup.sql` creates the `licence-photos` bucket — verify in dashboard → Storage that it exists and is **private**.
+The legacy project (`hshvnjzczdytfiklhojz`) is read-only rollback only — do not
+apply new migrations to it.
 
-In **Supabase Auth → Phone**: configure Twilio as the SMS provider per §16 Q4. You'll need:
-- Twilio Account SID
-- Twilio Auth Token
-- Twilio "From" number (or messaging service SID)
+**Auth:** email OTP via Supabase's built-in mailer. No Twilio configuration needed.
+In **Supabase Auth → Providers → Email**, confirm "Enable email signups" is ON and
+the Magic Link template includes `{{ .Token }}` (6-digit OTP).
 
-Test by triggering an OTP from your own number. If SMS doesn't arrive in ~30s, check Twilio logs.
+Test by requesting an OTP from your own email address. Code arrives in ~10–30s; check
+spam if missing.
 
 ---
 
@@ -140,24 +150,28 @@ EQ Cards reads up to 5 env vars via `--dart-define`. Required ones in **bold**.
 
 | Key | Required? | Source |
 |---|---|---|
-| **`SUPABASE_URL`** | yes | Supabase dashboard → Project Settings → API |
-| **`SUPABASE_ANON_KEY`** | yes | Same |
+| **`SUPABASE_URL`** | yes | `https://jvknxcmbtrfnxfrwfimn.supabase.co` (eq-canonical) |
+| **`SUPABASE_ANON_KEY`** | yes | Supabase dashboard → eq-canonical → Project Settings → API |
 | `SENTRY_DSN` | no | sentry.io project settings → Client Keys |
 | `POSTHOG_API_KEY` | no | app.posthog.com → Project settings |
 | `POSTHOG_HOST` | no | defaults to `https://us.i.posthog.com` |
 
 Without Sentry/PostHog keys, those services init silently as no-ops (per `main.dart` checks). Recommended for v1: skip them on dev runs, set them on release-tag CI builds.
 
-For convenience, save your dev defines to `.dart-defines.json` (gitignored — already in `.gitignore` via the `.env*` pattern... actually verify and add if missing):
+Save your production defines to `.dart-defines.prod.json` (gitignored):
 
 ```json
 {
-  "SUPABASE_URL": "https://xxx.supabase.co",
+  "SUPABASE_URL": "https://jvknxcmbtrfnxfrwfimn.supabase.co",
   "SUPABASE_ANON_KEY": "eyJxxx"
 }
 ```
 
-Then run with `--dart-define-from-file=.dart-defines.json`.
+Then run with `--dart-define-from-file=.dart-defines.prod.json`.
+
+**Note:** `.dart-defines.json` (without `.prod`) may still point at the legacy project
+(`hshvnjzczdytfiklhojz`). Check which file is which before running. The production
+defines file is `.dart-defines.prod.json`.
 
 ### 6.1 Web OCR — Edge Function deploy
 
@@ -235,7 +249,13 @@ flutter run --dart-define-from-file=.dart-defines.json
 flutter run -d chrome --dart-define-from-file=.dart-defines.json
 ```
 
-You should see: splash → phone entry → OTP → empty Licences with the "Complete your profile" banner. Tap **Profile** in the bottom nav, fill the form, save. Banner disappears. Add a licence. Tap any field on the detail screen → toast confirms copy.
+**Direct / standalone path (email-OTP):** splash → `/auth/email` → enter email →
+`/auth/otp` → 6-digit code → empty Licences with the "Complete your profile" banner.
+Fill profile, save, add a licence, tap any field → toast confirms copy.
+
+**Shell iframe path:** open `core.eq.solutions/:tenant/cards` in a browser where the
+EQ Shell has set up a JWT. The `#sh=<jwt>` hash triggers `IframeHandoffScreen` →
+`setSession` → `/licences` directly (no email prompt).
 
 ---
 
@@ -247,12 +267,20 @@ flutter build web --release --dart-define-from-file=.dart-defines.prod.json
 
 Output is in `build/web/`. **Deploy to Netlify** (decided ARCHITECTURE §16 Q5, 2026-04-28) — matches the existing EQ Solutions / SKS deploy pattern.
 
-Two ways:
+**GitHub auto-deploy is NOT wired** — per global EQ rules, production releases require an
+explicit deploy step. Netlify site config is in `netlify.toml`
+(Site ID: `c1bf4b4d-3131-4dd6-977f-2c0dd5cc4d72`).
 
-1. **GitHub auto-deploy (preferred).** Create a Netlify site wired to the EQ Cards repo, set the build command to `flutter build web --release --dart-define-from-file=.dart-defines.prod.json` (Netlify needs Flutter installed in the build image — use the `flutter-bot/netlify-plugin-flutter` plugin or a custom build image), publish directory `build/web`. Push to `main` triggers a deploy.
-2. **Manual drag-drop.** Run the build locally, drag `build/web/` onto the Netlify dashboard. Useful for first-deploy / testing before wiring CI.
+Deploy with:
 
-Domain target: `cards.eq.solutions` via Netlify custom domain. **Do not cross-deploy** — per global CLAUDE.md, EQ files never go to SKS repos and vice versa; each Netlify site is wired to one specific GitHub repo.
+```bash
+netlify deploy --prod --dir build/web --site c1bf4b4d-3131-4dd6-977f-2c0dd5cc4d72
+```
+
+Or drag-drop `build/web/` onto the Netlify dashboard.
+
+Domain: `cards.eq.solutions` (Netlify custom domain — LIVE). **Do not cross-deploy** —
+per global CLAUDE.md, EQ files never go to SKS repos and vice versa.
 
 ---
 
@@ -265,9 +293,12 @@ Domain target: `cards.eq.solutions` via Netlify custom domain. **Do not cross-de
 | `Unauthorized` on first Supabase call | Anon key wrong, or RLS blocking | Verify dart-defines + RLS policies in dashboard |
 | OTP arrives but `verifyOTP` fails | Wrong `OtpType` or template mismatch | Supabase Auth → Phone settings, verify Twilio config |
 | `flutter analyze` shows part-file errors | `.g.dart` / `.freezed.dart` missing | Step 4 (`--delete-conflicting-outputs`) |
-| Photo upload fails with 403 | Storage RLS not applied | Re-run migration `0003`, check `licence-photos` bucket exists and is private |
+| Photo upload fails with 403 | Storage RLS not applied | Check `licence-photos` RLS on eq-canonical; path must be `{tenant_id}/{staff_id}/{licence_id}/{slot}` |
 | Web build fails on `dart:io` | Plugin trying mobile-only code on web | Check `kIsWeb` guards (architecture §11.5) — file an issue if a file slipped through |
 | Hot reload broken on web | Code-gen out of date | `dart run build_runner build --delete-conflicting-outputs` again |
+| Cards shows old auth screen after deploy | Stale service-worker cache | Hard-reload (`Ctrl+Shift+R`) or clear site data in browser DevTools; SW kill-switch should handle it automatically |
+| `setSession` fails on iframe handoff | `#sh=<jwt>` hash not present or token expired | Shell must mint a fresh token via `mint-cards-iframe-token`; check Shell logs |
+| Licences list returns empty on eq-canonical | `eq_cards_list_my_licences` RPC not found | Migration `2026_05_21_eq_cards_rpcs` may not have been applied; check Supabase MCP → list_migrations |
 
 ---
 
