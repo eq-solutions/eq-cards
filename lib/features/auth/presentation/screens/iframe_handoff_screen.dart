@@ -80,6 +80,13 @@ class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
     }
 
     try {
+      // Clear any prior session (e.g. a stale email-OTP session from
+      // before Unit 4) so the Shell JWT always wins. scope: local means
+      // no network call — just wipes localStorage.
+      await Supabase.instance.client.auth.signOut(
+        scope: SignOutScope.local,
+      );
+
       // gotrue's setSession is (refreshToken, {accessToken}). The shell
       // mints an HS256 access token, NOT a refresh token. Passing it
       // ONLY as positional arg would hit _callRefreshToken which POSTs
