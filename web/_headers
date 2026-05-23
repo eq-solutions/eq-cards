@@ -36,9 +36,11 @@
 # debug builds and by CanvasKit; release builds still need it for CanvasKit.
   Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://eu.i.posthog.com https://eu-assets.i.posthog.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' blob: data: https://www.gstatic.com https://hshvnjzczdytfiklhojz.supabase.co https://jvknxcmbtrfnxfrwfimn.supabase.co; connect-src 'self' blob: data: https://www.gstatic.com https://fonts.gstatic.com https://fonts.googleapis.com https://hshvnjzczdytfiklhojz.supabase.co wss://hshvnjzczdytfiklhojz.supabase.co https://jvknxcmbtrfnxfrwfimn.supabase.co wss://jvknxcmbtrfnxfrwfimn.supabase.co https://eu.i.posthog.com https://eu-assets.i.posthog.com https://*.sentry.io; manifest-src 'self'; worker-src 'self' blob:; frame-ancestors 'self' https://*.eq.solutions
 
-# Cache the Flutter bundle aggressively — it's content-addressed.
+# main.dart.js is NOT content-addressed (same filename across builds), so
+# immutable would cause browsers to serve a stale build indefinitely. Use
+# no-cache so every load revalidates against the CDN (304 if unchanged).
 /main.dart.js
-  Cache-Control: public, max-age=31536000, immutable
+  Cache-Control: public, no-cache, must-revalidate
 /flutter_service_worker.js
   Cache-Control: public, max-age=0, must-revalidate
 /index.html

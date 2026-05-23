@@ -2,9 +2,12 @@
 //
 // Cards no longer authenticates against its own Supabase. Instead, the
 // EQ Shell mints a canonical Supabase JWT and passes it to the Cards
-// iframe via the URL hash:
+// iframe via the URL hash on the handoff route:
 //
-//     https://cards.eq.solutions/#sh=<jwt>
+//     https://cards.eq.solutions/auth/handoff#sh=<jwt>
+//
+// Targeting /auth/handoff directly avoids a GoRouter redirect from "/"
+// that would strip the hash fragment before this screen can read it.
 //
 // This screen runs as the unauthenticated landing route. It:
 //
