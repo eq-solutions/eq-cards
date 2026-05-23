@@ -20,10 +20,6 @@
 //     "expiry_date": string,      // YYYY-MM-DD
 //     "holder_name": string | null
 //   }
-//
-// Error shapes:
-//   { "error": "licence_not_found" }  — 404
-//   { "error": "licence_id_required" } — 400
 
 const CORS_HEADERS = {
   'access-control-allow-origin': '*',
@@ -41,14 +37,14 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-interface LicenceRow {
-  licence_type: string;
-  licence_number: string;
-  state: string | null;
-  issuing_authority: string | null;
-  expiry_date: string;
-  profiles: { full_name: string | null } | null;
-}
+const REST_HEADERS = (key: string) => ({
+  'apikey': key,
+  'Authorization': `Bearer ${key}`,
+  'Accept': 'application/json',
+});
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -63,10 +59,6 @@ Deno.serve(async (req) => {
   if (!licenceId) {
     return jsonResponse({ error: 'licence_id_required' }, 400);
   }
-
-  // Basic UUID shape check — avoids injecting arbitrary strings into the query.
-  const UUID_RE =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!UUID_RE.test(licenceId)) {
     return jsonResponse({ error: 'invalid_licence_id' }, 400);
   }
@@ -77,41 +69,54 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'supabase_env_missing' }, 500);
   }
 
-  // PostgREST embedded resource join: licences → profiles(full_name).
-  // Service role bypasses RLS. deleted_at=is.null guards soft-deleted records.
-  const apiUrl =
+  const headers = REST_HEADERS(serviceRoleKey);
+
+  // Query 1 — licence row. licences.user_id has no direct FK to profiles
+  // (both reference auth.users), so embedded resource join isn't available;
+  // two separate queries is the clean path.
+  const licenceResp = await fetch(
     `${supabaseUrl}/rest/v1/licences` +
-    `?id=eq.${licenceId}` +
-    `&deleted_at=is.null` +
-    `&select=licence_type,licence_number,state,issuing_authority,expiry_date,profiles(full_name)` +
-    `&limit=1`;
-
-  const resp = await fetch(apiUrl, {
-    headers: {
-      'apikey': serviceRoleKey,
-      'Authorization': `Bearer ${serviceRoleKey}`,
-      'Accept': 'application/json',
-    },
-  });
-
-  if (!resp.ok) {
-    const text = await resp.text().catch(() => '');
-    console.error('supabase_rest_error', { status: resp.status, body: text });
+      `?id=eq.${licenceId}&deleted_at=is.null` +
+      `&select=licence_type,licence_number,state,issuing_authority,expiry_date,user_id` +
+      `&limit=1`,
+    { headers },
+  );
+  if (!licenceResp.ok) {
+    const text = await licenceResp.text().catch(() => '');
+    console.error('supabase_licence_error', { status: licenceResp.status, body: text });
     return jsonResponse({ error: 'database_error' }, 502);
   }
+  const licenceRows = (await licenceResp.json()) as Array<{
+    licence_type: string;
+    licence_number: string;
+    state: string | null;
+    issuing_authority: string | null;
+    expiry_date: string;
+    user_id: string;
+  }>;
 
-  const rows = (await resp.json()) as LicenceRow[];
-  if (!rows.length) {
+  if (!licenceRows.length) {
     return jsonResponse({ error: 'licence_not_found' }, 404);
   }
+  const licence = licenceRows[0];
 
-  const row = rows[0];
+  // Query 2 — holder's display name from profiles.
+  const profileResp = await fetch(
+    `${supabaseUrl}/rest/v1/profiles?id=eq.${licence.user_id}&select=full_name&limit=1`,
+    { headers },
+  );
+  let holderName: string | null = null;
+  if (profileResp.ok) {
+    const profileRows = (await profileResp.json()) as Array<{ full_name: string | null }>;
+    holderName = profileRows[0]?.full_name ?? null;
+  }
+
   return jsonResponse({
-    licence_type: row.licence_type,
-    licence_number: row.licence_number,
-    state: row.state,
-    issuing_authority: row.issuing_authority,
-    expiry_date: row.expiry_date,
-    holder_name: row.profiles?.full_name ?? null,
+    licence_type: licence.licence_type,
+    licence_number: licence.licence_number,
+    state: licence.state,
+    issuing_authority: licence.issuing_authority,
+    expiry_date: licence.expiry_date,
+    holder_name: holderName,
   });
 });
