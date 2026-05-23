@@ -1,11 +1,9 @@
-// Cards Unit 4 (2026-05-21) — email-OTP sign-in is gone. Cards now
-// authenticates via a JWT minted by the shell and passed in the
-// URL hash. See IframeHandoffScreen for the consumer.
-//
-// What's left here:
+// Auth repository — two sign-in paths:
+//   1. Shell handoff: JWT minted by Shell, passed via #sh= URL hash.
+//      acceptHandoff() applies it as the active Supabase session.
+//   2. Email OTP: user types email, receives a 6-digit code, verifies it.
+//      sendOtp() / verifyOtp() wrap the Supabase gotrue methods.
 //   - signOut() — the only outbound auth action the Cards UI takes
-//   - acceptHandoff() — applies a shell-minted JWT as the active
-//     Supabase session
 //   - Breadcrumb helpers for Sentry diagnostics
 
 import 'dart:async';
@@ -41,6 +39,36 @@ class AuthRepository {
       unawaited(_breadcrumb('handoff_accept_succeeded'));
     } catch (e) {
       unawaited(_breadcrumb('handoff_accept_failed', {'error': e.toString()}));
+      throw mapSupabaseError(e);
+    }
+  }
+
+  /// Send a 6-digit OTP to [email]. The Supabase project must have email OTP
+  /// enabled in Auth → Email → "Enable Email OTP" (distinct from magic links).
+  Future<void> sendOtp(String email) async {
+    unawaited(_breadcrumb('otp_send_started', {'email': email}));
+    try {
+      await _client.auth.signInWithOtp(email: email);
+      unawaited(_breadcrumb('otp_send_succeeded'));
+    } catch (e) {
+      unawaited(_breadcrumb('otp_send_failed', {'error': e.toString()}));
+      throw mapSupabaseError(e);
+    }
+  }
+
+  /// Verify the 6-digit [token] for [email]. On success, Supabase establishes
+  /// a session; GoRouter's auth listener picks it up and redirects.
+  Future<void> verifyOtp(String email, String token) async {
+    unawaited(_breadcrumb('otp_verify_started'));
+    try {
+      await _client.auth.verifyOTP(
+        email: email,
+        token: token,
+        type: OtpType.email,
+      );
+      unawaited(_breadcrumb('otp_verify_succeeded'));
+    } catch (e) {
+      unawaited(_breadcrumb('otp_verify_failed', {'error': e.toString()}));
       throw mapSupabaseError(e);
     }
   }

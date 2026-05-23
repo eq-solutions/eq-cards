@@ -1,10 +1,13 @@
 abstract class Routes {
   static const splash = '/';
 
-  // Cards Unit 4 (2026-05-21) — replaces email/otp with iframe handoff.
-  // The legacy /auth/email and /auth/otp routes are gone; any external
-  // bookmark to them lands on /auth/handoff via the redirect logic.
+  // Handoff — reads #sh=<jwt> from the URL hash and calls setSession.
+  // Used by the Shell to inject a session token into the Cards iframe.
   static const handoff = '/auth/handoff';
+
+  // Email OTP — direct sign-in for users accessing Cards outside the Shell.
+  static const email = '/auth/email';
+  static const otp = '/auth/otp';
 
   static const home = '/home';
   static const profile = '/profile';

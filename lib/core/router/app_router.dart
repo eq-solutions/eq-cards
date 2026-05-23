@@ -32,11 +32,20 @@ GoRouter appRouter(AppRouterRef ref) {
         path: Routes.splash,
         builder: (context, state) => const _SplashScreen(),
       ),
-      // Cards Unit 4 (2026-05-21) — sole auth entry point. Reads
-      // #sh=<jwt> from the URL hash and calls Supabase.auth.setSession.
+      // Shell handoff — reads #sh=<jwt> from URL hash and calls setSession.
+      // Redirects to /auth/email if no token is present in the hash.
       GoRoute(
         path: Routes.handoff,
         builder: (context, state) => const IframeHandoffScreen(),
+      ),
+      // Email OTP — direct sign-in outside the Shell.
+      GoRoute(
+        path: Routes.email,
+        builder: (context, state) => const EmailEntryScreen(),
+      ),
+      GoRoute(
+        path: Routes.otp,
+        builder: (context, state) => const OtpScreen(),
       ),
       // Legal documents — top-level routes outside the shell so they can be
       // reached from anywhere (Settings, share sheet, etc.) and present as
@@ -146,7 +155,7 @@ String? _redirect(BuildContext context, GoRouterState state) {
   }
   if (isSignedIn && isAuthRoute) return Routes.licencesList;
   if (!isSignedIn && !isAuthRoute && !isLegalRoute && !isShareRoute) {
-    return Routes.handoff;
+    return Routes.email;
   }
   return null;
 }

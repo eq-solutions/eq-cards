@@ -25,8 +25,10 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../../core/router/routes.dart';
 import '../../../../core/theme/eq_colours.dart';
 import '../../../../core/theme/eq_spacing.dart';
 import '../../../../core/theme/eq_typography.dart';
@@ -43,7 +45,6 @@ class IframeHandoffScreen extends ConsumerStatefulWidget {
 
 class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
   String? _error;
-  bool _hasToken = false;
 
   @override
   void initState() {
@@ -53,13 +54,14 @@ class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
 
   Future<void> _consumeHash() async {
     if (!kIsWeb) {
-      setState(() => _error = 'Open EQ Cards via your tenant shell.');
+      if (mounted) context.go(Routes.email);
       return;
     }
 
     final hash = HandoffPlatform.currentHash();
     if (hash.isEmpty || !hash.contains('sh=')) {
-      setState(() => _error = null); // no token; show prompt
+      // No shell token — send user to the email OTP flow.
+      if (mounted) context.go(Routes.email);
       return;
     }
 
@@ -73,8 +75,6 @@ class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
       );
       return;
     }
-
-    setState(() => _hasToken = true);
 
     try {
       // gotrue's setSession is (refreshToken, {accessToken}). The shell
@@ -100,10 +100,7 @@ class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
     }
   }
 
-  void _openShell() {
-    if (!kIsWeb) return;
-    HandoffPlatform.redirectTo('https://core.eq.solutions');
-  }
+  void _goToEmail() => context.go(Routes.email);
 
   @override
   Widget build(BuildContext context) {
@@ -126,27 +123,14 @@ class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
                   ),
                   const SizedBox(height: EqSpacing.lg),
                   Text(
-                    _hasToken && _error == null
-                        ? 'Signing you in…'
-                        : _error == null
-                            ? 'EQ Cards'
-                            : 'Sign-in failed',
+                    _error != null ? 'Sign-in failed' : 'Signing you in…',
                     style: EqTypography.headingL.copyWith(
                       fontWeight: FontWeight.w700,
                       color: EqColours.deep,
                     ),
                   ),
                   const SizedBox(height: EqSpacing.md),
-                  if (_hasToken && _error == null)
-                    const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        color: EqColours.sky,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  else if (_error != null)
+                  if (_error != null)
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -158,34 +142,23 @@ class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
                         ),
                         const SizedBox(height: EqSpacing.lg),
                         FilledButton(
-                          onPressed: _openShell,
+                          onPressed: _goToEmail,
                           style: FilledButton.styleFrom(
                             backgroundColor: EqColours.sky,
                             minimumSize: const Size.fromHeight(48),
                           ),
-                          child: const Text('Open my tenant shell'),
+                          child: const Text('Sign in with email'),
                         ),
                       ],
                     )
                   else
-                    Column(
-                      children: [
-                        Text(
-                          'EQ Cards is part of the EQ Solutions platform. Open Cards through your tenant shell to sign in.',
-                          style: EqTypography.bodyM
-                              .copyWith(color: EqColours.grey),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: EqSpacing.lg),
-                        FilledButton(
-                          onPressed: _openShell,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: EqColours.sky,
-                            minimumSize: const Size.fromHeight(48),
-                          ),
-                          child: const Text('Open my tenant shell'),
-                        ),
-                      ],
+                    const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        color: EqColours.sky,
+                        strokeWidth: 2,
+                      ),
                     ),
                 ],
               ),
