@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -20,6 +21,11 @@ const _posthogHost = String.fromEnvironment(
 );
 
 Future<void> main() async {
+  // Path-based URLs — required for the #sh=<jwt> Shell handoff. Hash strategy
+  // would treat #sh=<jwt> as a route path; path strategy treats it as a URL
+  // fragment so GoRouter sees "/" and IframeHandoffScreen reads the hash.
+  usePathUrlStrategy();
+
   // Single runZonedGuarded around everything: binding init, plugin setup, Sentry
   // init (without `appRunner` — we call runApp ourselves), and runApp all
   // execute in the same zone. This avoids the "Zone mismatch" assertion that
