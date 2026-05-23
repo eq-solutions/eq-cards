@@ -14,3 +14,10 @@
   # set as Netlify env vars, which we don't want to do until production
   # secrets are reviewed.
   command = ""
+
+# SPA routing — all paths serve index.html so go_router handles the route
+# (required for /share?licence_id=... deep links to work on direct access).
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200

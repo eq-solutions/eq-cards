@@ -18,6 +18,9 @@ abstract class Routes {
   static const privacyPolicy = '/legal/privacy';
   static const termsOfUse = '/legal/terms';
 
+  // D2: public licence-verification page — no auth required.
+  static const share = '/share';
+
   /// URL builders for path-parameter routes. Use these instead of hand-rolled
   /// string interpolation so the route shapes stay in one place.
   static String licenceDetailFor(String id) => '/licences/$id';

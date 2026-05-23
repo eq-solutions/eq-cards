@@ -384,6 +384,11 @@ deno_version = 2
 [functions.ocr-licence]
 verify_jwt = false
 
+# share-licence: fully public endpoint — no JWT required. Licence IDs are
+# 128-bit UUIDs (unguessable). Service role key is used server-side only.
+[functions.share-licence]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

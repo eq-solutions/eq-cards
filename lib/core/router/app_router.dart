@@ -49,6 +49,15 @@ GoRouter appRouter(AppRouterRef ref) {
         path: Routes.termsOfUse,
         builder: (context, state) => LegalDocumentScreen.terms(),
       ),
+      // D2: public licence-verification page — no auth required.
+      // Reached by scanning a QR code from a tradie's EQ Cards wallet.
+      GoRoute(
+        path: Routes.share,
+        builder: (context, state) {
+          final licenceId = state.uri.queryParameters['licence_id'] ?? '';
+          return ShareLicenceScreen(licenceId: licenceId);
+        },
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navShell) =>
             HomeShellScreen(navigationShell: navShell),
@@ -129,12 +138,16 @@ String? _redirect(BuildContext context, GoRouterState state) {
   // Legal documents are reachable without sign-in so users can review the
   // Privacy Policy and Terms before sign-in.
   final isLegalRoute = loc.startsWith('/legal/');
+  // /share is a public licence-verification page — no sign-in needed.
+  final isShareRoute = loc.startsWith('/share');
 
   if (loc == Routes.splash || loc == Routes.home) {
     return isSignedIn ? Routes.licencesList : Routes.handoff;
   }
   if (isSignedIn && isAuthRoute) return Routes.licencesList;
-  if (!isSignedIn && !isAuthRoute && !isLegalRoute) return Routes.handoff;
+  if (!isSignedIn && !isAuthRoute && !isLegalRoute && !isShareRoute) {
+    return Routes.handoff;
+  }
   return null;
 }
 

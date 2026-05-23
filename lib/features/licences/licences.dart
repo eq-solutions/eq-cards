@@ -7,3 +7,4 @@ export 'presentation/screens/licence_detail_screen.dart'
 export 'presentation/screens/licence_edit_screen.dart'
     show LicenceEditScreen, LicencePrefill;
 export 'presentation/screens/licences_list_screen.dart' show LicencesListScreen;
+export 'presentation/screens/share_licence_screen.dart' show ShareLicenceScreen;

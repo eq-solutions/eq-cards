@@ -76,11 +76,6 @@ class LicenceDetailScreen extends ConsumerWidget {
     );
   }
 
-  /// Share-via-QR sheet. Phase 1 implementation: encodes a placeholder URL
-  /// of the form `https://cards.eq.solutions/share?licence_id=<id>`. The
-  /// actual share-redeem endpoint is documented in ARCHITECTURE §18.2 and
-  /// scheduled for Phase 2 — for now the QR is demoware that proves the
-  /// flow works end-to-end and lets us count `qr_generated` events.
   Future<void> _showShareSheet(BuildContext context, Licence licence) async {
     final url = 'https://cards.eq.solutions/share?licence_id=${licence.id}';
     unawaited(
@@ -102,10 +97,9 @@ class LicenceDetailScreen extends ConsumerWidget {
               Text('Share this licence', style: EqTypography.headingM),
               const SizedBox(height: EqSpacing.sm),
               Text(
-                'Preview — the import endpoint goes live with the next '
-                'release. For now the QR encodes a placeholder URL so we '
-                'can validate the flow end-to-end. Tap "Copy link" to grab '
-                'it for testing.',
+                'Anyone who scans this code can view your licence details. '
+                'Share it with a supervisor or site manager to verify your '
+                'card on the spot.',
                 style: EqTypography.bodyM.copyWith(color: EqColours.grey),
               ),
               const SizedBox(height: EqSpacing.lg),
