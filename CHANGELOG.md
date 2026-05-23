@@ -6,6 +6,107 @@ All notable changes to EQ Cards are documented here. Format follows
 
 ## [Unreleased]
 
+### 2026-05-23 — Post-Unit-4 polish (commits `aa43666`, `9afd10c`, `9629fa6`, `2996fb9`, `dad4ad8`, `0471433`, `7db6d3d`)
+
+Six targeted fixes and one feature restore shipped the day after Unit 4 merge.
+
+- **Email-OTP sign-in restored alongside Shell handoff (commit `aa43666`).** Unit 4
+  initially shipped Shell-only auth. This restores a two-path flow:
+  - **Path 1 (Shell iframe):** `#sh=<jwt>` in URL hash → `IframeHandoffScreen` →
+    `setSession` → `/licences`.
+  - **Path 2 (direct / standalone):** no hash → `/auth/email` → email OTP →
+    `/auth/otp` → `/licences`.
+  New files: `email_entry_screen.dart`, `otp_screen.dart`, `auth_flow_notifier.dart`,
+  `auth_flow_state.dart`, `Routes.email`, `Routes.otp`. `IframeHandoffScreen`
+  no-hash branch routes to `/auth/email`. All paths land in the same Supabase session
+  on eq-canonical.
+- **Live licence-share QR + canonical token alignment (commit `7db6d3d`).** QR share
+  moved from demoware to live: token aligned to eq-canonical, share URL updated.
+- **Share-licence fix: two-query pattern (commit `0471433`).** Switched from a join
+  query to a two-query pattern to avoid missing FK join on the eq-canonical schema.
+- **Redirect fix: `core.eq.solutions` not apex (commit `dad4ad8`).** Open-shell
+  (no EQ Shell context) now redirects to the Shell at `core.eq.solutions` instead of
+  the apex domain.
+- **SW kill-switch (commits `2996fb9`, merge `9629fa6`).** Service worker reset
+  deployed for users stuck on the pre-Unit-4 cached build. Sends `SKIP_WAITING` to
+  any registered service worker then reloads.
+- **CSP: eq-canonical added to `_headers` (commit `9afd10c`).** All CSP directives now
+  include `jvknxcmbtrfnxfrwfimn.supabase.co` alongside the legacy project. Both
+  projects allowed during the rollback window.
+
+---
+
+### 2026-05-21–22 — Unit 4: canonical flip + Shell SSO (branch commit `0d14c50`, fixes `6b55b22` `e765846` `11f8712`, merge `cd00fc1`)
+
+The major architectural shift: Cards Flutter app flipped from the legacy per-module
+Supabase project (`hshvnjzczdytfiklhojz`) to eq-canonical (`jvknxcmbtrfnxfrwfimn`).
+Auth switched to EQ Shell JWT handoff. Resolves `ARCHITECTURE.md §18` reconciliation.
+
+#### Schema / RPCs applied to eq-canonical
+
+Four migrations applied to eq-canonical via MCP:
+
+- `2026_05_21_eq_cards_rpcs` — `eq_cards_list_my_licences`,
+  `eq_cards_upsert_my_licence(jsonb)`, `eq_cards_soft_delete_my_licence`. Bridge RPCs
+  that handle column renames so Flutter models stay unchanged.
+- `2026_05_21_staff_personal_fields_for_cards` — 8 columns added to `app_data.staff`
+  (DOB, address fields, emergency contact) so Cards keeps the same profile shape.
+  Backfilled for Royce.
+- `2026_05_21_eq_cards_profile_rpcs` — `eq_cards_current_staff` +
+  `eq_cards_upsert_my_profile`.
+- `2026_05_21_licence_photos_policies_phase_1f` — Dropped stale `user_metadata`-based
+  `licence_photos_*` policies; recreated against `app_metadata.tenant_id`. New path
+  convention: `{tenant_id}/{staff_id}/{licence_id}/{slot}.jpg`.
+
+#### Flutter changes
+
+- New `IframeHandoffScreen` reads `#sh=<jwt>` from URL hash, calls
+  `Supabase.auth.setSession(token, accessToken: token)`, then GoRouter lands on
+  `/licences`. `dart:html` behind conditional import so `flutter test` (VM target)
+  loads cleanly.
+- Auth screens from email-OTP era deleted in this commit (restored in `aa43666`
+  the next day; see above).
+- `LicenceRepository.getAllForCurrentUser` / `upsert` / `softDelete` call the
+  `eq_cards_*` RPCs. `licenceToUpsertPayload` no longer takes `userId` (RPC resolves
+  `staff_id` server-side from JWT).
+- `ProfileRepository.getCurrent` / `upsert` call `eq_cards_current_staff` /
+  `eq_cards_upsert_my_profile`. `profileToUpsertPayload` no longer sends `id`.
+- `PhotoUpload` paths updated to `{tenant_id}/{staff_id}/{licence_id}/{slot}`.
+- Router: `/auth/email` + `/auth/otp` removed, `/auth/handoff` added as the sole
+  unauthenticated route. `_redirect` sends unsigned users to `/auth/handoff`.
+- New `.dart-defines.prod.json` pointing at `jvknxcmbtrfnxfrwfimn`.
+
+#### Unit 4 fixes
+
+- **`6b55b22`** — `setSession` requires keyword arg: `(token, accessToken: token)`.
+- **`e765846`** — `tenant_id` must be read from the JWT `app_metadata`, not
+  `currentUser.appMetadata` (which was always null).
+- **`11f8712`** — Disabled the service worker; it was caching the old auth flow
+  inside the Shell iframe, causing silent auth failures after deploy.
+
+**Tests after Unit 4:** 190 passing (`flutter analyze` clean; 6 email-auth tests
+deleted in step 1, restored in `aa43666`).
+
+---
+
+### 2026-05-21 — Unit 3: data migration script (commit `df521a9`)
+
+`scripts/migrate-to-canonical.ts`: one-time migration of Cards Supabase
+(`hshvnjzczdytfiklhojz`) `profiles` + `licences` → eq-canonical
+(`jvknxcmbtrfnxfrwfimn`) `app_data.staff` + `app_data.licences`.
+
+- Writes via `eq_intake_commit_batch` RPC (not direct INSERT).
+- Idempotent: `imported_from = 'eq_cards_supabase_2026_05_20'` dedup key.
+- Photo migration: `Cards licence-photos` bucket → canonical
+  `tenant-{tenant_id}` bucket with `licences/{licence_id}/{side}.jpg` paths.
+- Dry-run by default; `--apply` required for writes.
+- Per-intake rollback via `eq_intake_rollback` RPC.
+- `scripts/README.md` added with usage instructions + safety properties.
+
+**Migration run completed.** Data is live on eq-canonical.
+
+---
+
 ### 2026-05-21 — Onboarding-walkthrough polish (merge `94fd7c5`, branch commit `6c10d53`)
 
 Six fixes flagged by Royce after watching a real user upload a licence
@@ -34,6 +135,115 @@ untouched.
   no longer set up a dead-URL surprise.
 
 Quality after the merge: `flutter analyze` clean, `flutter test` 196/196.
+
+---
+
+### 2026-05-20 — Pilot readiness: email-OTP + Polish packs A+B+C + iframe embed
+
+Three sessions on 2026-05-20 hardened Cards for real testers before the SKS-tester
+URL went live.
+
+#### Auth: email OTP (commit `33fcaeb`)
+
+Phone-OTP + Twilio dependency dropped. Auth now uses Supabase's built-in mailer —
+free for low volume and no Twilio billing or account required for a 5–50 tester
+pilot.
+
+- `phone_entry_screen.dart` → `email_entry_screen.dart`. Validates with
+  `validateEmail()`, lowercases + trims, explains "new accounts created on first
+  sign-in" so testers don't hunt for a signup button.
+- `AuthRepository.sendOtp` / `verifyOtp` take `email` instead of `phone`;
+  Supabase calls switched to `signInWithOtp(email:)` and
+  `verifyOTP(email:, type: OtpType.email)`.
+- OTP screen copy updated: "Sent to `<email>`" with spam/60-min-expiry hint.
+  PILOT_MODE banner removed.
+- Analytics: `signup_completed` method changed from `'phone'` to `'email'`.
+- `docs/PRIVACY-POLICY.md` + `TERMS-OF-USE.md` updated: email as sign-in
+  identifier; Twilio removed from sub-processor table.
+- `ARCHITECTURE.md §16 Q4` marked superseded; platform-parity table updated.
+- 195 tests pass (was 194 — +1 empty-email validation case).
+
+Note: `aus_phone.dart` kept — `mobile` is still a profile field for tap-to-copy
+onto site induction forms; it's a contact field, not an auth identifier.
+
+#### Netlify: `netlify.toml` + `.netlify/` ignore (commit `fa3bb77`)
+
+Added `netlify.toml` with site ID `c1bf4b4d-3131-4dd6-977f-2c0dd5cc4d72`,
+`publish = "build/web"`, SPA redirect (`/*` → `/index.html` for go_router deep
+links), and a comment explaining that GitHub auto-deploy is NOT wired.
+
+#### Legal docs: entity placeholders filled (commit `3f39990`)
+
+`docs/PRIVACY-POLICY.md` + `docs/TERMS-OF-USE.md` entity placeholders replaced
+with real names (CDC Solutions Pty Ltd / EQ Solutions) for pilot launch.
+
+#### Polish packs A+B+C (commit `0757115`)
+
+528 lines across 11 files; 196/196 tests pass.
+
+**Pack A — Risk mitigation:**
+- **A1 — OCR rate-limit.** 20 calls/hour/user enforced server-side via new
+  `check_and_record_ocr_usage` SECURITY DEFINER RPC + `public.ocr_usage` table
+  (migration `0005_ocr_rate_limit.sql`). Atomic — two concurrent calls can't both
+  pass the boundary. Edge Function `ocr-licence` v9 calls it first; over-limit
+  returns HTTP 429 → Flutter shows "you've used your 20 magic-scans for the hour."
+  Closes the unbounded-cost risk (~A$0.005/call × unbounded = problem).
+- **A2 — Privacy consent toggles.** Analytics opt-out + crash-reporting opt-out
+  now exist. `lib/core/privacy/privacy_prefs.dart` (static cache +
+  `shared_preferences` I/O). `AnalyticsService.track` / `identify` early-return
+  when opted out; Sentry `beforeSend` returns `null`. Hydrated in `main()` before
+  either SDK initialises. Default: opted in.
+
+**Pack B — First-tester experience:**
+- **B3 — Splash branding.** Replaced bare `CircularProgressIndicator` with EQ
+  launcher mark + "EQ Cards" name + sky-coloured spinner.
+- **B4 — Help & feedback in Settings.** Dedicated section with "Get help" +
+  "Send feedback" rows. Both compose a prefilled `mailto:contact@eq.solutions`.
+  Address standardised from `support@` to `contact@eq.solutions`. Sign-out copy
+  updated from "phone" to "email".
+
+**Pack C — Reliability:**
+- **C1 — OCR loading copy.** "First scan of the day may take a few seconds while
+  we warm up the magic-scanner" sets cold-start expectations.
+- **C3 — Error state on licences list.** New `_ListErrorState` widget:
+  `NotAuthenticatedFailure` / JWT errors → "Sign in again" CTA; everything else
+  → "Try again" CTA. Context-appropriate icon (lock vs cloud-off).
+
+Migration `0005_ocr_rate_limit.sql` applied to live `hshvnjzczdytfiklhojz` via
+Supabase MCP. Edge Function `ocr-licence` v9 deployed.
+
+#### iframe-embed support (commit `9bcd02c`)
+
+EQ Shell at `<tenant>.eq.solutions` can now mount Cards via iframe at
+`/:tenant/cards`. Two changes to `web/_headers`:
+- Dropped `X-Frame-Options: DENY` (not granular enough; `ALLOW-FROM` is
+  deprecated).
+- `frame-ancestors 'self' https://*.eq.solutions` — only eq.solutions subdomains
+  can frame Cards.
+
+Note: this is a visual-embedding change only. Cross-origin data access still goes
+through the §18 protocol when built.
+
+---
+
+### 2026-05-19 — Agent-review security + UX sweep (commits `3a7045b`, `c63d30c`, `43db5f9`)
+
+Three batches of improvements from an independent agent-review pass:
+
+- **Batch 1 — Security + correctness (`3a7045b`).** SQL injection prevention in
+  Supabase queries; auth-guard edge cases hardened; RLS policy audit.
+- **Batch 2 — UX additions (`c63d30c`).** Pilot banner added; help UI improved;
+  OCR verify flow; wedge promise clarified in UI copy.
+- **Batch 3 — Doc + gitignore hygiene (`43db5f9`).** `.gitignore` tightened;
+  stale doc references cleaned up.
+
+---
+
+### 2026-05-13 — Repo hygiene (commit `aa7926f`)
+
+Added `.gitattributes` — normalise text files to LF across platforms.
+
+---
 
 ### 2026-04-29 overnight (continued) — Battle-test push + tiered-product framing
 

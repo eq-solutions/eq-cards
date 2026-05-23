@@ -1,250 +1,314 @@
 # EQ Cards — Current Status
 
-**Last updated:** 2026-05-21 (post-onboarding-walkthrough polish)
-**Posture:** Pause-and-polish + reauthorized UX/robustness work. Schema still frozen.
+**Last updated:** 2026-05-24
+**Posture:** Active — Unit 4 (canonical flip + Shell SSO) shipped. App is live at
+`cards.eq.solutions`, iframe-embedded in EQ Shell at `core.eq.solutions/:tenant/cards`.
 
 ---
 
-## Latest (2026-05-21) — Onboarding-walkthrough polish
+## What shipped (2026-05-20 → 2026-05-23)
 
-Single merge commit `94fd7c5` (branch commit `6c10d53`). Royce walked
-a real user through licence onboarding, caught a "scan button missing"
-moment, and authorised a broader sweep of the same flow. Six items, all
-in `lib/features/{auth,licences,settings}/presentation/`:
+### 2026-05-20 — Pilot readiness: email-OTP + polish + iframe embed
 
-- **Cropper action button labelled "Scan licence"** on web + iOS (Android
-  uses the checkmark icon + "Frame your licence" toolbar title). Cropper
-  config extracted to `lib/features/licences/presentation/helpers/licence_crop.dart`
-  and reused by both the OCR-scan flow (list screen) and the photo-replace
-  flow (edit screen). Edit-screen photos now go through the same JPEG-85
-  + crop path so storage stays tidy.
-- **Skip-OCR actually skips.** Previously the "Skip OCR, fill manually"
-  button just dismissed the dialog while OCR kept running invisibly, then
-  auto-navigated 5-10s later with the prefill the user had asked to skip.
-  Now races OCR vs cancel via `Future.any`; user-skip immediately
-  navigates with photo-only (no prefill) and shows a confirming snackbar.
-- **Privacy Act collection notice** wired into the email entry screen as
-  tappable Privacy Policy + Terms of Use links below the Send code button.
-  Switched the Padding to `SingleChildScrollView` so the column survives
-  small viewports (fixed a 5px overflow that broke 6 widget tests).
-- **Get help / Send feedback** previously built a `mailto:` URI then
-  dropped it on the floor. User got a snackbar telling them to email an
-  address with no compositional help. Replaced with a copy-ready composer
-  dialog showing To/Subject/Body in a monospaced block + a "Copy email"
-  action. No new dependency added (deliberately avoiding `url_launcher`
-  until that's a thumbs-up).
-- **QR-share copy softened** to reflect Phase 2 status — was promising
-  "Scan with another EQ Solutions app" when the share-redeem endpoint
-  doesn't exist yet. Onboarding demos no longer set up a dead-URL surprise.
+Three back-to-back sessions hardened Cards for real testers:
 
-**Quality after the merge:** `flutter analyze` No issues · `flutter test`
-196/196 passing.
+- **Auth: email OTP (commit `33fcaeb`).** Phone-OTP + Twilio dependency dropped. Auth now
+  uses Supabase's built-in mailer: `/auth/email` → enter address → 6-digit code → session.
+  `validateEmail()` validator, breadcrumb masks email. 195 tests pass after rename +
+  rewrite of `phone_entry_screen_test`.
+
+- **Netlify: `netlify.toml` + site config (commit `fa3bb77`).** Site ID
+  `c1bf4b4d-3131-4dd6-977f-2c0dd5cc4d72`. Deploys are manual (`netlify deploy --prod`
+  or drag-drop). GitHub auto-deploy is explicitly NOT wired — production releases are
+  gated by an explicit step per global EQ rules.
+
+- **Polish packs A+B+C (commit `0757115`).** 528 lines across 11 files, 196/196 passing.
+
+  - **A1 — OCR rate-limit.** 20 calls/hour/user enforced server-side via a new
+    `check_and_record_ocr_usage` RPC + `public.ocr_usage` table (migration 0005).
+    Edge Function `ocr-licence` v9 calls it before forwarding to Anthropic; over-limit
+    returns HTTP 429 → Flutter shows "you've used your 20 magic-scans for the hour."
+    Closes the unbounded-cost risk.
+
+  - **A2 — Privacy consent toggles.** Analytics opt-out + crash-reporting opt-out wired.
+    `lib/core/privacy/privacy_prefs.dart` (SharedPreferences). `AnalyticsService` and
+    Sentry's `beforeSend` hook both read the prefs; hydrated in `main()` before SDKs
+    init. Default: opted in (matches Privacy Policy).
+
+  - **B3 — Splash branding.** Replaced bare `CircularProgressIndicator` with EQ launcher
+    mark + "EQ Cards" name + sky spinner.
+
+  - **B4 — Help & feedback in Settings.** Dedicated section with "Get help" + "Send
+    feedback" rows. Both compose a prefilled `mailto:contact@eq.solutions`. Sign-out
+    copy updated from "phone" to "email" (stale copy from phone-OTP era).
+
+  - **C1 — OCR loading copy.** "First scan of the day may take a few seconds while we
+    warm up the magic-scanner" sets the cold-start expectation.
+
+  - **C3 — Error state on licences list.** `_ListErrorState` widget: detects
+    `NotAuthenticatedFailure` → "Sign in again" CTA; everything else → "Try again."
+
+- **iframe-embed support (commit `9bcd02c`).** EQ Shell at `<tenant>.eq.solutions` now
+  mounts Cards via iframe at `/:tenant/cards`. Changes to `web/_headers`:
+  - Dropped `X-Frame-Options: DENY` in favour of granular CSP `frame-ancestors`.
+  - `frame-ancestors 'self' https://*.eq.solutions` — only eq.solutions subdomains
+    can frame Cards; everything else blocked.
+
+- **Legal docs filled (commit `3f39990`).** Entity placeholders in
+  `docs/PRIVACY-POLICY.md` + `docs/TERMS-OF-USE.md` replaced with real names for
+  pilot launch.
+
+### 2026-05-21 — Unit 3: Data migration to eq-canonical (commit `df521a9`)
+
+One-time migration script (`scripts/migrate-to-canonical.ts`) migrates EQ Cards data
+from the legacy Supabase project (`hshvnjzczdytfiklhojz`) to eq-canonical
+(`jvknxcmbtrfnxfrwfimn`):
+
+- Writes via `eq_intake_commit_batch` RPC (not direct INSERT) — idempotent, safe to
+  re-run.
+- Dry-run by default; `--apply` flag required for writes.
+- Photos: `licence-photos` bucket → canonical `tenant-{tenant_id}` bucket, path
+  `licences/{licence_id}/{side}.jpg`.
+- Per-intake rollback via `eq_intake_rollback` RPC.
+
+**Migration is complete.** The old project is kept live for the rollback window; CSP
+allows both.
+
+### 2026-05-21–22 — Unit 4: Canonical flip + Shell SSO (merge `cd00fc1`)
+
+The Flutter app now reads/writes from eq-canonical (`jvknxcmbtrfnxfrwfimn`) via
+`public.eq_cards_*` RPCs. Auth is primarily Shell JWT handoff.
+
+**Schema/RPC migrations applied to eq-canonical:**
+- `2026_05_21_eq_cards_rpcs` — `eq_cards_list_my_licences`, `eq_cards_upsert_my_licence`,
+  `eq_cards_soft_delete_my_licence`
+- `2026_05_21_staff_personal_fields_for_cards` — 8 extra columns on `app_data.staff`
+  (DOB, address, emergency contact) backfilled for Royce
+- `2026_05_21_eq_cards_profile_rpcs` — `eq_cards_current_staff` + `eq_cards_upsert_my_profile`
+- `2026_05_21_licence_photos_policies_phase_1f` — licence-photos RLS updated to
+  `app_metadata.tenant_id`; path convention: `{tenant_id}/{staff_id}/{licence_id}/{slot}.jpg`
+
+**Flutter changes:**
+- New `IframeHandoffScreen`: reads `#sh=<jwt>` from URL hash → `setSession` → `/licences`.
+- Auth screens from email-OTP era deleted (Unit 4 initially shipped Shell-only; see Unit 4.1
+  below for the restore).
+- `LicenceRepository`, `ProfileRepository`, `PhotoUpload` all updated to use RPCs and the
+  new canonical photo path.
+
+**Unit 4 fixes:**
+- `6b55b22` — `setSession(token, accessToken: token)` — correct keyword arg.
+- `e765846` — Read `tenant_id` from `app_metadata` via JWT, not `currentUser.appMetadata`.
+- `11f8712` — Disabled the service worker (was caching the old auth flow in the Shell
+  iframe).
+
+**Tests after Unit 4:** 190 passing.
+
+### 2026-05-23 — Post-Unit-4 polish (commits `aa43666`, `9afd10c`, `9629fa6`, `2996fb9`, `dad4ad8`, `0471433`, `7db6d3d`)
+
+- **Email-OTP restored alongside Shell handoff (commit `aa43666`).** Unit 4 initially
+  dropped email-OTP (Shell-only). This commit restores a two-path auth flow:
+  - **Path 1 (Shell iframe):** `#sh=<jwt>` in URL hash → `IframeHandoffScreen` →
+    `setSession` → `/licences`.
+  - **Path 2 (direct / standalone):** no hash → `/auth/email` → email OTP →
+    `/auth/otp` → `/licences`.
+  Both paths land in the same authenticated Supabase session on eq-canonical.
+
+- **Live licence-share QR + canonical token alignment (commit `7db6d3d`, fix `0471433`).**
+  The QR share feature is now live (was demoware in v0.1.0). Token aligned to canonical;
+  two-query pattern to avoid missing FK join on the eq-canonical schema.
+
+- **SW kill-switch for stale cache (commits `2996fb9`, `9629fa6`).** Service worker
+  reset deployed for users stuck on the pre-Unit-4 build.
+
+- **CSP fix: eq-canonical in `_headers` (commit `9afd10c`).** Both Supabase projects
+  allowed in CSP during rollback window.
+
+- **Redirect fix (commit `dad4ad8`).** Open-shell (no EQ Shell context) redirect goes
+  to `core.eq.solutions` not the apex domain.
 
 ---
 
-## TL;DR
+## Current state
 
-EQ Cards v0.1.0 is **feature-complete for the wedge** (tap-to-copy on profile + licence fields), now with iPhone OCR fix, image cropping, search/filter/long-press, full Sentry breadcrumb trail, network retry, and a per-tab error boundary. Royce can dogfood end-to-end on iPhone PWA via Brave/Safari. Mobile native builds still deferred (Android Studio install required on the Windows host; iOS needs a Mac).
+### Auth flow
 
-Strategic context: the broader **EQ Intake** architecture (canonical schema spine + three intake doors + every export door) is being built in a parallel Cowork session. EQ Cards is one of the three intake doors. **No schema changes** in Cards until INTAKE Sprint-1 lands. UX/robustness work on existing flows is allowed and was completed overnight (see "Latest" below).
+| Entry point | Flow |
+|---|---|
+| EQ Shell iframe | `#sh=<jwt>` in URL hash → `IframeHandoffScreen` → `setSession` → `/licences` |
+| Direct / standalone | No hash → `/auth/email` → email OTP → `/auth/otp` → `/licences` |
 
-A separate `docs/PRODUCT-TIERS.md` covers the Starter → Pro → Enterprise framing across the EQ Solutions suite — drafted overnight, awaiting real-customer-conversation pricing data before any of it goes live.
+### Infrastructure
 
----
-
-## Latest (overnight 2026-04-29 PM)
-
-Four-tier overnight push, four local commits, all on `main`:
-
-- **1cc0351 — Tier 1: iPhone OCR fix + image cropping + error UX.** `image_cropper` re-added (was deferred Phase 1). New crop step between picker and OCR with ID-1 card aspect ratio default. OCR loading dialog. Errors surfaced via SnackBar (no more silent `catch (_)` swallow). Sentry breadcrumbs across the OCR pipeline.
-- **fd32ff2 — Tier 2: Search, filter, expiring-soon, long-press, onboarding.** Search field + 3 filter chips above the licence list. Long-press any card → quick-actions sheet (Open / Edit). First-launch tap-to-copy hint via SnackBar (persisted in shared_preferences). All wired without schema changes.
-- **5ad17c8 — Tier 3: iPhone PWA viewport tuning.** `viewport-fit=cover` so the sky AppBar paints into the iPhone notch. `maximum-scale=1` prevents iOS auto-zoom on input focus. Multiple `apple-touch-icon` sizes for clean Add-to-Home-Screen.
-- **2dddfb8 — Tier 4: Battle-testing.** Edge Function call now retries once on 5xx/network with 1.5s backoff (never on 4xx). 30s timeout. Sentry breadcrumb trail across auth + licence repos. Per-tab `_ShellErrorBoundary` so a build-phase exception in one tab renders a fallback instead of red-screening the app.
-- **`docs/PRODUCT-TIERS.md`** drafted — Starter → Pro → Enterprise framing across the EQ Solutions suite. Working draft; pricing numbers placeholder, await real-customer conversations.
-
-**Quality after the push:** `flutter analyze` No issues · `flutter test` 129/129 passing.
-
----
-
-## What's done
-
-### Code shipped this week
-
-- **Auth** — phone OTP via Supabase. AUS mobile validator. Auto-submit on 6-digit OTP.
-- **Profile** — full edit form, tap-to-copy on every row, "Copy all profile fields" induction-block button. Completion detection drives the home banner.
-- **Licences** — full CRUD. 13 pre-seeded Aus tradie licence types. Type-specific metadata fields. Camera capture (mobile) → on-device ML Kit OCR + parser. Web file picker → Anthropic Claude Vision via Supabase Edge Function. Photo upload (EXIF-stripped both paths). Signed URLs for private photos. Expiry badges.
-- **Magic-scanner OCR** — pre-fills `licence_number`, `licence_type`, `state`, `issuing_authority`, `issue_date`, `expiry_date` from a photo. State→authority fallback for driver licences (NSW→Service NSW, etc.).
-- **Alerts** — local notifications at 90 / 30 / 7 days before expiry (mobile only).
-- **Settings** — sign out, biometric toggle, app version, and a **3-direction Design picker** (Linear / Wallet / Photo-first) with persisted selection.
-- **Home shell** — 3-tab Material 3 NavigationBar, biometric gate, "Complete your profile" banner.
-- **Web companion** — `kIsWeb` guards on mobile-only plugins. PostHog JS snippet in `web/index.html`. CORS-safe Edge Function.
-- **QR sharing** — new bottom-sheet on licence detail with `qr_flutter`-rendered QR + Copy link. Encodes a placeholder URL (`cards.eq.solutions/share?licence_id=…`) until the §18.2 share-redeem endpoint exists.
-
-### Observability
-
-- **PostHog** — all 9 events from ARCHITECTURE §10.2 wired and verified flowing on web (EU host). Identity sync on auth state changes. `app_opened` → `signup_completed` → `copy_field` → `licence_added` → `licence_deleted` → `qr_generated` → `profile_field_filled` → `profile_completed` → `copy_induction_block`.
-- **Sentry** — DSN configured, `runZonedGuarded` wraps all of `main()` so uncaught zone errors capture cleanly. Verified by the historical "Zone mismatch" capture in the dashboard.
+| Service | URL / ID | Notes |
+|---|---|---|
+| **Supabase (primary)** | `jvknxcmbtrfnxfrwfimn` (eq-canonical) | All profile + licence data lives here post-Unit-4 |
+| Supabase (legacy rollback) | `hshvnjzczdytfiklhojz` | Read-only rollback; do not write to |
+| Edge Function (OCR) | `https://hshvnjzczdytfiklhojz.supabase.co/functions/v1/ocr-licence` | Still on legacy; redeploy to canonical when rollback window closes |
+| PostHog | `eq-production` project, EU host (`eu.i.posthog.com`) | All 9 v1 events wired |
+| Sentry | `eq-cards`, EU host | `runZonedGuarded` wraps `main()` |
+| **Live PWA** | `https://cards.eq.solutions` | Netlify, manual deploy, custom domain LIVE |
+| Shell embed | `https://core.eq.solutions/:tenant/cards` | Shell hands off JWT via `#sh=` hash |
+| Local dev | `http://localhost:8765/` | `flutter run -d edge --web-port=8765 --dart-define-from-file=.dart-defines.json` |
+| Netlify site ID | `c1bf4b4d-3131-4dd6-977f-2c0dd5cc4d72` | `netlify deploy --prod` from `build/web/` |
 
 ### Quality
 
-- `flutter analyze`: **No issues found.**
-- `flutter test`: **126 / 126 passing.** All 19 pre-existing failures from the 0.1.0 release are now green (12 golden baselines captured, 5 OCR parser bugs fixed, 2 ProfileEdit viewport tests fixed).
-- **All 3 design directions ship in production** behind the Settings → Design picker (decided 2026-04-29 PM — keep all 3 as a permanent user choice, not a review tool). Persisted via `shared_preferences`.
-- **Launcher icon: EQ infinity-loop mark.** Sky-on-white for iOS / web / Android legacy; white-on-sky adaptive for Android 8+ (parallax-capable). Source PNGs at `assets/icon/launcher.png` + `assets/icon/launcher_foreground.png`. Generated platform icons committed at the standard paths. In-app `Settings → Design → Linear` preview loads the same asset so it matches the home-screen icon.
-
-### Infra
-
-- Supabase project **`hshvnjzczdytfiklhojz`** (originally "EQ Assets") is now exclusively EQ Cards. Migrations 0001, 0002, 0003 applied.
-- Edge Function **`ocr-licence`** deployed (v7). Uses Anthropic Claude Sonnet 4.6 with a forced `extract_licence` tool. JWT verified manually inside the function (gateway `--no-verify-jwt` so CORS preflight works).
-- **Netlify drag-drop deploy** working. Production builds at `build/web/`. Auto-deploy via GitHub not yet wired.
+- `flutter analyze`: No issues found (as of Unit 4 merge `cd00fc1`)
+- `flutter test`: 190 passing (Unit 4); email-OTP restore added more — run `flutter test`
+  for the live count
 
 ---
 
-## What's paused
+## What's done (cumulative)
 
-Nothing in this list should be picked up unilaterally — wait for INTAKE Phase 1 to land or an explicit instruction.
+Full history in CHANGELOG.md. Key milestones:
 
-**Schema is frozen.** No new tables. **No new columns on `profiles` or `licences`.** The current shape is what we polish on; any data-model change waits for the canonical spine. (Reaffirmed by Cowork 2026-04-29.)
+- **v0.1.0 phase 1** — auth, profile, licences, OCR, alerts, settings, home shell
+- **Overnight sprints** — iPhone OCR fix, search/filter, battle-test, test coverage (+65 tests)
+- **Onboarding polish** — cropper UX, skip-OCR, legal links, support dialog (196/196)
+- **Agent-review security sweep** — correctness, UX, gitignore, doc hygiene
+- **Email-OTP pilot auth** — Twilio dependency dropped; Supabase mailer
+- **Polish packs A+B+C** — OCR rate-limit, privacy toggles, splash, help, error states
+- **iframe-embed support** — EQ Shell can frame Cards at `*.eq.solutions`
+- **Unit 3** — data migrated from legacy Supabase to eq-canonical
+- **Unit 4** — Flutter on eq-canonical, Shell JWT handoff, all RPCs updated
+- **Two-path auth** — Shell JWT (primary) + email-OTP (standalone/demos) live
+- **Live QR share** — canonical token alignment, two-query FK fix
+- **SW kill-switch** — users stuck on stale build reset automatically
+- **`cards.eq.solutions` custom domain** — LIVE on Netlify
 
-- Multi-tenant migration (`tenant_id`, `schema_version` columns) — spine work, not Cards work
-- New canonical entities (SWMS / prestarts / JSAs / toolbox / incidents / ITPs) — those land in the canonical project from day one, not in Cards
-- Share-redeem endpoint — external-consumer work, post-migration (the QR currently links to a stub URL; fine for the pause window)
-- Custom domain `cards.eq.solutions` (Netlify custom domain)
-- GitHub → Netlify auto-deploy wiring
-- Twilio production OTP delivery (test OTP via dashboard still required)
+---
+
+## What's next
+
+### 1. Per-tenant storage bucket policies
+
+Unit 4 moved photo paths to `{tenant_id}/{staff_id}/{licence_id}/{slot}.jpg` in the
+canonical Storage bucket. RLS on `licence-photos` was updated to scope by
+`app_metadata.tenant_id`. Per-tenant _bucket_ policies (one bucket per tenant prefix)
+are the natural next step for stronger isolation. Currently low-urgency — RLS is the
+guard and it works.
+
+### 2. OCR Edge Function — migrate to eq-canonical
+
+`ocr-licence` Edge Function v9 still lives on the legacy project
+(`hshvnjzczdytfiklhojz`). Once the rollback window closes:
+
+```bash
+supabase link --project-ref jvknxcmbtrfnxfrwfimn
+supabase functions deploy ocr-licence
+supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+```
+
+Then update `SUPABASE_URL` in `.dart-defines.prod.json` + `web/index.html` PostHog snippet.
+
+### 3. Legacy project teardown (after rollback window)
+
+Once eq-canonical is stable for a couple of weeks post-Unit-4:
+- Strip `hshvnjzczdytfiklhojz` from CSP `_headers` (leave eq-canonical only)
+- Pause or delete the legacy Supabase project
+- Clean up stale migrations in `supabase/migrations/` (0001–0005 were applied to the
+  legacy project; canonical schema is managed via MCP/Studio)
+
+### 4. GitHub → Netlify auto-deploy
+
+Not wired — `netlify.toml` explicitly gates on manual deploys. Requires Netlify env
+vars for dart-defines (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SENTRY_DSN`,
+`POSTHOG_API_KEY`). Held pending a production secrets review.
+
+### 5. GTM validation gate — 5 outside-SKS sparkies on Cards
+
+From `eq/pending.md`: the EQ GTM priority is to validate the product with 5
+outside-SKS trade subbies before further build investment. Cards is the wedge product.
+
+Steps:
+- Identify first 5 outside-SKS trade subbies
+- Send outreach message (direct pilot invite via `cards.eq.solutions`)
+- Onboard via email-OTP standalone flow
+- Track `copy_field` events in PostHog — ≥5/week per user = wedge working
+
+### 6. EQ Intake migration trigger (when canonical is ready)
+
+Per `EQ-CARDS-INTAKE-BRIDGE.md` (Path A decision): Cards data is already in
+eq-canonical. When the second EQ surface needs to read shared user data, the
+integration will be RLS-gated direct access — no token exchange needed. The remaining
+work is confirming the `app_data.staff` ↔ Cards `profiles` field mapping is complete.
+
+---
+
+## What's deferred
+
+- Mobile builds (Android Studio on Windows host; iOS needs Mac)
 - Apple Wallet pass generation
-- Drift offline cache
-- Public launch / wider invite list
-- Mobile builds (Android Studio install on Windows host; iOS deferred — Mac required)
-
----
-
-## What's allowed during the pause
-
-- Bugfixes on the existing code paths
-- Polishing OCR accuracy if real photos surface gaps
-- ~~Picking ONE of the 3 design directions and trimming the other two~~ **Decided 2026-04-29 PM:** all 3 ship in production behind the Settings picker. No trimming.
-- Real licence-photo testing on a phone (RUNBOOK §12)
-- ~~Pilot 2-3 real users on what's already built~~ **Decided 2026-04-29 PM:** no public/real-user pilots until INTAKE Sprint-1 lands. Royce uses the Netlify zip for personal demos only.
-- Documentation cleanup (this file, CHANGELOG, RUNBOOK, ARCHITECTURE)
-- Verifying analytics taxonomy continues to fire cleanly in PostHog
-
-### Production-quality work explicitly parked (2026-04-29 PM)
-
-Considered and deferred. INTAKE Sprint-1 will reshape the data model; production-quality investment in current Cards architecture compounds with that work, so it waits.
-
-- Twilio production OTP wiring
-- Cost cap / rate-limit on the `ocr-licence` Edge Function
-- Privacy policy + Terms of Use drafting and Settings wiring
-- Real iOS app on TestFlight (needs Mac / CI runner / Apple Dev account)
-- Real Android APK / Play Internal Testing
-- Customer-support email + onboarding flow
-- App Store / Play Store listings
-- Pilot users / wider invite list
-
-**Do not pick any of these up unilaterally.** Reauthorize individually, or wait for INTAKE Sprint-1 to ship and re-evaluate the whole list.
-
----
-
-## Coordination with EQ Intake
-
-EQ Intake is the broader frame: a canonical schema spine that every EQ surface (Cards mobile, Import desktop, Capture vision) feeds, and that every output target (job-mgt, accounting, client portals, compliance bundles) consumes.
-
-EQ Cards is **one of the three intake doors.** Specifically the mobile surface. The first wedge there is **inductions** — do once in EQ, export in whichever format the next site demands.
-
-### Schema mapping (current → INTAKE canonical)
-
-| EQ Cards (today) | EQ Intake canonical |
-|---|---|
-| `profiles` | `staff` (a Cards user is a Staff record where `role = self`) |
-| `licences` | (no direct canonical equivalent yet — a `licence` entity is implied by inductions/SWMS attachments and may be added) |
-| `audit_log` | Subsumed by `eq_intake_row_audit` + `eq_intake_events` |
-
-### Document reconciliation pending
-
-`ARCHITECTURE.md §18` of this repo says "no shared database, each EQ module gets its own Supabase project, share API with consent." That's a different architecture from INTAKE's "one canonical schema spine, multi-tenant by RLS." Two ways to reconcile when INTAKE Sprint-1 lands:
-
-1. **§18 is replaced.** EQ Cards data moves to (or is mirrored in) the canonical Supabase project. The share API §18.2 becomes the export profile for the "Cards user shares their wallet with this site" scenario.
-2. **§18 is reframed as a module-local cache.** EQ Cards keeps its own Supabase project for offline-first / latency reasons. A federated layer pulls from it into the canonical spine.
-
-Don't action either yet. Flagged in `ARCHITECTURE.md §18` with a TODO referencing this file.
-
-### Standing rules from the INTAKE bundle that apply here
-
-- **Generic placeholders only** in any output. No real client names. (Already followed.)
-- **Inductions / SWMS / safety-critical features never paywalled.** When EQ Cards eventually exposes induction export, that path is free.
-- **Auth changes require Chat review before deployment.** (Already in the global CLAUDE.md.)
-- **SELECT-only on Supabase without approval; never touch SKS live data unless explicitly told.**
-- **Self-critique applied** — high-stakes, real people depend on it.
+- Drift offline cache + offline writes
+- Phase 2 share-redeem endpoint (external consumers only — non-EQ surfaces)
+- Twilio SMS OTP (email-OTP is standard now; phone-OTP re-evaluation deferred)
+- Public launch / wider invite list beyond the 5-sparky pilot
 
 ---
 
 ## Where things live
 
-### Repo (this folder)
+### Repo
 
 | Path | What |
 |---|---|
 | `lib/` | Flutter app source |
-| `test/` | Tests (126/126) |
-| `supabase/migrations/` | 0001 / 0002 / 0003 — applied |
-| `supabase/functions/ocr-licence/` | Claude Vision Edge Function |
-| `web/` | Web bundle source (`index.html` has the PostHog JS snippet) |
-| `android/`, `ios/` | Platform folders (manifests + Info.plist wired with permissions) |
-| `ARCHITECTURE.md` | Phase-0 binding contract + open questions |
+| `test/` | Tests (≥190 passing; run `flutter test` for live count) |
+| `scripts/migrate-to-canonical.ts` | Unit 3 one-time migration script (idempotent, `--apply` required for writes) |
+| `scripts/README.md` | Usage instructions + safety properties for the migration script |
+| `supabase/migrations/` | 0001–0005 applied to legacy project; canonical schema managed via MCP/Studio |
+| `supabase/functions/ocr-licence/` | Claude Vision Edge Function v9 (still on legacy project) |
+| `web/` | Web bundle source (`_headers` has CSP; `index.html` has PostHog snippet) |
+| `netlify.toml` | Netlify site config — build publish dir + SPA redirect |
+| `.dart-defines.prod.json` | Production dart-defines pointing at eq-canonical (gitignored) |
+| `ARCHITECTURE.md` | Binding architecture contract (§18 updated for canonical resolution) |
 | `CHANGELOG.md` | Full session-by-session history |
-| `RUNBOOK.md` | First-morning setup + OCR smoke test plan |
-| `SCHEMA.md` | DB schema with RLS policies |
-| `progress.html` | Single-page status board (visual) |
-| `STATUS.md` | This file |
-| `.dart-defines.json` | Dev secrets (gitignored) |
+| `RUNBOOK.md` | First-morning setup + OCR smoke test |
+| `SCHEMA.md` | Legacy DB schema (pre-Unit-4); eq-canonical schema via MCP |
 
-### Live infrastructure
+### Tools
 
-| Service | URL / ID |
-|---|---|
-| Supabase project | `hshvnjzczdytfiklhojz` (eq-cards) |
-| Edge Function | `https://hshvnjzczdytfiklhojz.supabase.co/functions/v1/ocr-licence` |
-| PostHog | `eq-production` project, EU host (`eu.i.posthog.com`), token in `.dart-defines.json` |
-| Sentry | `eq-cards` project, EU host, DSN in `.dart-defines.json` |
-| Local dev | `http://localhost:8765/` (when `flutter run -d edge --web-port=8765` is running) |
-| Netlify | Manual drag-drop only; no fixed URL yet |
-
-### Tools installed this week
-
-- **Supabase CLI** at `C:\Users\EQ\.eq-tools\supabase\supabase.exe` (on user PATH). Already linked to the eq-cards project.
-- **Flutter SDK** at `C:\Projects\flutter` (relocated from OneDrive).
+- **Supabase CLI** at `C:\Users\EQ\.eq-tools\supabase\supabase.exe` (on PATH).
+- **Flutter SDK** at `C:\Projects\flutter`.
 
 ---
 
 ## Resuming work — first commands
 
 ```powershell
-# In a fresh PowerShell window.
 cd C:\Projects\eq-cards
 flutter analyze              # expect: No issues found
-flutter test                 # expect: 126 / 126 passing
-flutter run -d edge --web-port=8765 --dart-define-from-file=.dart-defines.json
+flutter test                 # expect: ≥190 passing
+flutter run -d edge --web-port=8765 --dart-define-from-file=.dart-defines.prod.json
 # App at http://localhost:8765/
+# Direct path: goes to /auth/email (email-OTP flow)
+# Shell path: open core.eq.solutions/:tenant/cards (Shell JWT handoff)
 ```
 
-If `flutter` isn't on PATH, the SDK is at `C:\Projects\flutter\bin`.
-
----
-
-## When something needs to change
-
-- **Approve a deploy** — say "deploy". I'll re-deploy the Edge Function or build the web bundle as appropriate.
-- **Pick a design** — tell me which of Linear / Wallet / Photo-first wins; I trim the other two and wire the chosen icon into `ios/Runner/Assets.xcassets/AppIcon.appiconset/` + `android/.../mipmap-*/`.
-- **Re-evaluate the pause** — when INTAKE Phase 1 ships (or earlier if you decide), come back and say which of the two §18 reconciliation paths to take.
+Use `.dart-defines.prod.json` (eq-canonical) not `.dart-defines.json` (may still point
+at legacy project). Check which is which before running against live data.
 
 ---
 
 ## Notable session-history bookmarks (for future agents)
 
-- 7-iteration OCR Edge Function debug chain — see `CHANGELOG.md` "Edge Function deploys this sprint." TL;DR: HTTP 204 No Content forbids response bodies, Deno throws if you set one.
-- "Zone mismatch" Sentry crash → fixed by wrapping all of `main()` in one `runZonedGuarded` and dropping Sentry's `appRunner` parameter.
-- Pre-existing test failures (12 goldens, 5 OCR parsers, 2 ProfileEdit viewport) — all closed during the overnight sprint 2026-04-28→29.
+- **Unit 4 canonical flip** — Flutter now uses `eq_cards_*` RPCs on eq-canonical.
+  Flutter models unchanged; the RPCs bridge the column renames (`user_id` → `staff_id`,
+  etc.). JWT `app_metadata.tenant_id` is the tenant identifier throughout.
+- **Two-path auth** — `IframeHandoffScreen` (`#sh=<jwt>`) for Shell embed; email-OTP
+  (`/auth/email` → `/auth/otp`) for standalone/direct access. Both paths land in the
+  same Supabase session on eq-canonical.
+- **SW kill-switch** — `web/` contains a service-worker-reset mechanism for users
+  stuck on old cached builds. Check `11f8712` and `2996fb9` if stale-build issues recur.
+- **OCR Edge Function still on legacy** — `ocr-licence` v9 on `hshvnjzczdytfiklhojz`.
+  Redeploy to eq-canonical when that project is decommissioned.
+- **§18 reconciliation resolved** — Path A (consolidate to canonical) taken. See
+  `ARCHITECTURE.md §18` (updated).
+- **7-iteration OCR debug chain** — see CHANGELOG "Edge Function deploys this sprint."
+  HTTP 204 No Content forbids response bodies; Deno throws if you set one.
+- **"Zone mismatch" Sentry crash** — fixed by wrapping all of `main()` in one
+  `runZonedGuarded` and dropping Sentry's `appRunner` parameter.
 
 ---
 

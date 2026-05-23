@@ -1,8 +1,23 @@
 # EQ Cards — Database Schema
 
-**Status:** Phase 0.5 contract
+**Status:** Phase 0.5 contract (legacy — see migration note below)
 **Owner:** Royce Milmlow
-**Last updated:** 2026-04-27
+**Last updated:** 2026-05-24 (migration note added)
+
+> **⚠ Unit 3 + 4 migration (2026-05-21).** The schema below describes the legacy
+> per-module Supabase project (`hshvnjzczdytfiklhojz`). As of Unit 4, Cards data lives
+> in eq-canonical (`jvknxcmbtrfnxfrwfimn`) in the `app_data` schema, with column renames
+> (`user_id` → `staff_id`, `photo_*_url` → `photo_*_path`, `deleted_at` → `active=false`).
+> Flutter models are unchanged; the `eq_cards_*` bridge RPCs handle the translation.
+>
+> The canonical schema is managed via Supabase MCP / Studio on eq-canonical. Four
+> migrations were applied directly: `2026_05_21_eq_cards_rpcs`,
+> `2026_05_21_staff_personal_fields_for_cards`,
+> `2026_05_21_eq_cards_profile_rpcs`,
+> `2026_05_21_licence_photos_policies_phase_1f`.
+>
+> This document is preserved as the authoritative reference for what was built in
+> Phase 0.5 and for the `0001`–`0005` migrations applied to the legacy project.
 
 This document defines the Supabase schema for EQ Cards v1. Every column, type, index, and RLS predicate listed here is locked. Schema changes require an explicit migration file AND a doc update in the same PR.
 
