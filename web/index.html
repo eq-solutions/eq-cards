@@ -48,6 +48,39 @@
   <link rel="manifest" href="manifest.json">
 
   <!--
+    Service-worker kill-switch.
+    The pre-Unit-4 build registered Flutter's default SW, which kept serving
+    the old email-OTP entry screen (and stale Supabase URL) even after the
+    canonical flip. Commit 11f8712 stopped registering new SWs; this block
+    unregisters any SW already installed in users' browsers and clears the
+    caches it populated, then reloads once. No-op for clean clients. Safe to
+    leave in for a couple of releases; remove once telemetry shows no users
+    still arriving with a registration.
+  -->
+  <script>
+    (function () {
+      if (!('serviceWorker' in navigator)) return;
+      navigator.serviceWorker.getRegistrations().then(function (regs) {
+        if (!regs.length) return;
+        Promise.all(regs.map(function (r) { return r.unregister(); }))
+          .then(function () {
+            return (typeof caches !== 'undefined' && caches.keys)
+              ? caches.keys().then(function (keys) {
+                  return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+                })
+              : null;
+          })
+          .then(function () {
+            if (sessionStorage.getItem('eq_sw_purged') === '1') return;
+            sessionStorage.setItem('eq_sw_purged', '1');
+            location.reload();
+          })
+          .catch(function () { /* best-effort */ });
+      }).catch(function () { /* best-effort */ });
+    })();
+  </script>
+
+  <!--
     PostHog JS SDK — required for posthog_flutter on web.
     The package's setup() call is a no-op on web (see posthog_flutter_web_handler.dart);
     capture/identify/reset all expect window.posthog to already exist.
