@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -23,6 +24,7 @@ import '../../../../core/widgets/eq_button.dart';
 import '../../../auth/auth.dart';
 import '../../../profile/presentation/screens/profile_fill_from_licence_screen.dart'
     show DlProfileFill;
+import 'licence_crop_screen.dart';
 import '../../data/models/licence.dart';
 import '../../data/ocr_service.dart';
 import '../helpers/licence_crop.dart';
@@ -313,17 +315,25 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
     );
     if (picked == null || !context.mounted) return;
 
-    // Cropping step — let the user frame the licence card before we
-    // upload + OCR. Smaller upload (faster, cheaper Anthropic call) and
-    // higher OCR accuracy (less background noise).
-    //
-    // Skip on web: ImageCropper's web dialog has a Flutter web interop
-    // bug where the confirm ("Scan licence") button resolves to null
-    // instead of the cropped file. The compress step below handles size
-    // reduction anyway, so skipping crop doesn't hurt OCR quality.
-    final XFile cropped;
+    // Cropping step — native Flutter UI on web (no JS bridge); ImageCropper
+    // on native builds. The web native crop decodes the picked image, shows
+    // draggable corner handles, and re-encodes the selection as JPEG before
+    // returning. This eliminates background noise for better OCR accuracy.
+    // croppedFile is only set on native — used by extractFromFile (ML Kit).
+    // On web the native crop returns Uint8List directly.
+    XFile? croppedFile;
+    Uint8List rawBytes;
     if (kIsWeb) {
-      cropped = picked;
+      final pickedBytes = await picked.readAsBytes();
+      if (!context.mounted) return;
+      final cropped = await Navigator.of(context).push<Uint8List>(
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (_) => LicenceCropScreen(imageBytes: pickedBytes),
+        ),
+      );
+      if (cropped == null || !context.mounted) return; // user cancelled
+      rawBytes = cropped;
     } else {
       final c = await cropLicencePhoto(
         context,
@@ -331,11 +341,13 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
         actionLabel: 'Scan licence',
       );
       if (c == null || !context.mounted) return;
-      cropped = c;
+      croppedFile = c;
+      rawBytes = await c.readAsBytes();
     }
-
-    final rawBytes = await cropped.readAsBytes();
-    final pickedMime = picked.mimeType;
+    // The native crop re-encodes to JPEG, so on web the mime is always
+    // image/jpeg. On native, the original mime from the picker is used
+    // (ImageCropper also outputs JPEG, so this is also always image/jpeg).
+    final pickedMime = kIsWeb ? 'image/jpeg' : picked.mimeType;
 
     if (!context.mounted) return;
     // Show a loading dialog while OCR runs. The Edge Function round-trip
@@ -428,9 +440,9 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
     // resolves first drives the flow; the loser's future still settles
     // harmlessly in the background.
     final ocr = ref.read(ocrServiceProvider);
-    final ocrCall = (kIsWeb
+    final ocrCall = (kIsWeb || croppedFile == null
             ? ocr.extractFromBytesViaEdgeFunction(bytes, mimeType: mime)
-            : ocr.extractFromFile(File(cropped.path)))
+            : ocr.extractFromFile(File(croppedFile.path)))
         .then<void>((r) {
       extraction = r;
       unawaited(
@@ -517,6 +529,33 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
       // the user tapped Skip — they explicitly asked to fill manually.
       ocr: cancelled ? null : extraction,
     );
+
+    // Rear-of-card detection: if OCR thinks it's a driver licence but found
+    // no holder name, no card number, and no expiry, the user probably
+    // photographed the back. The rear of an Aussie DL is ~80% PDF417
+    // barcode — Claude Vision can't decode it as structured text. Prompt
+    // the user to flip the card and try again rather than silently
+    // dropping them into an empty licence form.
+    final looksLikeRear = !cancelled &&
+        extraction != null &&
+        extraction!.licenceTypeCandidate == 'driver_licence' &&
+        extraction!.numberCandidate == null &&
+        extraction!.holderName == null &&
+        extraction!.expiryDateCandidate == null;
+    if (looksLikeRear) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            "That looks like the back of the licence — "
+            'flip to the front and scan again.',
+          ),
+          duration: const Duration(seconds: 6),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: EqColours.ink,
+        ),
+      );
+      return; // Stay on the list; user can tap + to try again.
+    }
 
     // Driver licence + profile fields extracted → ask the user to confirm
     // their details before continuing to save the licence itself.

@@ -57,6 +57,11 @@ dependencies:
   # Biometric (architecture §11.4)
   local_auth: ^2.2.0
 
+  # Image decoding / cropping — pure Dart, used by LicenceCropScreen to
+  # decode the captured photo, apply the user's crop rect, and re-encode
+  # as JPEG before the OCR upload. No JS bridge, works on all platforms.
+  image: ^4.2.0
+
   # Date formatting
   intl: ^0.19.0
 
