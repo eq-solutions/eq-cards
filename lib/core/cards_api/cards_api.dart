@@ -26,8 +26,6 @@
 //   supabase/tenant-migrations/0006_cards_rpcs.sql (eq-shell repo)
 //   supabase/tenant-migrations/0007_cards_profile_rpc.sql (eq-shell repo)
 
-import 'dart:io' show HttpStatus;
-
 import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -160,10 +158,11 @@ class CardsApi {
     final detail = data['detail'] as String?;
     final status = res.statusCode ?? 500;
 
-    if (status == HttpStatus.unauthorized || code == 'not_signed_in') {
+    // Literal status codes — avoids a dart:io import that fails Flutter web.
+    if (status == 401 || code == 'not_signed_in') {
       throw const NotAuthenticatedFailure();
     }
-    if (status == HttpStatus.notFound || code == 'licence_not_found') {
+    if (status == 404 || code == 'licence_not_found') {
       throw const NotFoundFailure();
     }
     throw ServerFailure(status, detail ?? code);
