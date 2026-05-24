@@ -11,14 +11,25 @@ part 'app_lock_notifier.g.dart';
 class AppLockNotifier extends _$AppLockNotifier {
   @override
   AppLockPhase build() {
-    // Re-evaluate whenever auth state changes (OTP sign-in, sign-out).
+    // Re-evaluate whenever auth state changes (sign-out, token refresh, etc.).
+    //
+    // We only run the PIN check on cold start — i.e. when the notifier is
+    // first built with a pre-existing session (handled below). Once the user
+    // is unlocked (either by PIN entry or by a fresh OTP that proves identity)
+    // we do NOT re-gate on subsequent auth events such as tokenRefreshed or a
+    // second signedIn event. This prevents two bugs:
+    //   1. Fresh OTP on any browser looping back to PIN entry.
+    //   2. A tokenRefreshed event kicking the user out of the crop/OCR flow.
     ref.listen(authStateChangesProvider, (_, next) {
       next.whenData((authState) {
         final session = Supabase.instance.client.auth.currentSession;
         final hasSession = session != null && !session.isExpired;
         if (!hasSession) {
           state = AppLockPhase.unlocked; // OTP is the gate, not PIN
-        } else {
+        } else if (state != AppLockPhase.unlocked) {
+          // Only re-check if we're not already unlocked this session.
+          // Cold-start re-authentication (state == checking or pinEntryRequired)
+          // is handled here; active-session token refreshes are ignored.
           state = AppLockPhase.checking;
           _checkLockState();
         }
