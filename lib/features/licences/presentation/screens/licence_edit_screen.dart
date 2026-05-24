@@ -48,8 +48,8 @@ class LicenceEditScreen extends ConsumerStatefulWidget {
 class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
   final _formKey = GlobalKey<FormState>();
   final _number = TextEditingController();
-  final _state = TextEditingController();
   final _authority = TextEditingController();
+  String? _selectedState;
   final _notes = TextEditingController();
   final _metadataControllers = <String, TextEditingController>{};
 
@@ -75,7 +75,6 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
   @override
   void dispose() {
     _number.dispose();
-    _state.dispose();
     _authority.dispose();
     _notes.dispose();
     for (final c in _metadataControllers.values) {
@@ -97,7 +96,7 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
           _number.text = existing.licenceNumber;
           _issueDate = existing.issueDate;
           _expiryDate = existing.expiryDate;
-          _state.text = existing.state ?? '';
+          _selectedState = existing.state;
           _authority.text = existing.issuingAuthority ?? '';
           _notes.text = existing.notes ?? '';
           for (final entry in existing.metadata.entries) {
@@ -124,7 +123,7 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
         _typeCode = ocr!.licenceTypeCandidate;
       }
       if (ocr?.stateCandidate != null) {
-        _state.text = ocr!.stateCandidate!;
+        _selectedState = ocr!.stateCandidate;
       }
       if (ocr?.issuingAuthorityCandidate != null) {
         _authority.text = ocr!.issuingAuthorityCandidate!;
@@ -278,7 +277,7 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
         licenceNumber: _number.text.trim(),
         issueDate: _issueDate, // nullable — not all licences print an issue date
         expiryDate: _expiryDate!,
-        state: _textOrNull(_state.text),
+        state: _selectedState,
         issuingAuthority: _textOrNull(_authority.text),
         notes: _textOrNull(_notes.text),
         photoFrontPath: _existing?.photoFrontPath,
@@ -439,10 +438,24 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
                 onTap: () => _pickDate(forExpiry: true),
               ),
               const SizedBox(height: EqSpacing.md),
-              EqTextField(
-                controller: _state,
-                label: 'State (NSW, VIC, etc.)',
-                validator: validateAuState,
+              DropdownButtonFormField<String>(
+                value: _selectedState,
+                decoration: InputDecoration(
+                  labelText: 'State',
+                  filled: true,
+                  fillColor: EqColours.ice,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                hint: const Text('Select state'),
+                items: const [
+                  'NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT',
+                ]
+                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                    .toList(),
+                onChanged: (v) => setState(() => _selectedState = v),
               ),
               const SizedBox(height: EqSpacing.md),
               EqTextField(
