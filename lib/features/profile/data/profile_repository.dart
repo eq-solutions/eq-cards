@@ -1,59 +1,48 @@
-// Cards Unit 4 (2026-05-21) — calls public.eq_cards_current_staff +
-// public.eq_cards_upsert_my_profile on eq-canonical. These RPCs bridge
-// the column rename (Cards profiles -> canonical staff): the response
-// shape matches what Profile.fromJson expects, so the model is
-// unchanged.
+// Cards Unit 5 (2026-05-24) — profile reads/writes route through the
+// Shell's /cards-api endpoint (CardsApi in lib/core/cards_api). The
+// endpoint targets the caller's per-tenant Supabase project (resolved
+// from the JWT). Return shapes are unchanged so Profile.fromJson works
+// against the JSON we receive without coercion.
 //
-// The `id` returned IS the canonical staff_id. Cards uses it as the
-// "current user identifier" throughout the app (the first segment of
-// photo storage paths used to be auth.uid(); post-flip it should be
-// the tenant_id, with staff_id as the second segment — see
-// LicenceRepository for path generation).
+// Previously (Cards Unit 4, 2026-05-21) these called supabase.rpc
+// against shared eq-canonical's eq_cards_current_staff +
+// eq_cards_upsert_my_profile. After the Shell admin moved to per-tenant
+// DBs that direct path caused drift; the new path closes the gap.
+//
+// The `id` returned IS still the canonical staff_id (cards-api just
+// proxies; same id, same meaning, just routed to a different DB).
 
 import 'package:meta/meta.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/cards_api/cards_api.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/supabase/supabase_client_provider.dart';
-import '../../../core/supabase/supabase_error_handler.dart';
 import 'models/profile.dart';
 
 part 'profile_repository.g.dart';
 
 class ProfileRepository {
-  ProfileRepository(this._client);
+  ProfileRepository(this._client, this._api);
   final SupabaseClient _client;
+  final CardsApi _api;
 
   Future<Profile?> getCurrent() async {
-    // The RPC reads JWT claims; no need to pass user_id explicitly.
     if (_client.auth.currentUser == null) {
       throw const NotAuthenticatedFailure();
     }
-    try {
-      final rows = await _client.rpc<List<dynamic>>('eq_cards_current_staff');
-      final list = rows.cast<Map<String, dynamic>>();
-      if (list.isEmpty) return null;
-      return Profile.fromJson(list.first);
-    } catch (e) {
-      throw mapSupabaseError(e);
-    }
+    final row = await _api.currentStaff();
+    if (row == null) return null;
+    return Profile.fromJson(row);
   }
 
   Future<Profile> upsert(Profile profile) async {
-    try {
-      final rows = await _client.rpc<List<dynamic>>(
-        'eq_cards_upsert_my_profile',
-        params: {'p_payload': profileToUpsertPayload(profile)},
-      );
-      final list = rows.cast<Map<String, dynamic>>();
-      if (list.isEmpty) {
-        throw const NotFoundFailure();
-      }
-      return Profile.fromJson(list.first);
-    } catch (e) {
-      throw mapSupabaseError(e);
+    if (_client.auth.currentUser == null) {
+      throw const NotAuthenticatedFailure();
     }
+    final row = await _api.upsertMyProfile(profileToUpsertPayload(profile));
+    return Profile.fromJson(row);
   }
 }
 
@@ -100,5 +89,8 @@ String _isoDate(DateTime d) {
 
 @riverpod
 ProfileRepository profileRepository(ProfileRepositoryRef ref) {
-  return ProfileRepository(ref.watch(supabaseClientProvider));
+  return ProfileRepository(
+    ref.watch(supabaseClientProvider),
+    ref.watch(cardsApiProvider),
+  );
 }
