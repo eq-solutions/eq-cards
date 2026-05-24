@@ -35,7 +35,7 @@ if (-not $SupabaseUrl -or -not $SupabaseAnonKey) {
 # ── Flutter build ─────────────────────────────────────────────────────────────
 if (-not $SkipBuild) {
     Write-Host "`n==> Building Flutter web (release)..." -ForegroundColor Cyan
-    flutter build web --release `
+    flutter build web --release --no-web-resources-cdn `
         "--dart-define=SUPABASE_URL=$SupabaseUrl" `
         "--dart-define=SUPABASE_ANON_KEY=$SupabaseAnonKey" `
         "--dart-define=SENTRY_DSN=$SentryDsn" `
