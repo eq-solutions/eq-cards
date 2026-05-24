@@ -52,6 +52,48 @@ const LICENCE_TYPES = [
   'traffic_control',
 ];
 
+// Profile fields extracted only when the document is a driver licence.
+// All other document types leave these null.
+const DRIVER_LICENCE_PROFILE_PROPERTIES = {
+  holder_name: {
+    type: ['string', 'null'],
+    description:
+      'Full legal name (given name + surname) printed on the card. ' +
+      'Only populate for driver_licence. Null for all other document types.',
+  },
+  date_of_birth: {
+    type: ['string', 'null'],
+    description:
+      'Date of birth ISO YYYY-MM-DD from the card. ' +
+      'Only populate for driver_licence. Null for all other document types.',
+  },
+  address_street: {
+    type: ['string', 'null'],
+    description:
+      'Street address line (number + street name). ' +
+      'Only populate for driver_licence. Null for all other document types.',
+  },
+  address_suburb: {
+    type: ['string', 'null'],
+    description:
+      'Suburb or city from the address. ' +
+      'Only populate for driver_licence. Null for all other document types.',
+  },
+  address_state: {
+    type: ['string', 'null'],
+    enum: ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'ACT', null],
+    description:
+      'State code from the address field on the card. ' +
+      'Only populate for driver_licence. Null for all other document types.',
+  },
+  address_postcode: {
+    type: ['string', 'null'],
+    description:
+      '4-digit Australian postcode from the address. ' +
+      'Only populate for driver_licence. Null for all other document types.',
+  },
+};
+
 const EXTRACT_TOOL = {
   name: 'extract_licence',
   description:
@@ -102,6 +144,7 @@ const EXTRACT_TOOL = {
         description:
           'Self-rated confidence in the extraction. "low" if the photo is blurry or fields are guesses; "high" if every field is clearly readable.',
       },
+      ...DRIVER_LICENCE_PROFILE_PROPERTIES,
     },
     required: ['raw_text', 'confidence'],
   },
@@ -117,7 +160,11 @@ const SYSTEM_PROMPT =
   'a card showing "NSW" / "VIC" / "QLD" etc. anywhere on it has that state. ' +
   'For licence_number and dates ONLY: return null if not clearly readable. ' +
   'For licence_type, state, and issuing_authority: infer confidently when the document type is unambiguous. ' +
-  'Dates must be ISO YYYY-MM-DD. Card numbers are returned as printed (preserve case for letters).';
+  'Dates must be ISO YYYY-MM-DD. Card numbers are returned as printed (preserve case for letters). ' +
+  'DRIVER LICENCE EXTRA: When the document is a driver_licence, also populate holder_name (full name as ' +
+  'printed), date_of_birth (ISO YYYY-MM-DD), address_street (number + street), address_suburb, ' +
+  'address_state (2–3 letter code), and address_postcode (4 digits). ' +
+  'For ALL other document types, set all six of these fields to null.';
 
 interface OcrRequest {
   image_base64?: string;

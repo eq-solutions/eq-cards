@@ -85,6 +85,15 @@ GoRouter appRouter(AppRouterRef ref) {
                       return LicenceEditScreen(prefill: prefill);
                     },
                   ),
+                  // Driver licence profile-fill confirmation — shown between
+                  // OCR and licence save when a DL scan extracts profile data.
+                  GoRoute(
+                    path: 'fill-profile',
+                    builder: (context, state) {
+                      final fill = state.extra as DlProfileFill?;
+                      return ProfileFillFromLicenceScreen(fill: fill);
+                    },
+                  ),
                   GoRoute(
                     path: ':id',
                     builder: (context, state) {

@@ -15,6 +15,8 @@ abstract class Routes {
   static const licencesList = '/licences';
   static const licenceCreate = '/licences/new';
   static const licenceCapture = '/licences/capture';
+  // Profile fill from driver licence scan — shown between OCR and licence save
+  static const profileFillFromLicence = '/licences/fill-profile';
   static const licenceDetail = '/licences/:id';
   static const licenceEdit = '/licences/:id/edit';
   static const settings = '/settings';

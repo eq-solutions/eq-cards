@@ -21,6 +21,8 @@ import '../../../../core/utils/photo_upload.dart';
 import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_button.dart';
 import '../../../auth/auth.dart';
+import '../../../profile/presentation/screens/profile_fill_from_licence_screen.dart'
+    show DlProfileFill;
 import '../../data/models/licence.dart';
 import '../../data/ocr_service.dart';
 import '../helpers/licence_crop.dart';
@@ -300,9 +302,14 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
 
   Future<void> _captureFlow(BuildContext context, WidgetRef ref) async {
     final picker = ImagePicker();
+    // Always open the camera directly — on mobile web this maps to
+    // <input capture="environment"> which captures JPEG; on desktop web
+    // it falls back to file picker. The old ImageSource.gallery path on
+    // mobile web let users pick HEIC library photos which broke OCR.
     final picked = await picker.pickImage(
-      source: kIsWeb ? ImageSource.gallery : ImageSource.camera,
+      source: ImageSource.camera,
       preferredCameraDevice: CameraDevice.rear,
+      imageQuality: 85,
     );
     if (picked == null || !context.mounted) return;
 
@@ -383,13 +390,22 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
         );
         unawaited(Sentry.captureException(e, stackTrace: st));
         bytes = rawBytes;
-        // Use the picker's reported mime — if it's HEIC, we'll let the
-        // Edge Function 400 with `unsupported_mime_type` which the user
-        // sees as a clear "photo format not supported" SnackBar, instead
-        // of an opaque upstream failure.
-        if (pickedMime != null && pickedMime.isNotEmpty) {
+        // Do NOT override mime with pickedMime here. The crop step
+        // (ImageCropper, compressFormat: jpg) already converted the
+        // image to JPEG, so rawBytes are always JPEG regardless of the
+        // original format (e.g. HEIC from an iPhone library photo).
+        // Overriding mime with 'image/heic' (the original picker mime)
+        // was the silent iOS OCR-fail pathway — the Edge Function
+        // rejected HEIC with `unsupported_mime_type`.
+        // Only honour pickedMime if it's a format the Edge Function accepts.
+        final supportedMime = RegExp(
+          r'^image/(jpeg|jpg|png|webp|gif)$',
+          caseSensitive: false,
+        );
+        if (pickedMime != null && supportedMime.hasMatch(pickedMime)) {
           mime = pickedMime;
         }
+        // Otherwise keep mime = 'image/jpeg' — the crop already produced JPEG.
       }
     }
 
@@ -484,15 +500,36 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
         ),
       );
     }
-    context.go(
-      Routes.licenceCreate,
-      extra: LicencePrefill(
-        photoBytes: bytes,
-        // On cancel, drop the OCR result even if it raced in just before
-        // the user tapped Skip — they explicitly asked to fill manually.
-        ocr: cancelled ? null : extraction,
-      ),
+    final licencePrefill = LicencePrefill(
+      photoBytes: bytes,
+      // On cancel, drop the OCR result even if it raced in just before
+      // the user tapped Skip — they explicitly asked to fill manually.
+      ocr: cancelled ? null : extraction,
     );
+
+    // Driver licence + profile fields extracted → ask the user to confirm
+    // their details before continuing to save the licence itself.
+    // Assign to a local variable so the null check promotes the type.
+    final e = extraction;
+    if (!cancelled &&
+        e != null &&
+        e.licenceTypeCandidate == 'driver_licence' &&
+        e.hasProfileFields) {
+      context.go(
+        Routes.profileFillFromLicence,
+        extra: DlProfileFill(
+          holderName: e.holderName,
+          dateOfBirth: e.dateOfBirth,
+          addressStreet: e.addressStreet,
+          addressSuburb: e.addressSuburb,
+          addressState: e.addressState,
+          addressPostcode: e.addressPostcode,
+          licencePrefill: licencePrefill,
+        ),
+      );
+    } else {
+      context.go(Routes.licenceCreate, extra: licencePrefill);
+    }
   }
 
 }
