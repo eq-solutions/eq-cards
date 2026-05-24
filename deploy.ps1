@@ -43,7 +43,7 @@ if (-not $SkipBuild) {
         "--dart-define=POSTHOG_HOST=$PosthogHost"
 
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "flutter build failed — deploy aborted."
+        Write-Error "flutter build failed - deploy aborted."
         exit 1
     }
 }

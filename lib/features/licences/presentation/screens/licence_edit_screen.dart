@@ -25,6 +25,7 @@ import '../../data/models/licence_type.dart';
 import '../../data/ocr_service.dart';
 import '../helpers/licence_crop.dart';
 import '../notifiers/licence_types_provider.dart';
+import 'licence_crop_screen.dart';
 import '../notifiers/licences_list_notifier.dart';
 import 'licence_detail_screen.dart';
 
@@ -201,16 +202,34 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
       preferredCameraDevice: CameraDevice.rear,
     );
     if (picked == null || !mounted) return;
-    // Crop after pick so saved photos are framed + JPEG-compressed, even on
-    // the edit path. No OCR here — the user is editing known fields and
-    // we don't want to clobber their corrections with a fresh extraction.
-    final cropped = await cropLicencePhoto(
-      context,
-      picked,
-      actionLabel: 'Use photo',
-    );
-    if (cropped == null || !mounted) return;
-    final bytes = await cropped.readAsBytes();
+
+    // Crop after pick so saved photos are framed + JPEG-compressed.
+    // Web uses the native Flutter LicenceCropScreen (no JS bridge).
+    // Mobile uses ImageCropper (platform plugin). No OCR on the edit
+    // path — the user is editing known fields and we don't want to
+    // clobber their corrections with a fresh extraction.
+    final Uint8List bytes;
+    if (kIsWeb) {
+      final pickedBytes = await picked.readAsBytes();
+      if (!mounted) return;
+      final cropped = await Navigator.of(context).push<Uint8List>(
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (_) => LicenceCropScreen(imageBytes: pickedBytes),
+        ),
+      );
+      if (cropped == null || !mounted) return;
+      bytes = cropped;
+    } else {
+      final cropped = await cropLicencePhoto(
+        context,
+        picked,
+        actionLabel: 'Use photo',
+      );
+      if (cropped == null || !mounted) return;
+      bytes = await cropped.readAsBytes();
+    }
+
     setState(() {
       if (front) {
         _pendingFront = bytes;

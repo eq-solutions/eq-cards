@@ -1099,7 +1099,7 @@ class _OcrLoadingDialogState extends State<_OcrLoadingDialog> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer(const Duration(seconds: 8), () {
+    _timer = Timer(const Duration(seconds: 5), () {
       if (mounted) setState(() => _allowCancel = true);
     });
   }
@@ -1137,10 +1137,10 @@ class _OcrLoadingDialogState extends State<_OcrLoadingDialog> {
               const SizedBox(height: EqSpacing.xs),
               Text(
                 _allowCancel
-                    ? 'Still working — slow network? Tap below to enter the '
-                        'details yourself instead.'
-                    : 'First scan of the day may take a few seconds while we '
-                        'warm up the magic-scanner.',
+                    ? 'Taking longer than usual — tap below to fill the '
+                        'details in yourself instead.'
+                    : 'Usually 5–10 seconds. '
+                        'First scan of the day may take a little longer.',
                 textAlign: TextAlign.center,
                 style: EqTypography.label.copyWith(color: EqColours.grey),
               ),
