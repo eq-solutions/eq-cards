@@ -41,8 +41,14 @@ class AuthFlowNotifier extends _$AuthFlowNotifier {
 String _message(Failure f) => switch (f) {
       NetworkFailure() =>
         'No internet connection. Check your network and try again.',
+      ServerFailure(code: 429) =>
+        'Too many sign-in attempts. Wait a minute and try again.',
+      ServerFailure(code: 401, message: final m)
+          when m.toLowerCase().contains('rate limit') ||
+              m.toLowerCase().contains('exceeded') =>
+        'Too many sign-in attempts. Wait a minute and try again.',
       ServerFailure(code: 401) =>
-        'Incorrect code. Check your email and try again.',
+        'Incorrect code — check your email and try again.',
       ServerFailure(:final message) => message,
       NotAuthenticatedFailure() => 'Session expired. Please sign in again.',
       NotFoundFailure() => 'Account not found.',
