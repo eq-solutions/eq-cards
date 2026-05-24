@@ -7,6 +7,7 @@ import '../../features/auth/auth.dart';
 import '../../features/auth/domain/app_lock_state.dart';
 import '../../features/auth/presentation/notifiers/app_lock_notifier.dart';
 import '../../features/auth/presentation/screens/pin_entry_screen.dart';
+import '../../features/certificates/certificates.dart';
 import '../../features/legal/presentation/screens/legal_document_screen.dart';
 import '../../features/licences/licences.dart';
 import '../../features/profile/profile.dart';
@@ -130,7 +131,39 @@ GoRouter appRouter(AppRouterRef ref) {
               ),
             ],
           ),
-          // Tab 1 — Profile
+          // Tab 1 — Certificates
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.certificatesList,
+                builder: (context, state) => const CertificatesListScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'new',
+                    builder: (context, state) =>
+                        const CertificateAddScreen(),
+                  ),
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return CertificateDetailScreen(certificateId: id);
+                    },
+                    routes: [
+                      GoRoute(
+                        path: 'edit',
+                        builder: (context, state) {
+                          final id = state.pathParameters['id']!;
+                          return CertificateAddScreen(certificateId: id);
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+          // Tab 2 — Profile
           StatefulShellBranch(
             routes: [
               GoRoute(

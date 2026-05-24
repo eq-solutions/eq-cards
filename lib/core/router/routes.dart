@@ -23,6 +23,11 @@ abstract class Routes {
   static const profileFillFromLicence = '/licences/fill-profile';
   static const licenceDetail = '/licences/:id';
   static const licenceEdit = '/licences/:id/edit';
+  static const certificatesList = '/certificates';
+  static const certificateCreate = '/certificates/new';
+  static const certificateDetail = '/certificates/:id';
+  static const certificateEdit = '/certificates/:id/edit';
+
   static const settings = '/settings';
   static const privacyPolicy = '/legal/privacy';
   static const termsOfUse = '/legal/terms';
@@ -34,4 +39,7 @@ abstract class Routes {
   /// string interpolation so the route shapes stay in one place.
   static String licenceDetailFor(String id) => '/licences/$id';
   static String licenceEditFor(String id) => '/licences/$id/edit';
+
+  static String certificateDetailFor(String id) => '/certificates/$id';
+  static String certificateEditFor(String id) => '/certificates/$id/edit';
 }

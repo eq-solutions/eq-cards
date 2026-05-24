@@ -48,6 +48,11 @@ class HomeShellScreen extends ConsumerWidget {
             label: 'Licences',
           ),
           NavigationDestination(
+            icon: Icon(Icons.workspace_premium_outlined),
+            selectedIcon: Icon(Icons.workspace_premium, color: EqColours.deep),
+            label: 'Certs',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.person_outline),
             selectedIcon: Icon(Icons.person, color: EqColours.deep),
             label: 'Profile',
