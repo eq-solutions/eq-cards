@@ -114,7 +114,7 @@ class AlertsScheduler {
         // wall-clock time on iOS regardless of TZ changes.
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
-        payload: licence.id,
+        payload: licence.id ?? '',
       );
     }
   }
