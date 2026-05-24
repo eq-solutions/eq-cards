@@ -316,12 +316,23 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
     // Cropping step — let the user frame the licence card before we
     // upload + OCR. Smaller upload (faster, cheaper Anthropic call) and
     // higher OCR accuracy (less background noise).
-    final cropped = await cropLicencePhoto(
-      context,
-      picked,
-      actionLabel: 'Scan licence',
-    );
-    if (cropped == null || !context.mounted) return;
+    //
+    // Skip on web: ImageCropper's web dialog has a Flutter web interop
+    // bug where the confirm ("Scan licence") button resolves to null
+    // instead of the cropped file. The compress step below handles size
+    // reduction anyway, so skipping crop doesn't hurt OCR quality.
+    final XFile cropped;
+    if (kIsWeb) {
+      cropped = picked;
+    } else {
+      final c = await cropLicencePhoto(
+        context,
+        picked,
+        actionLabel: 'Scan licence',
+      );
+      if (c == null || !context.mounted) return;
+      cropped = c;
+    }
 
     final rawBytes = await cropped.readAsBytes();
     final pickedMime = picked.mimeType;
