@@ -28,7 +28,7 @@ class Licence with _$Licence {
     required String userId,
     required String licenceType,
     required String licenceNumber,
-    required DateTime issueDate,
+    DateTime? issueDate,
     required DateTime expiryDate,
     String? issuingAuthority,
     String? state,

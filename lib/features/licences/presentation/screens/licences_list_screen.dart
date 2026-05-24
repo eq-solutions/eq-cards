@@ -530,18 +530,20 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
       ocr: cancelled ? null : extraction,
     );
 
-    // Rear-of-card detection: if OCR thinks it's a driver licence but found
-    // no holder name, no card number, and no expiry, the user probably
+    // Rear-of-card detection: if OCR returned essentially nothing useful —
+    // no card number, no expiry, no holder name — the user probably
     // photographed the back. The rear of an Aussie DL is ~80% PDF417
-    // barcode — Claude Vision can't decode it as structured text. Prompt
-    // the user to flip the card and try again rather than silently
-    // dropping them into an empty licence form.
+    // barcode; other cards often have barcodes or plain blank backs.
+    // Claude Vision can't decode barcodes as structured text. Prompt the
+    // user to flip and retry rather than dropping them into a blank form.
+    // Note: we do NOT require licenceTypeCandidate == 'driver_licence' here
+    // because the type is often null or unknown when scanning the rear.
     final looksLikeRear = !cancelled &&
         extraction != null &&
-        extraction!.licenceTypeCandidate == 'driver_licence' &&
         extraction!.numberCandidate == null &&
+        extraction!.expiryDateCandidate == null &&
         extraction!.holderName == null &&
-        extraction!.expiryDateCandidate == null;
+        extraction!.licenceTypeCandidate == null;
     if (looksLikeRear) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

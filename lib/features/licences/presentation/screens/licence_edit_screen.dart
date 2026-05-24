@@ -221,9 +221,15 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
   }
 
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
-    if (_typeCode == null || _issueDate == null || _expiryDate == null) {
-      setState(() => _error = 'Type, issue date and expiry date are required.');
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    // Issue date is optional — many licences (e.g. driver licences) don't
+    // print one. Only type and expiry are hard requirements.
+    if (_typeCode == null) {
+      setState(() => _error = 'Please select the licence type.');
+      return;
+    }
+    if (_expiryDate == null) {
+      setState(() => _error = 'Please set an expiry date.');
       return;
     }
 
@@ -251,7 +257,7 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
         userId: userId,
         licenceType: _typeCode!,
         licenceNumber: _number.text.trim(),
-        issueDate: _issueDate!,
+        issueDate: _issueDate, // nullable — not all licences print an issue date
         expiryDate: _expiryDate!,
         state: _textOrNull(_state.text),
         issuingAuthority: _textOrNull(_authority.text),
@@ -403,7 +409,7 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
               ),
               const SizedBox(height: EqSpacing.md),
               _DateField(
-                label: 'Issue date',
+                label: 'Issue date (optional)',
                 value: _issueDate,
                 onTap: () => _pickDate(forExpiry: false),
               ),
@@ -510,6 +516,7 @@ class _TypeDropdown extends StatelessWidget {
           .map((t) => DropdownMenuItem(value: t.code, child: Text(t.label)))
           .toList(),
       onChanged: onChanged,
+      validator: (v) => v == null ? 'Please select a licence type' : null,
     );
   }
 }

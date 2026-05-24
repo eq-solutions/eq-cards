@@ -157,7 +157,7 @@ Map<String, dynamic> licenceToUpsertPayload(Licence l) {
   final payload = <String, dynamic>{
     'licence_type': l.licenceType,
     'licence_number': l.licenceNumber,
-    'issue_date': _isoDate(l.issueDate),
+    'issue_date': l.issueDate != null ? _isoDate(l.issueDate!) : null,
     'expiry_date': _isoDate(l.expiryDate),
     'metadata': l.metadata,
   };
