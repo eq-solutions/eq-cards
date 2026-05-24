@@ -14,9 +14,9 @@
 -- users' rows, but the principle is: USING gates SELECT, WITH CHECK gates
 -- INSERT/UPDATE values. Always pair them.
 --
--- Apply via Supabase MCP (`apply_migration` with this file's contents) or
--- the Supabase Studio SQL editor against project hshvnjzczdytfiklhojz.
--- DO NOT auto-apply — Royce reviews and applies.
+-- Applied to eq-canonical (jvknxcmbtrfnxfrwfimn) 2026-05-24 via Supabase MCP.
+-- Note: the storage.objects block below is omitted from the canonical apply —
+-- canonical storage policies use tenant_id isolation (not uid) and were set up separately.
 
 alter policy "users_update_own_profile" on public.profiles
   using (id = auth.uid())

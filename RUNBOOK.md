@@ -132,8 +132,7 @@ supabase init
 supabase link --project-ref jvknxcmbtrfnxfrwfimn
 ```
 
-The legacy project (`hshvnjzczdytfiklhojz`) is read-only rollback only — do not
-apply new migrations to it.
+The legacy project (`hshvnjzczdytfiklhojz`) was decommissioned 2026-05-24.
 
 **Auth:** email OTP via Supabase's built-in mailer. No Twilio configuration needed.
 In **Supabase Auth → Providers → Email**, confirm "Enable email signups" is ON and
@@ -169,8 +168,7 @@ Save your production defines to `.dart-defines.prod.json` (gitignored):
 
 Then run with `--dart-define-from-file=.dart-defines.prod.json`.
 
-**Note:** `.dart-defines.json` (without `.prod`) may still point at the legacy project
-(`hshvnjzczdytfiklhojz`). Check which file is which before running. The production
+Both `.dart-defines.json` and `.dart-defines.prod.json` point at eq-canonical. The production
 defines file is `.dart-defines.prod.json`.
 
 ### 6.1 Web OCR — Edge Function deploy

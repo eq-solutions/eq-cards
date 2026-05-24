@@ -1,0 +1,47 @@
+name: Build & Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate code
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Build web
+        run: |
+          flutter build web --release \
+            --dart-define=SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
+            --dart-define=SUPABASE_ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}" \
+            --dart-define=SENTRY_DSN="${{ secrets.SENTRY_DSN }}" \
+            --dart-define=POSTHOG_API_KEY="${{ secrets.POSTHOG_API_KEY }}" \
+            --dart-define=POSTHOG_HOST="${{ secrets.POSTHOG_HOST }}"
+
+      - name: Deploy to Netlify
+        run: |
+          cd build/web
+          zip -r /tmp/deploy.zip .
+          result=$(curl -s -X POST \
+            "https://api.netlify.com/api/v1/sites/${{ secrets.NETLIFY_SITE_ID }}/deploys" \
+            -H "Authorization: Bearer ${{ secrets.NETLIFY_AUTH_TOKEN }}" \
+            -H "Content-Type: application/zip" \
+            --data-binary @/tmp/deploy.zip)
+          echo "State: $(echo $result | jq -r '.state')"
+          echo "URL:   $(echo $result | jq -r '.ssl_url')"
+          if [ "$(echo $result | jq -r '.state')" = "null" ]; then
+            echo "Deploy failed: $result"
+            exit 1
+          fi

@@ -36,7 +36,7 @@ See `eq-context/eq/cards/canonical-migration/plan.md` §Unit 3 for context.
 
 | Var | Source |
 |---|---|
-| `CARDS_SUPABASE_URL` | Cards project URL (`https://hshvnjzczdytfiklhojz.supabase.co`) |
+| `CARDS_SUPABASE_URL` | Legacy Cards project URL (`https://hshvnjzczdytfiklhojz.supabase.co`) — project decommissioned 2026-05-24; script is historical |
 | `CARDS_SUPABASE_SERVICE_KEY` | Cards project service-role key (Dashboard → API → service_role) |
 | `CANONICAL_SUPABASE_URL` | Canonical project URL (`https://jvknxcmbtrfnxfrwfimn.supabase.co`) |
 | `CANONICAL_SUPABASE_SERVICE_KEY` | Canonical project service-role key |

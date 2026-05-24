@@ -141,9 +141,9 @@ The Flutter app now reads/writes from eq-canonical (`jvknxcmbtrfnxfrwfimn`) via
 
 | Service | URL / ID | Notes |
 |---|---|---|
-| **Supabase (primary)** | `jvknxcmbtrfnxfrwfimn` (eq-canonical) | All profile + licence data lives here post-Unit-4 |
-| Supabase (legacy rollback) | `hshvnjzczdytfiklhojz` | Read-only rollback; do not write to |
-| Edge Function (OCR) | `https://hshvnjzczdytfiklhojz.supabase.co/functions/v1/ocr-licence` | Still on legacy; redeploy to canonical when rollback window closes |
+| **Supabase** | `jvknxcmbtrfnxfrwfimn` (eq-canonical) | All profile + licence data; Edge Functions; OCR |
+| Edge Function (OCR) | `https://jvknxcmbtrfnxfrwfimn.supabase.co/functions/v1/ocr-licence` | Deployed to eq-canonical 2026-05-24 |
+| Edge Function (share) | `https://jvknxcmbtrfnxfrwfimn.supabase.co/functions/v1/share-licence` | Deployed to eq-canonical 2026-05-24 |
 | PostHog | `eq-production` project, EU host (`eu.i.posthog.com`) | All 9 v1 events wired |
 | Sentry | `eq-cards`, EU host | `runZonedGuarded` wraps `main()` |
 | **Live PWA** | `https://cards.eq.solutions` | Netlify, manual deploy, custom domain LIVE |
@@ -181,36 +181,7 @@ Full history in CHANGELOG.md. Key milestones:
 
 ## What's next
 
-### 1. Per-tenant storage bucket policies
-
-Unit 4 moved photo paths to `{tenant_id}/{staff_id}/{licence_id}/{slot}.jpg` in the
-canonical Storage bucket. RLS on `licence-photos` was updated to scope by
-`app_metadata.tenant_id`. Per-tenant _bucket_ policies (one bucket per tenant prefix)
-are the natural next step for stronger isolation. Currently low-urgency — RLS is the
-guard and it works.
-
-### 2. OCR Edge Function — migrate to eq-canonical
-
-`ocr-licence` Edge Function v9 still lives on the legacy project
-(`hshvnjzczdytfiklhojz`). Once the rollback window closes:
-
-```bash
-supabase link --project-ref jvknxcmbtrfnxfrwfimn
-supabase functions deploy ocr-licence
-supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
-```
-
-Then update `SUPABASE_URL` in `.dart-defines.prod.json` + `web/index.html` PostHog snippet.
-
-### 3. Legacy project teardown (after rollback window)
-
-Once eq-canonical is stable for a couple of weeks post-Unit-4:
-- Strip `hshvnjzczdytfiklhojz` from CSP `_headers` (leave eq-canonical only)
-- Pause or delete the legacy Supabase project
-- Clean up stale migrations in `supabase/migrations/` (0001–0005 were applied to the
-  legacy project; canonical schema is managed via MCP/Studio)
-
-### 4. GitHub → Netlify auto-deploy
+### 1. GitHub → Netlify auto-deploy
 
 Not wired — `netlify.toml` explicitly gates on manual deploys. Requires Netlify env
 vars for dart-defines (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SENTRY_DSN`,
@@ -258,7 +229,8 @@ work is confirming the `app_data.staff` ↔ Cards `profiles` field mapping is co
 | `scripts/migrate-to-canonical.ts` | Unit 3 one-time migration script (idempotent, `--apply` required for writes) |
 | `scripts/README.md` | Usage instructions + safety properties for the migration script |
 | `supabase/migrations/` | 0001–0005 applied to legacy project; canonical schema managed via MCP/Studio |
-| `supabase/functions/ocr-licence/` | Claude Vision Edge Function v9 (still on legacy project) |
+| `supabase/functions/ocr-licence/` | Claude Vision Edge Function — deployed to eq-canonical |
+| `supabase/functions/share-licence/` | Public QR share endpoint — deployed to eq-canonical |
 | `web/` | Web bundle source (`_headers` has CSP; `index.html` has PostHog snippet) |
 | `netlify.toml` | Netlify site config — build publish dir + SPA redirect |
 | `.dart-defines.prod.json` | Production dart-defines pointing at eq-canonical (gitignored) |
@@ -286,8 +258,7 @@ flutter run -d edge --web-port=8765 --dart-define-from-file=.dart-defines.prod.j
 # Shell path: open core.eq.solutions/:tenant/cards (Shell JWT handoff)
 ```
 
-Use `.dart-defines.prod.json` (eq-canonical) not `.dart-defines.json` (may still point
-at legacy project). Check which is which before running against live data.
+Both `.dart-defines.prod.json` and `.dart-defines.json` point at eq-canonical (`jvknxcmbtrfnxfrwfimn`). Legacy project decommissioned 2026-05-24.
 
 ---
 
@@ -301,8 +272,7 @@ at legacy project). Check which is which before running against live data.
   same Supabase session on eq-canonical.
 - **SW kill-switch** — `web/` contains a service-worker-reset mechanism for users
   stuck on old cached builds. Check `11f8712` and `2996fb9` if stale-build issues recur.
-- **OCR Edge Function still on legacy** — `ocr-licence` v9 on `hshvnjzczdytfiklhojz`.
-  Redeploy to eq-canonical when that project is decommissioned.
+- **OCR + share Edge Functions on eq-canonical** — both `ocr-licence` and `share-licence` deployed to `jvknxcmbtrfnxfrwfimn` 2026-05-24. Legacy project decommissioned.
 - **§18 reconciliation resolved** — Path A (consolidate to canonical) taken. See
   `ARCHITECTURE.md §18` (updated).
 - **7-iteration OCR debug chain** — see CHANGELOG "Edge Function deploys this sprint."
