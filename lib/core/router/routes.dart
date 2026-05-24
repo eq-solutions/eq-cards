@@ -9,6 +9,10 @@ abstract class Routes {
   static const email = '/auth/email';
   static const otp = '/auth/otp';
 
+  // PIN auth — gate shown after a valid session is restored.
+  static const pinSetup = '/auth/pin/setup';
+  static const pinEntry = '/auth/pin/enter';
+
   static const home = '/home';
   static const profile = '/profile';
   static const profileEdit = '/profile/edit';
