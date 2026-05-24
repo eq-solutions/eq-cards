@@ -153,7 +153,9 @@ String? _redirect(BuildContext context, GoRouterState state) {
   if (loc == Routes.splash || loc == Routes.home) {
     return isSignedIn ? Routes.licencesList : Routes.handoff;
   }
-  if (isSignedIn && isAuthRoute) return Routes.licencesList;
+  // Handoff is always processed even when a session exists — it needs to
+  // clear any stale session and apply the fresh Shell JWT.
+  if (isSignedIn && isAuthRoute && loc != Routes.handoff) return Routes.licencesList;
   if (!isSignedIn && !isAuthRoute && !isLegalRoute && !isShareRoute) {
     return Routes.email;
   }

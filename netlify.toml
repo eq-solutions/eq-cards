@@ -9,11 +9,14 @@
 
 [build]
   publish = "build/web"
-  # No build command — we build locally with the right --dart-defines and
-  # upload the artifact. A CI build here would need the dart-defines file
-  # set as Netlify env vars, which we don't want to do until production
-  # secrets are reviewed.
-  command = ""
+  command = "bash scripts/netlify_build.sh"
+  # Required env vars (set in Netlify UI → Site → Environment variables):
+  #   SUPABASE_URL, SUPABASE_ANON_KEY, SENTRY_DSN, POSTHOG_API_KEY, POSTHOG_HOST
+  # Netlify caches $HOME between builds so Flutter is only downloaded once.
+
+[build.environment]
+  # Pin to stable channel. Bump to upgrade Flutter in CI.
+  FLUTTER_CHANNEL = "stable"
 
 # SPA routing — all paths serve index.html so go_router handles the route
 # (required for /share?licence_id=... deep links to work on direct access).
