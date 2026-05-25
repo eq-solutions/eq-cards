@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/pin_repository.dart';
@@ -55,7 +58,10 @@ class AppLockNotifier extends _$AppLockNotifier {
       // A fresh signedIn event may have already unlocked us while the RPC
       // was in flight — don't overwrite that.
       if (state == AppLockPhase.checking) {
-        state = hasPinSet ? AppLockPhase.pinEntryRequired : AppLockPhase.pinSetupRequired;
+        // PIN is opt-in: only gate on entry if the user already set one.
+        // pinSetupRequired is only used by the voluntary PIN-setup flow
+        // (e.g. Settings → Set up PIN), not enforced on cold start.
+        state = hasPinSet ? AppLockPhase.pinEntryRequired : AppLockPhase.unlocked;
       }
     } catch (_) {
       if (state == AppLockPhase.checking) {
@@ -75,9 +81,17 @@ class AppLockNotifier extends _$AppLockNotifier {
     }
   }
 
+  /// Called from PinSetupScreen "Skip for now" — dismisses setup without saving.
+  void skipPinSetup() => state = AppLockPhase.unlocked;
+
   /// Called from PinSetupScreen after the user has confirmed their PIN.
   Future<void> setupPin(String pin) async {
-    await ref.read(pinRepositoryProvider).setPin(pin);
-    state = AppLockPhase.unlocked;
+    try {
+      await ref.read(pinRepositoryProvider).setPin(pin);
+      state = AppLockPhase.unlocked;
+    } catch (e, stack) {
+      unawaited(Sentry.captureException(e, stackTrace: stack));
+      rethrow;
+    }
   }
 }

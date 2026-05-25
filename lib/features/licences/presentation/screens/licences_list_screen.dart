@@ -304,12 +304,13 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
 
   Future<void> _captureFlow(BuildContext context, WidgetRef ref) async {
     final picker = ImagePicker();
-    // Always open the camera directly — on mobile web this maps to
-    // <input capture="environment"> which captures JPEG; on desktop web
-    // it falls back to file picker. The old ImageSource.gallery path on
-    // mobile web let users pick HEIC library photos which broke OCR.
+    // Web: use gallery (file input, no capture attribute) — this reliably
+    // opens a file picker on both desktop and mobile browsers. camera with
+    // capture=environment is unreliable on desktop Chrome/Edge and may
+    // return null without showing any UI.
+    // Native: camera directly for best OCR quality.
     final picked = await picker.pickImage(
-      source: ImageSource.camera,
+      source: kIsWeb ? ImageSource.gallery : ImageSource.camera,
       preferredCameraDevice: CameraDevice.rear,
       imageQuality: 85,
     );

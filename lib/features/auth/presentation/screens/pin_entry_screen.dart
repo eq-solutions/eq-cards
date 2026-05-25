@@ -262,7 +262,22 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
                     onBackspace: _onBackspace,
                     disabled: _isSaving,
                   ),
-                  const SizedBox(height: EqSpacing.xl + EqSpacing.md),
+                  const SizedBox(height: EqSpacing.xl),
+                  TextButton(
+                    onPressed: _isSaving
+                        ? null
+                        : () {
+                            ref
+                                .read(appLockNotifierProvider.notifier)
+                                .skipPinSetup();
+                          },
+                    child: Text(
+                      'Skip for now',
+                      style: EqTypography.bodyM
+                          .copyWith(color: EqColours.grey),
+                    ),
+                  ),
+                  const SizedBox(height: EqSpacing.md),
                 ],
               ),
             ),

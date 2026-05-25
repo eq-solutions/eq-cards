@@ -95,23 +95,40 @@ class _CertificateAddScreenState extends ConsumerState<CertificateAddScreen> {
   }
 
   Future<void> _pickFile() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png', 'webp'],
-      withData: true,
-    );
-    if (result == null || result.files.isEmpty) return;
-    final file = result.files.first;
-    if (file.bytes == null) return;
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png', 'webp'],
+        withData: true,
+      );
+      if (result == null || result.files.isEmpty) return; // user cancelled
+      final file = result.files.first;
+      if (file.bytes == null) {
+        // Some browsers return a file entry without bytes even with
+        // withData:true — show an actionable error rather than silently
+        // dropping the selection.
+        setState(
+          () => _error =
+              'Could not read the file. Try a different format or browser.',
+        );
+        return;
+      }
 
-    final ext = (file.extension ?? 'pdf').toLowerCase();
-    final mime = ext == 'pdf' ? 'application/pdf' : 'image/$ext';
+      final ext = (file.extension ?? 'pdf').toLowerCase();
+      final mime = ext == 'pdf' ? 'application/pdf' : 'image/$ext';
 
-    setState(() {
-      _pendingBytes = file.bytes;
-      _pendingFileName = file.name;
-      _pendingMime = mime;
-    });
+      setState(() {
+        _pendingBytes = file.bytes;
+        _pendingFileName = file.name;
+        _pendingMime = mime;
+        _error = null;
+      });
+    } catch (e) {
+      setState(
+        () => _error =
+            'Could not open file picker. Try refreshing the page.',
+      );
+    }
   }
 
   Future<void> _pickDate({required bool isExpiry}) async {
