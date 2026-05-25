@@ -25,5 +25,5 @@
     X-Content-Type-Options = "nosniff"
     X-XSS-Protection = "1; mode=block"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    Permissions-Policy = "microphone=(), geolocation=()"
     Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.sentry.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://jvknxcmbtrfnxfrwfimn.supabase.co https://*.supabase.co wss://jvknxcmbtrfnxfrwfimn.supabase.co https://eu.i.posthog.com https://*.sentry.io; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
