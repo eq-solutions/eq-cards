@@ -17,9 +17,9 @@ class AuthFlowNotifier extends _$AuthFlowNotifier {
       await ref.read(authRepositoryProvider).sendOtp(email.trim());
       state = AuthFlowAwaitingOtp(email.trim());
     } on Failure catch (f) {
-      state = AuthFlowError(_message(f));
+      state = AuthFlowError(_message(f), email: email.trim());
     } catch (_) {
-      state = const AuthFlowError('Something went wrong. Please try again.');
+      state = AuthFlowError('Something went wrong. Please try again.', email: email.trim());
     }
   }
 

@@ -113,13 +113,19 @@ class LicenceRepository {
   }
 
   Future<Licence> _withSignedUrls(Licence l) async {
+    // Photo paths come from the per-tenant DB (via cards-api) but signing uses
+    // shared eq-canonical storage. Both must agree on the path format.
+    // If signing fails, log to Sentry — silent null means blank photos, which
+    // will surface the storage migration being applied to only one side.
     Future<String?> sign(String? path) async {
       if (path == null) return null;
       try {
         return await _client.storage
             .from(_bucket)
             .createSignedUrl(path, _signedUrlSeconds);
-      } catch (_) {
+      } catch (e, st) {
+        unawaited(_breadcrumb('licence_signed_url_failed', {'path': path, 'error': e.toString()}));
+        unawaited(Sentry.captureException(e, stackTrace: st));
         return null;
       }
     }
