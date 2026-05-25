@@ -20,6 +20,8 @@ class AuthFlowVerifying extends AuthFlowState {
 }
 
 class AuthFlowError extends AuthFlowState {
-  const AuthFlowError(this.message);
+  const AuthFlowError(this.message, {this.email = ''});
   final String message;
+  // Preserve the email so the OTP screen can retry with the correct address.
+  final String email;
 }

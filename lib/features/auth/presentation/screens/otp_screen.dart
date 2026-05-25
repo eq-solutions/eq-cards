@@ -57,12 +57,20 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     final email = flowState is AuthFlowAwaitingOtp
         ? flowState.email
         : flowState is AuthFlowError
-            ? '' // error — email shown from previous state; fallback gracefully
+            ? flowState.email // preserved from the failed attempt
             : '';
 
     final isLoading = flowState is AuthFlowVerifying;
     final error = flowState is AuthFlowError ? flowState.message : null;
     final isSending = flowState is AuthFlowSendingOtp;
+
+    // Clear the code field when an error is shown so the user must enter a
+    // fresh code rather than re-submitting an expired or rejected token.
+    if (error != null && _codeController.text.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _codeController.clear();
+      });
+    }
 
     return Scaffold(
       backgroundColor: EqColours.white,
