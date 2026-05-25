@@ -19,6 +19,14 @@ class OcrExtraction {
     this.stateCandidate,
     this.issueDateCandidate,
     this.expiryDateCandidate,
+    // Driver licence profile fields — non-null only when licenceTypeCandidate
+    // is 'driver_licence' and the field was legible.
+    this.holderName,
+    this.dateOfBirth,
+    this.addressStreet,
+    this.addressSuburb,
+    this.addressState,
+    this.addressPostcode,
   });
 
   final String rawText;
@@ -29,6 +37,25 @@ class OcrExtraction {
   final String? stateCandidate;
   final DateTime? issueDateCandidate;
   final DateTime? expiryDateCandidate;
+
+  // Profile fields — only populated for driver licences.
+  final String? holderName;
+  final DateTime? dateOfBirth;
+  final String? addressStreet;
+  final String? addressSuburb;
+  final String? addressState;
+  final String? addressPostcode;
+
+  /// True when at least one profile field was extracted — used to decide
+  /// whether to show the "Fill your profile from this scan?" confirmation
+  /// step after a driver licence scan.
+  bool get hasProfileFields =>
+      holderName != null ||
+      dateOfBirth != null ||
+      addressStreet != null ||
+      addressSuburb != null ||
+      addressState != null ||
+      addressPostcode != null;
 }
 
 class OcrService {
@@ -138,6 +165,13 @@ class OcrService {
       stateCandidate: data['state'] as String?,
       issueDateCandidate: _parseIsoDate(data['issue_date'] as String?),
       expiryDateCandidate: _parseIsoDate(data['expiry_date'] as String?),
+      // Driver licence profile fields — null for all other document types.
+      holderName: data['holder_name'] as String?,
+      dateOfBirth: _parseIsoDate(data['date_of_birth'] as String?),
+      addressStreet: data['address_street'] as String?,
+      addressSuburb: data['address_suburb'] as String?,
+      addressState: data['address_state'] as String?,
+      addressPostcode: data['address_postcode'] as String?,
     );
   }
 

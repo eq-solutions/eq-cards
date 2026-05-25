@@ -50,6 +50,14 @@ class SettingsScreen extends ConsumerWidget {
             padding: EdgeInsets.zero,
             child: Column(
               children: [
+                _StaticRow(
+                  icon: Icons.person_outline,
+                  label: 'Signed in as',
+                  subtitle: Supabase.instance.client.auth.currentUser?.email ??
+                      Supabase.instance.client.auth.currentUser?.phone ??
+                      'Unknown',
+                ),
+                const Divider(height: 1),
                 _BiometricRow(
                   asyncEnabled: asyncBiometric,
                   onChanged: (v) => ref

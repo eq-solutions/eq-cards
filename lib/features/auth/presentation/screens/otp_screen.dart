@@ -59,6 +59,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
       if (next is AuthFlowError) _codeController.clear();
     });
 
+
     // Safety: if state is no longer in an OTP-related phase (e.g. stale
     // navigation after app restart), go back to email entry.
     if (flowState is! AuthFlowAwaitingOtp &&

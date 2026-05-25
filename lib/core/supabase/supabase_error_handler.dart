@@ -15,7 +15,9 @@ Failure mapSupabaseError(Object error) {
     return const NetworkFailure();
   }
   if (error is AuthException) {
-    return ServerFailure(401, error.message);
+    // AuthException.statusCode is a String? — parse it for rate-limit detection.
+    final statusCode = int.tryParse(error.statusCode ?? '') ?? 401;
+    return ServerFailure(statusCode, error.message);
   }
   if (error is PostgrestException) {
     final code = int.tryParse(error.code ?? '') ?? 500;

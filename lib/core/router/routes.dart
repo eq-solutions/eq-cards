@@ -9,14 +9,25 @@ abstract class Routes {
   static const email = '/auth/email';
   static const otp = '/auth/otp';
 
+  // PIN auth — gate shown after a valid session is restored.
+  static const pinSetup = '/auth/pin/setup';
+  static const pinEntry = '/auth/pin/enter';
+
   static const home = '/home';
   static const profile = '/profile';
   static const profileEdit = '/profile/edit';
   static const licencesList = '/licences';
   static const licenceCreate = '/licences/new';
   static const licenceCapture = '/licences/capture';
+  // Profile fill from driver licence scan — shown between OCR and licence save
+  static const profileFillFromLicence = '/licences/fill-profile';
   static const licenceDetail = '/licences/:id';
   static const licenceEdit = '/licences/:id/edit';
+  static const certificatesList = '/certificates';
+  static const certificateCreate = '/certificates/new';
+  static const certificateDetail = '/certificates/:id';
+  static const certificateEdit = '/certificates/:id/edit';
+
   static const settings = '/settings';
   static const privacyPolicy = '/legal/privacy';
   static const termsOfUse = '/legal/terms';
@@ -28,4 +39,7 @@ abstract class Routes {
   /// string interpolation so the route shapes stay in one place.
   static String licenceDetailFor(String id) => '/licences/$id';
   static String licenceEditFor(String id) => '/licences/$id/edit';
+
+  static String certificateDetailFor(String id) => '/certificates/$id';
+  static String certificateEditFor(String id) => '/certificates/$id/edit';
 }
