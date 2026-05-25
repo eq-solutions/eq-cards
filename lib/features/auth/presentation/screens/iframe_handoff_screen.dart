@@ -29,6 +29,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/router/routes.dart';
@@ -106,10 +107,12 @@ class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
       // /auth/handoff to allow stale-session replacement, so we must drive
       // the final navigation ourselves.
       if (mounted) context.go(Routes.licencesList);
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('IframeHandoffScreen: setSession failed: $e');
+      unawaited(Sentry.captureException(e, stackTrace: stack));
       setState(
         () => _error =
-            'EQ Cards rejected the sign-in handoff. Sign out and back in at your tenant shell, then retry.\n\n$e',
+            'Sign-in failed. Sign out and back in at your tenant shell, then retry.',
       );
     }
   }

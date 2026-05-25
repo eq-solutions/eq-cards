@@ -47,6 +47,12 @@
   <title>EQ Cards</title>
   <link rel="manifest" href="manifest.json">
 
+  <!-- Cropper.js — required by image_cropper on web. Must load synchronously
+       before flutter_bootstrap.js so Cropper is available when Flutter calls
+       new Cropper(...). Missing this produces "undefined is not a constructor". -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+
   <!--
     Service-worker kill-switch.
     The pre-Unit-4 build registered Flutter's default SW, which kept serving

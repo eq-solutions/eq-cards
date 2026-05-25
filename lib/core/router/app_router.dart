@@ -4,6 +4,10 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../features/auth/auth.dart';
+import '../../features/auth/domain/app_lock_state.dart';
+import '../../features/auth/presentation/notifiers/app_lock_notifier.dart';
+import '../../features/auth/presentation/screens/pin_entry_screen.dart';
+import '../../features/certificates/certificates.dart';
 import '../../features/legal/presentation/screens/legal_document_screen.dart';
 import '../../features/licences/licences.dart';
 import '../../features/profile/profile.dart';
@@ -18,15 +22,19 @@ part 'app_router.g.dart';
 
 @riverpod
 GoRouter appRouter(AppRouterRef ref) {
-  // Bridge: Riverpod auth-state changes -> ChangeNotifier -> GoRouter refresh.
+  // Bridge: Riverpod state changes -> ChangeNotifier -> GoRouter refresh.
   final notifier = _AuthRouterNotifier();
   ref.listen(authStateChangesProvider, (_, __) => notifier.bump());
+  ref.listen(appLockNotifierProvider, (_, __) => notifier.bump());
   ref.onDispose(notifier.dispose);
 
   return GoRouter(
     initialLocation: Routes.splash,
     refreshListenable: notifier,
-    redirect: _redirect,
+    redirect: (context, state) {
+      final lockPhase = ref.read(appLockNotifierProvider);
+      return _redirect(context, state, lockPhase);
+    },
     routes: [
       GoRoute(
         path: Routes.splash,
@@ -46,6 +54,15 @@ GoRouter appRouter(AppRouterRef ref) {
       GoRoute(
         path: Routes.otp,
         builder: (context, state) => const OtpScreen(),
+      ),
+      // PIN auth — gates the app on every cold start once a PIN is set.
+      GoRoute(
+        path: Routes.pinSetup,
+        builder: (context, state) => const PinSetupScreen(),
+      ),
+      GoRoute(
+        path: Routes.pinEntry,
+        builder: (context, state) => const PinEntryScreen(),
       ),
       // Legal documents — top-level routes outside the shell so they can be
       // reached from anywhere (Settings, share sheet, etc.) and present as
@@ -85,6 +102,15 @@ GoRouter appRouter(AppRouterRef ref) {
                       return LicenceEditScreen(prefill: prefill);
                     },
                   ),
+                  // Driver licence profile-fill confirmation — shown between
+                  // OCR and licence save when a DL scan extracts profile data.
+                  GoRoute(
+                    path: 'fill-profile',
+                    builder: (context, state) {
+                      final fill = state.extra as DlProfileFill?;
+                      return ProfileFillFromLicenceScreen(fill: fill);
+                    },
+                  ),
                   GoRoute(
                     path: ':id',
                     builder: (context, state) {
@@ -105,7 +131,39 @@ GoRouter appRouter(AppRouterRef ref) {
               ),
             ],
           ),
-          // Tab 1 — Profile
+          // Tab 1 — Certificates
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.certificatesList,
+                builder: (context, state) => const CertificatesListScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'new',
+                    builder: (context, state) =>
+                        const CertificateAddScreen(),
+                  ),
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return CertificateDetailScreen(certificateId: id);
+                    },
+                    routes: [
+                      GoRoute(
+                        path: 'edit',
+                        builder: (context, state) {
+                          final id = state.pathParameters['id']!;
+                          return CertificateAddScreen(certificateId: id);
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+          // Tab 2 — Profile
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -135,7 +193,7 @@ GoRouter appRouter(AppRouterRef ref) {
   );
 }
 
-String? _redirect(BuildContext context, GoRouterState state) {
+String? _redirect(BuildContext context, GoRouterState state, AppLockPhase lockPhase) {
   // Treat an expired session the same as no session. Without this, an
   // offline user whose token expired (and `tokenRefreshed` never fired)
   // stays on signed-in routes while every Supabase call returns 401 —
@@ -144,6 +202,7 @@ String? _redirect(BuildContext context, GoRouterState state) {
   final isSignedIn = session != null && !session.isExpired;
   final loc = state.matchedLocation;
   final isAuthRoute = loc.startsWith('/auth/');
+  final isPinRoute = loc == Routes.pinSetup || loc == Routes.pinEntry;
   // Legal documents are reachable without sign-in so users can review the
   // Privacy Policy and Terms before sign-in.
   final isLegalRoute = loc.startsWith('/legal/');
@@ -153,12 +212,35 @@ String? _redirect(BuildContext context, GoRouterState state) {
   if (loc == Routes.splash || loc == Routes.home) {
     return isSignedIn ? Routes.licencesList : Routes.handoff;
   }
+
+  // Unauthenticated: PIN routes are off-limits.
+  if (!isSignedIn && isPinRoute) return Routes.email;
+
   // Handoff is always processed even when a session exists — it needs to
   // clear any stale session and apply the fresh Shell JWT.
-  if (isSignedIn && isAuthRoute && loc != Routes.handoff) return Routes.licencesList;
+  // PIN routes remain accessible when signed in (they ARE the gate).
+  if (isSignedIn && isAuthRoute && loc != Routes.handoff && !isPinRoute) {
+    return Routes.licencesList;
+  }
   if (!isSignedIn && !isAuthRoute && !isLegalRoute && !isShareRoute) {
     return Routes.email;
   }
+
+  // PIN gate — only applies to signed-in users on non-auth/legal/share routes,
+  // or when the lock notifier has determined a PIN action is required.
+  if (isSignedIn) {
+    if (lockPhase == AppLockPhase.pinSetupRequired && !isPinRoute) {
+      return Routes.pinSetup;
+    }
+    if (lockPhase == AppLockPhase.pinEntryRequired && !isPinRoute) {
+      return Routes.pinEntry;
+    }
+    // Once unlocked, bounce away from PIN routes if user somehow navigates back.
+    if (lockPhase == AppLockPhase.unlocked && isPinRoute) {
+      return Routes.licencesList;
+    }
+  }
+
   return null;
 }
 

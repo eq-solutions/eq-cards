@@ -222,7 +222,9 @@ class _LinearDetail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final issueText = DateFormat('d MMM yyyy').format(licence.issueDate);
+    final issueText = licence.issueDate != null
+        ? DateFormat('d MMM yyyy').format(licence.issueDate!)
+        : null;
     final expiryText = DateFormat('d MMM yyyy').format(licence.expiryDate);
 
     return SingleChildScrollView(
@@ -259,8 +261,10 @@ class _LinearDetail extends StatelessWidget {
                 const Divider(height: 1),
                 _CopyRow(label: 'Number', value: licence.licenceNumber),
                 const Divider(height: 1),
-                _Row(label: 'Issued', value: issueText),
-                const Divider(height: 1),
+                if (issueText != null) ...[
+                  _Row(label: 'Issued', value: issueText),
+                  const Divider(height: 1),
+                ],
                 _Row(
                   label: 'Expires',
                   value: expiryText,
@@ -315,7 +319,9 @@ class _WalletDetail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final issueText = DateFormat('d MMM yyyy').format(licence.issueDate);
+    final issueText = licence.issueDate != null
+        ? DateFormat('d MMM yyyy').format(licence.issueDate!)
+        : null;
     final expiryText = DateFormat('d MMM yyyy').format(licence.expiryDate);
 
     return CustomScrollView(
@@ -338,8 +344,10 @@ class _WalletDetail extends StatelessWidget {
                   children: [
                     _CopyRow(label: 'Number', value: licence.licenceNumber),
                     const Divider(height: 1),
-                    _Row(label: 'Issued', value: issueText),
-                    const Divider(height: 1),
+                    if (issueText != null) ...[
+                      _Row(label: 'Issued', value: issueText),
+                      const Divider(height: 1),
+                    ],
                     _Row(
                       label: 'Expires',
                       value: expiryText,
@@ -491,7 +499,9 @@ class _PhotoFirstDetail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final issueText = DateFormat('d MMM yyyy').format(licence.issueDate);
+    final issueText = licence.issueDate != null
+        ? DateFormat('d MMM yyyy').format(licence.issueDate!)
+        : null;
     final expiryText = DateFormat('d MMM yyyy').format(licence.expiryDate);
     final hasPhoto = licence.photoFrontSignedUrl != null;
 
@@ -570,8 +580,10 @@ class _PhotoFirstDetail extends StatelessWidget {
                   children: [
                     _CopyRow(label: 'Number', value: licence.licenceNumber),
                     const Divider(height: 1),
-                    _Row(label: 'Issued', value: issueText),
-                    const Divider(height: 1),
+                    if (issueText != null) ...[
+                      _Row(label: 'Issued', value: issueText),
+                      const Divider(height: 1),
+                    ],
                     _Row(
                       label: 'Expires',
                       value: expiryText,

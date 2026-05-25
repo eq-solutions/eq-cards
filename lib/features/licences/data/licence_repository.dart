@@ -133,10 +133,10 @@ Map<String, dynamic> licenceToUpsertPayload(Licence l) {
   final payload = <String, dynamic>{
     'licence_type': l.licenceType,
     'licence_number': l.licenceNumber,
-    'issue_date': _isoDate(l.issueDate),
     'expiry_date': _isoDate(l.expiryDate),
     'metadata': l.metadata,
   };
+  if (l.issueDate != null) payload['issue_date'] = _isoDate(l.issueDate!);
   if (l.id != null) payload['id'] = l.id;
   if (l.issuingAuthority != null) payload['issuing_authority'] = l.issuingAuthority;
   if (l.state != null) payload['state'] = l.state;

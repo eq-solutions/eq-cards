@@ -33,8 +33,8 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   final _email = TextEditingController();
   final _street = TextEditingController();
   final _suburb = TextEditingController();
-  final _state = TextEditingController();
   final _postcode = TextEditingController();
+  String? _selectedState;
   final _emergencyName = TextEditingController();
   final _emergencyRel = TextEditingController();
   final _emergencyMobile = TextEditingController();
@@ -82,7 +82,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     _email.text = p.email ?? '';
     _street.text = p.addressStreet ?? '';
     _suburb.text = p.addressSuburb ?? '';
-    _state.text = p.addressState ?? '';
+    _selectedState = p.addressState;
     _postcode.text = p.addressPostcode ?? '';
     _emergencyName.text = p.emergencyContactName ?? '';
     _emergencyRel.text = p.emergencyContactRelationship ?? '';
@@ -97,7 +97,6 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     _email.dispose();
     _street.dispose();
     _suburb.dispose();
-    _state.dispose();
     _postcode.dispose();
     _emergencyName.dispose();
     _emergencyRel.dispose();
@@ -141,7 +140,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       email: _textOrNull(_email.text),
       addressStreet: _textOrNull(_street.text),
       addressSuburb: _textOrNull(_suburb.text),
-      addressState: _textOrNull(_state.text),
+      addressState: _selectedState,
       addressPostcode: _textOrNull(_postcode.text),
       emergencyContactName: _textOrNull(_emergencyName.text),
       emergencyContactRelationship: _textOrNull(_emergencyRel.text),
@@ -287,10 +286,24 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: EqTextField(
-                      controller: _state,
-                      label: 'State',
-                      validator: validateAuState,
+                    child: DropdownButtonFormField<String>(
+                      value: _selectedState,
+                      decoration: InputDecoration(
+                        labelText: 'State',
+                        filled: true,
+                        fillColor: EqColours.ice,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(6),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                      hint: const Text('Select'),
+                      items: const [
+                        'NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT',
+                      ]
+                          .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                          .toList(),
+                      onChanged: (v) => setState(() => _selectedState = v),
                     ),
                   ),
                   const SizedBox(width: EqSpacing.md),

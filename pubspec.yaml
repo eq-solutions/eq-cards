@@ -57,6 +57,22 @@ dependencies:
   # Biometric (architecture §11.4)
   local_auth: ^2.2.0
 
+  # Image decoding / cropping — pure Dart, used by LicenceCropScreen to
+  # decode the captured photo, apply the user's crop rect, and re-encode
+  # as JPEG before the OCR upload. No JS bridge, works on all platforms.
+  image: ^4.2.0
+
+  # UUID generation — client-side IDs for certificate storage paths
+  # before the DB row is inserted.
+  uuid: ^4.4.0
+
+  # File picking — PDF + image selection for certificates.
+  # file_picker handles <input type="file"> on web and native pickers on mobile.
+  file_picker: ^8.0.0
+
+  # Open signed URLs (PDFs) in the device browser / PDF viewer.
+  url_launcher: ^6.3.0
+
   # Date formatting
   intl: ^0.19.0
 

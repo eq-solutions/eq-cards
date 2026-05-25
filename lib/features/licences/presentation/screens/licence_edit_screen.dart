@@ -25,6 +25,7 @@ import '../../data/models/licence_type.dart';
 import '../../data/ocr_service.dart';
 import '../helpers/licence_crop.dart';
 import '../notifiers/licence_types_provider.dart';
+import 'licence_crop_screen.dart';
 import '../notifiers/licences_list_notifier.dart';
 import 'licence_detail_screen.dart';
 
@@ -47,8 +48,8 @@ class LicenceEditScreen extends ConsumerStatefulWidget {
 class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
   final _formKey = GlobalKey<FormState>();
   final _number = TextEditingController();
-  final _state = TextEditingController();
   final _authority = TextEditingController();
+  String? _selectedState;
   final _notes = TextEditingController();
   final _metadataControllers = <String, TextEditingController>{};
 
@@ -74,7 +75,6 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
   @override
   void dispose() {
     _number.dispose();
-    _state.dispose();
     _authority.dispose();
     _notes.dispose();
     for (final c in _metadataControllers.values) {
@@ -96,7 +96,7 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
           _number.text = existing.licenceNumber;
           _issueDate = existing.issueDate;
           _expiryDate = existing.expiryDate;
-          _state.text = existing.state ?? '';
+          _selectedState = existing.state;
           _authority.text = existing.issuingAuthority ?? '';
           _notes.text = existing.notes ?? '';
           for (final entry in existing.metadata.entries) {
@@ -123,7 +123,7 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
         _typeCode = ocr!.licenceTypeCandidate;
       }
       if (ocr?.stateCandidate != null) {
-        _state.text = ocr!.stateCandidate!;
+        _selectedState = ocr!.stateCandidate;
       }
       if (ocr?.issuingAuthorityCandidate != null) {
         _authority.text = ocr!.issuingAuthorityCandidate!;
@@ -201,16 +201,34 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
       preferredCameraDevice: CameraDevice.rear,
     );
     if (picked == null || !mounted) return;
-    // Crop after pick so saved photos are framed + JPEG-compressed, even on
-    // the edit path. No OCR here — the user is editing known fields and
-    // we don't want to clobber their corrections with a fresh extraction.
-    final cropped = await cropLicencePhoto(
-      context,
-      picked,
-      actionLabel: 'Use photo',
-    );
-    if (cropped == null || !mounted) return;
-    final bytes = await cropped.readAsBytes();
+
+    // Crop after pick so saved photos are framed + JPEG-compressed.
+    // Web uses the native Flutter LicenceCropScreen (no JS bridge).
+    // Mobile uses ImageCropper (platform plugin). No OCR on the edit
+    // path — the user is editing known fields and we don't want to
+    // clobber their corrections with a fresh extraction.
+    final Uint8List bytes;
+    if (kIsWeb) {
+      final pickedBytes = await picked.readAsBytes();
+      if (!mounted) return;
+      final cropped = await Navigator.of(context).push<Uint8List>(
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (_) => LicenceCropScreen(imageBytes: pickedBytes),
+        ),
+      );
+      if (cropped == null || !mounted) return;
+      bytes = cropped;
+    } else {
+      final cropped = await cropLicencePhoto(
+        context,
+        picked,
+        actionLabel: 'Use photo',
+      );
+      if (cropped == null || !mounted) return;
+      bytes = await cropped.readAsBytes();
+    }
+
     setState(() {
       if (front) {
         _pendingFront = bytes;
@@ -221,9 +239,15 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
   }
 
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
-    if (_typeCode == null || _issueDate == null || _expiryDate == null) {
-      setState(() => _error = 'Type, issue date and expiry date are required.');
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    // Issue date is optional — many licences (e.g. driver licences) don't
+    // print one. Only type and expiry are hard requirements.
+    if (_typeCode == null) {
+      setState(() => _error = 'Please select the licence type.');
+      return;
+    }
+    if (_expiryDate == null) {
+      setState(() => _error = 'Please set an expiry date.');
       return;
     }
 
@@ -251,9 +275,9 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
         userId: userId,
         licenceType: _typeCode!,
         licenceNumber: _number.text.trim(),
-        issueDate: _issueDate!,
+        issueDate: _issueDate, // nullable — not all licences print an issue date
         expiryDate: _expiryDate!,
-        state: _textOrNull(_state.text),
+        state: _selectedState,
         issuingAuthority: _textOrNull(_authority.text),
         notes: _textOrNull(_notes.text),
         photoFrontPath: _existing?.photoFrontPath,
@@ -403,7 +427,7 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
               ),
               const SizedBox(height: EqSpacing.md),
               _DateField(
-                label: 'Issue date',
+                label: 'Issue date (optional)',
                 value: _issueDate,
                 onTap: () => _pickDate(forExpiry: false),
               ),
@@ -414,10 +438,24 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
                 onTap: () => _pickDate(forExpiry: true),
               ),
               const SizedBox(height: EqSpacing.md),
-              EqTextField(
-                controller: _state,
-                label: 'State (NSW, VIC, etc.)',
-                validator: validateAuState,
+              DropdownButtonFormField<String>(
+                value: _selectedState,
+                decoration: InputDecoration(
+                  labelText: 'State',
+                  filled: true,
+                  fillColor: EqColours.ice,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                hint: const Text('Select state'),
+                items: const [
+                  'NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT',
+                ]
+                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                    .toList(),
+                onChanged: (v) => setState(() => _selectedState = v),
               ),
               const SizedBox(height: EqSpacing.md),
               EqTextField(
@@ -510,6 +548,7 @@ class _TypeDropdown extends StatelessWidget {
           .map((t) => DropdownMenuItem(value: t.code, child: Text(t.label)))
           .toList(),
       onChanged: onChanged,
+      validator: (v) => v == null ? 'Please select a licence type' : null,
     );
   }
 }

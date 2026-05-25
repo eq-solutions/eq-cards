@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -21,6 +22,9 @@ import '../../../../core/utils/photo_upload.dart';
 import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_button.dart';
 import '../../../auth/auth.dart';
+import '../../../profile/presentation/screens/profile_fill_from_licence_screen.dart'
+    show DlProfileFill;
+import 'licence_crop_screen.dart';
 import '../../data/models/licence.dart';
 import '../../data/ocr_service.dart';
 import '../helpers/licence_crop.dart';
@@ -300,24 +304,50 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
 
   Future<void> _captureFlow(BuildContext context, WidgetRef ref) async {
     final picker = ImagePicker();
+    // Always open the camera directly — on mobile web this maps to
+    // <input capture="environment"> which captures JPEG; on desktop web
+    // it falls back to file picker. The old ImageSource.gallery path on
+    // mobile web let users pick HEIC library photos which broke OCR.
     final picked = await picker.pickImage(
-      source: kIsWeb ? ImageSource.gallery : ImageSource.camera,
+      source: ImageSource.camera,
       preferredCameraDevice: CameraDevice.rear,
+      imageQuality: 85,
     );
     if (picked == null || !context.mounted) return;
 
-    // Cropping step — let the user frame the licence card before we
-    // upload + OCR. Smaller upload (faster, cheaper Anthropic call) and
-    // higher OCR accuracy (less background noise).
-    final cropped = await cropLicencePhoto(
-      context,
-      picked,
-      actionLabel: 'Scan licence',
-    );
-    if (cropped == null || !context.mounted) return;
-
-    final rawBytes = await cropped.readAsBytes();
-    final pickedMime = picked.mimeType;
+    // Cropping step — native Flutter UI on web (no JS bridge); ImageCropper
+    // on native builds. The web native crop decodes the picked image, shows
+    // draggable corner handles, and re-encodes the selection as JPEG before
+    // returning. This eliminates background noise for better OCR accuracy.
+    // croppedFile is only set on native — used by extractFromFile (ML Kit).
+    // On web the native crop returns Uint8List directly.
+    XFile? croppedFile;
+    Uint8List rawBytes;
+    if (kIsWeb) {
+      final pickedBytes = await picked.readAsBytes();
+      if (!context.mounted) return;
+      final cropped = await Navigator.of(context).push<Uint8List>(
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (_) => LicenceCropScreen(imageBytes: pickedBytes),
+        ),
+      );
+      if (cropped == null || !context.mounted) return; // user cancelled
+      rawBytes = cropped;
+    } else {
+      final c = await cropLicencePhoto(
+        context,
+        picked,
+        actionLabel: 'Scan licence',
+      );
+      if (c == null || !context.mounted) return;
+      croppedFile = c;
+      rawBytes = await c.readAsBytes();
+    }
+    // The native crop re-encodes to JPEG, so on web the mime is always
+    // image/jpeg. On native, the original mime from the picker is used
+    // (ImageCropper also outputs JPEG, so this is also always image/jpeg).
+    final pickedMime = kIsWeb ? 'image/jpeg' : picked.mimeType;
 
     if (!context.mounted) return;
     // Show a loading dialog while OCR runs. The Edge Function round-trip
@@ -383,13 +413,22 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
         );
         unawaited(Sentry.captureException(e, stackTrace: st));
         bytes = rawBytes;
-        // Use the picker's reported mime — if it's HEIC, we'll let the
-        // Edge Function 400 with `unsupported_mime_type` which the user
-        // sees as a clear "photo format not supported" SnackBar, instead
-        // of an opaque upstream failure.
-        if (pickedMime != null && pickedMime.isNotEmpty) {
+        // Do NOT override mime with pickedMime here. The crop step
+        // (ImageCropper, compressFormat: jpg) already converted the
+        // image to JPEG, so rawBytes are always JPEG regardless of the
+        // original format (e.g. HEIC from an iPhone library photo).
+        // Overriding mime with 'image/heic' (the original picker mime)
+        // was the silent iOS OCR-fail pathway — the Edge Function
+        // rejected HEIC with `unsupported_mime_type`.
+        // Only honour pickedMime if it's a format the Edge Function accepts.
+        final supportedMime = RegExp(
+          r'^image/(jpeg|jpg|png|webp|gif)$',
+          caseSensitive: false,
+        );
+        if (pickedMime != null && supportedMime.hasMatch(pickedMime)) {
           mime = pickedMime;
         }
+        // Otherwise keep mime = 'image/jpeg' — the crop already produced JPEG.
       }
     }
 
@@ -401,9 +440,9 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
     // resolves first drives the flow; the loser's future still settles
     // harmlessly in the background.
     final ocr = ref.read(ocrServiceProvider);
-    final ocrCall = (kIsWeb
+    final ocrCall = (kIsWeb || croppedFile == null
             ? ocr.extractFromBytesViaEdgeFunction(bytes, mimeType: mime)
-            : ocr.extractFromFile(File(cropped.path)))
+            : ocr.extractFromFile(File(croppedFile.path)))
         .then<void>((r) {
       extraction = r;
       unawaited(
@@ -484,15 +523,65 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
         ),
       );
     }
-    context.go(
-      Routes.licenceCreate,
-      extra: LicencePrefill(
-        photoBytes: bytes,
-        // On cancel, drop the OCR result even if it raced in just before
-        // the user tapped Skip — they explicitly asked to fill manually.
-        ocr: cancelled ? null : extraction,
-      ),
+    final licencePrefill = LicencePrefill(
+      photoBytes: bytes,
+      // On cancel, drop the OCR result even if it raced in just before
+      // the user tapped Skip — they explicitly asked to fill manually.
+      ocr: cancelled ? null : extraction,
     );
+
+    // Rear-of-card detection: if OCR returned essentially nothing useful —
+    // no card number, no expiry, no holder name — the user probably
+    // photographed the back. The rear of an Aussie DL is ~80% PDF417
+    // barcode; other cards often have barcodes or plain blank backs.
+    // Claude Vision can't decode barcodes as structured text. Prompt the
+    // user to flip and retry rather than dropping them into a blank form.
+    // Note: we do NOT require licenceTypeCandidate == 'driver_licence' here
+    // because the type is often null or unknown when scanning the rear.
+    final looksLikeRear = !cancelled &&
+        extraction != null &&
+        extraction!.numberCandidate == null &&
+        extraction!.expiryDateCandidate == null &&
+        extraction!.holderName == null &&
+        extraction!.licenceTypeCandidate == null;
+    if (looksLikeRear) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            "That looks like the back of the licence — "
+            'flip to the front and scan again.',
+          ),
+          duration: const Duration(seconds: 6),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: EqColours.ink,
+        ),
+      );
+      return; // Stay on the list; user can tap + to try again.
+    }
+
+    // Driver licence + profile fields extracted → ask the user to confirm
+    // their details before continuing to save the licence itself.
+    // Assign to a local variable so the null check promotes the type.
+    final e = extraction;
+    if (!cancelled &&
+        e != null &&
+        e.licenceTypeCandidate == 'driver_licence' &&
+        e.hasProfileFields) {
+      context.go(
+        Routes.profileFillFromLicence,
+        extra: DlProfileFill(
+          holderName: e.holderName,
+          dateOfBirth: e.dateOfBirth,
+          addressStreet: e.addressStreet,
+          addressSuburb: e.addressSuburb,
+          addressState: e.addressState,
+          addressPostcode: e.addressPostcode,
+          licencePrefill: licencePrefill,
+        ),
+      );
+    } else {
+      context.go(Routes.licenceCreate, extra: licencePrefill);
+    }
   }
 
 }
@@ -1010,7 +1099,7 @@ class _OcrLoadingDialogState extends State<_OcrLoadingDialog> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer(const Duration(seconds: 8), () {
+    _timer = Timer(const Duration(seconds: 5), () {
       if (mounted) setState(() => _allowCancel = true);
     });
   }
@@ -1048,10 +1137,10 @@ class _OcrLoadingDialogState extends State<_OcrLoadingDialog> {
               const SizedBox(height: EqSpacing.xs),
               Text(
                 _allowCancel
-                    ? 'Still working — slow network? Tap below to enter the '
-                        'details yourself instead.'
-                    : 'First scan of the day may take a few seconds while we '
-                        'warm up the magic-scanner.',
+                    ? 'Taking longer than usual — tap below to fill the '
+                        'details in yourself instead.'
+                    : 'Usually 5–10 seconds. '
+                        'First scan of the day may take a little longer.',
                 textAlign: TextAlign.center,
                 style: EqTypography.label.copyWith(color: EqColours.grey),
               ),
