@@ -1,13 +1,16 @@
-// Auth repository — two sign-in paths:
+// Auth repository — three sign-in paths:
 //   1. Shell handoff: JWT minted by Shell, passed via #sh= URL hash.
 //      acceptHandoff() applies it as the active Supabase session.
 //   2. Email OTP: user types email, receives a 6-digit code, verifies it.
 //      sendOtp() / verifyOtp() wrap the Supabase gotrue methods.
+//   3. Google OAuth: signInWithGoogle() triggers Supabase's OAuth flow.
+//      On web, redirects to Google then back to the app — no extra package.
 //   - signOut() — the only outbound auth action the Cards UI takes
 //   - Breadcrumb helpers for Sentry diagnostics
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -69,6 +72,27 @@ class AuthRepository {
       unawaited(_breadcrumb('otp_verify_succeeded'));
     } catch (e) {
       unawaited(_breadcrumb('otp_verify_failed', {'error': e.toString()}));
+      throw mapSupabaseError(e);
+    }
+  }
+
+  /// Sign in via Google OAuth. On web, redirects to Google then back to the
+  /// app at [redirectTo]. Supabase picks up the session from the URL fragment
+  /// on return — no extra handling needed in the app.
+  ///
+  /// Requires Google configured as an OAuth provider in Supabase Auth settings
+  /// with the Supabase callback URL added to the Google Cloud Console.
+  Future<void> signInWithGoogle() async {
+    unawaited(_breadcrumb('google_signin_started'));
+    try {
+      await _client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: kIsWeb ? 'https://cards.eq.solutions' : null,
+      );
+      // On web, the page redirects — execution doesn't continue here.
+      // Session is established when the app reloads on the callback URL.
+    } catch (e) {
+      unawaited(_breadcrumb('google_signin_failed', {'error': e.toString()}));
       throw mapSupabaseError(e);
     }
   }
