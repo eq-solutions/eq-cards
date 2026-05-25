@@ -21,30 +21,46 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   final _codeController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
+  // Captured from the first AuthFlowAwaitingOtp state we see.
+  // Preserved through error/verifying transitions so retries don't
+  // call verifyOtp with an empty email.
+  String _email = '';
+
   @override
   void dispose() {
     _codeController.dispose();
     super.dispose();
   }
 
-  Future<void> _submit(String email) async {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     await ref
         .read(authFlowNotifierProvider.notifier)
-        .verifyOtp(email, _codeController.text);
+        .verifyOtp(_email, _codeController.text);
   }
 
-  Future<void> _resend(String email) async {
+  Future<void> _resend() async {
     _codeController.clear();
-    await ref.read(authFlowNotifierProvider.notifier).sendOtp(email);
+    await ref.read(authFlowNotifierProvider.notifier).sendOtp(_email);
   }
 
   @override
   Widget build(BuildContext context) {
     final flowState = ref.watch(authFlowNotifierProvider);
 
-    // Safety: if state is no longer AuthFlowAwaitingOtp (e.g. stale navigation),
-    // go back to email entry.
+    // Capture email the moment we land in awaiting state — persists through
+    // error/verifying so retries always have the correct address.
+    if (flowState is AuthFlowAwaitingOtp && _email.isEmpty) {
+      _email = flowState.email;
+    }
+
+    // Clear code exactly once on error transition.
+    ref.listen<AuthFlowState>(authFlowNotifierProvider, (_, next) {
+      if (next is AuthFlowError) _codeController.clear();
+    });
+
+    // Safety: if state is no longer in an OTP-related phase (e.g. stale
+    // navigation after app restart), go back to email entry.
     if (flowState is! AuthFlowAwaitingOtp &&
         flowState is! AuthFlowVerifying &&
         flowState is! AuthFlowError) {
@@ -53,19 +69,6 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
       });
       return const Scaffold(backgroundColor: EqColours.white);
     }
-
-    final email = flowState is AuthFlowAwaitingOtp
-        ? flowState.email
-        : flowState is AuthFlowError
-            ? flowState.email // preserved from the failed attempt
-            : '';
-
-    // Clear the code field exactly once when the state transitions to error,
-    // so the user must enter a fresh code. A postFrameCallback in build() would
-    // re-fire on every rebuild, silently deleting digits the user just typed.
-    ref.listen<AuthFlowState>(authFlowNotifierProvider, (_, next) {
-      if (next is AuthFlowError) _codeController.clear();
-    });
 
     final isLoading = flowState is AuthFlowVerifying;
     final error = flowState is AuthFlowError ? flowState.message : null;
@@ -106,8 +109,8 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                     ),
                     const SizedBox(height: EqSpacing.sm),
                     Text(
-                      email.isNotEmpty
-                          ? 'We sent a 6-digit code to $email.'
+                      _email.isNotEmpty
+                          ? 'We sent a 6-digit code to $_email.'
                           : 'We sent a 6-digit code to your email.',
                       style: EqTypography.bodyM.copyWith(
                         color: EqColours.grey,
@@ -129,7 +132,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                         letterSpacing: 8,
                         color: EqColours.ink,
                       ),
-                      onFieldSubmitted: (_) => _submit(email),
+                      onFieldSubmitted: (_) => _submit(),
                       decoration: const InputDecoration(
                         labelText: 'Sign-in code',
                         hintText: '000000',
@@ -157,7 +160,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                     ],
                     const SizedBox(height: EqSpacing.lg),
                     FilledButton(
-                      onPressed: isLoading ? null : () => _submit(email),
+                      onPressed: isLoading ? null : _submit,
                       style: FilledButton.styleFrom(
                         backgroundColor: EqColours.sky,
                         minimumSize: const Size.fromHeight(48),
@@ -175,9 +178,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                     ),
                     const SizedBox(height: EqSpacing.md),
                     TextButton(
-                      onPressed: (isLoading || isSending || email.isEmpty)
+                      onPressed: (isLoading || isSending || _email.isEmpty)
                           ? null
-                          : () => _resend(email),
+                          : _resend,
                       child: Text(
                         isSending ? 'Sending…' : 'Resend code',
                         style: EqTypography.bodyM.copyWith(

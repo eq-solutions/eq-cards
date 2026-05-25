@@ -1,24 +1,10 @@
-// Cards Unit 5 (2026-05-24) — Cards Flutter writes go through the
-// per-tenant data plane via the Shell's /cards-api endpoint (CardsApi
-// in lib/core/cards_api). The endpoint resolves the caller's tenant
-// from the Supabase JWT we already hold and routes to that tenant's
-// dedicated Supabase project (eq-canonical-internal / sks-canonical).
+// Cards Unit 4 (2026-05-21) — All reads + writes go directly to
+// eq-canonical (jvknxcmbtrfnxfrwfimn) via public.eq_cards_* RPCs.
 //
-// Previously (Cards Unit 4, 2026-05-21) these calls went directly to
-// shared eq-canonical via supabase.rpc('eq_cards_*'). After the Shell's
-// admin-side cards bridge moved to per-tenant DBs on 2026-05-24, that
-// direct path caused stale-data surprises (Cards mobile wrote to
-// shared, Shell read from tenant — divergence). This switch closes
-// the gap.
-//
-// What does NOT change:
-//   - Photo storage uploads still target shared eq-canonical's
-//     `licence-photos` bucket (no Shell consumer of these images today;
-//     storage migration deferred — see Shell-side runbook).
-//   - `_withSignedUrls` still constructs signed URLs against shared
-//     storage via the Supabase client.
-//   - The Licence Flutter model. Return shapes from cards-api mirror
-//     the old RPC return shapes exactly.
+// The cards-api Shell proxy (Unit 5) was rolled back because it requires
+// app_metadata.tenant_id in the JWT, which direct OTP sign-ins don't carry.
+// Routing stays on eq-canonical until tenant provisioning is wired for all
+// auth paths.
 
 import 'dart:async';
 
@@ -27,20 +13,16 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../core/cards_api/cards_api.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/supabase/supabase_client_provider.dart';
+import '../../../core/supabase/supabase_error_handler.dart';
 import 'models/licence.dart';
 
 part 'licence_repository.g.dart';
 
 class LicenceRepository {
-  LicenceRepository(this._client, this._api);
-
-  /// Kept for storage uploads + signed-URL generation only. All licence
-  /// row reads/writes go through [_api].
+  LicenceRepository(this._client);
   final SupabaseClient _client;
-  final CardsApi _api;
 
   static const _bucket = 'licence-photos';
   static const _signedUrlSeconds = 3600;
@@ -49,18 +31,26 @@ class LicenceRepository {
     if (_client.auth.currentUser == null) {
       throw const NotAuthenticatedFailure();
     }
-    final rows = await _api.listMyLicences();
-    final list = rows.map(Licence.fromJson).toList();
-    return Future.wait(list.map(_withSignedUrls));
+    try {
+      final rows = await _client.rpc<List<dynamic>>('eq_cards_list_my_licences');
+      final list = rows.cast<Map<String, dynamic>>().map(Licence.fromJson).toList();
+      return Future.wait(list.map(_withSignedUrls));
+    } catch (e) {
+      throw mapSupabaseError(e);
+    }
   }
 
   Future<Licence> getById(String id) async {
-    // No dedicated single-row endpoint — list + filter is acceptable for
-    // the tiny per-user dataset (a wallet typically has <30 licences).
-    final all = await getAllForCurrentUser();
-    final match = all.where((l) => l.id == id).toList();
-    if (match.isEmpty) throw const NotFoundFailure();
-    return match.first;
+    try {
+      final all = await getAllForCurrentUser();
+      final match = all.where((l) => l.id == id).toList();
+      if (match.isEmpty) throw const NotFoundFailure();
+      return match.first;
+    } on Failure {
+      rethrow;
+    } catch (e) {
+      throw mapSupabaseError(e);
+    }
   }
 
   Future<Licence> upsert(Licence licence) async {
@@ -68,41 +58,43 @@ class LicenceRepository {
       throw const NotAuthenticatedFailure();
     }
     final isInsert = licence.id == null;
-    unawaited(
-      _breadcrumb(
-        isInsert ? 'licence_insert_started' : 'licence_update_started',
-        {'licence_type': licence.licenceType},
-      ),
-    );
+    unawaited(_breadcrumb(
+      isInsert ? 'licence_insert_started' : 'licence_update_started',
+      {'licence_type': licence.licenceType},
+    ));
     try {
-      final row = await _api.upsertMyLicence(licenceToUpsertPayload(licence));
-      final saved = await _withSignedUrls(Licence.fromJson(row));
-      unawaited(
-        _breadcrumb(
-          isInsert ? 'licence_insert_succeeded' : 'licence_update_succeeded',
-          {'licence_id': saved.id ?? '', 'type': saved.licenceType},
-        ),
+      final rows = await _client.rpc<List<dynamic>>(
+        'eq_cards_upsert_my_licence',
+        params: {'p_payload': licenceToUpsertPayload(licence)},
       );
+      final list = rows.cast<Map<String, dynamic>>();
+      if (list.isEmpty) throw const NotFoundFailure();
+      final saved = await _withSignedUrls(Licence.fromJson(list.first));
+      unawaited(_breadcrumb(
+        isInsert ? 'licence_insert_succeeded' : 'licence_update_succeeded',
+        {'licence_id': saved.id ?? '', 'type': saved.licenceType},
+      ));
       return saved;
     } catch (e) {
-      unawaited(
-        _breadcrumb(
-          isInsert ? 'licence_insert_failed' : 'licence_update_failed',
-          {'error': e.toString()},
-        ),
-      );
-      rethrow;
+      unawaited(_breadcrumb(
+        isInsert ? 'licence_insert_failed' : 'licence_update_failed',
+        {'error': e.toString()},
+      ));
+      throw mapSupabaseError(e);
     }
   }
 
   Future<void> softDelete(String id) async {
     unawaited(_breadcrumb('licence_delete_started', {'licence_id': id}));
     try {
-      await _api.softDeleteMyLicence(id);
+      await _client.rpc<void>(
+        'eq_cards_soft_delete_my_licence',
+        params: {'p_licence_id': id},
+      );
       unawaited(_breadcrumb('licence_delete_succeeded'));
     } catch (e) {
       unawaited(_breadcrumb('licence_delete_failed', {'error': e.toString()}));
-      rethrow;
+      throw mapSupabaseError(e);
     }
   }
 
@@ -113,19 +105,13 @@ class LicenceRepository {
   }
 
   Future<Licence> _withSignedUrls(Licence l) async {
-    // Photo paths come from the per-tenant DB (via cards-api) but signing uses
-    // shared eq-canonical storage. Both must agree on the path format.
-    // If signing fails, log to Sentry — silent null means blank photos, which
-    // will surface the storage migration being applied to only one side.
     Future<String?> sign(String? path) async {
       if (path == null) return null;
       try {
         return await _client.storage
             .from(_bucket)
             .createSignedUrl(path, _signedUrlSeconds);
-      } catch (e, st) {
-        unawaited(_breadcrumb('licence_signed_url_failed', {'path': path, 'error': e.toString()}));
-        unawaited(Sentry.captureException(e, stackTrace: st));
+      } catch (_) {
         return null;
       }
     }
@@ -137,16 +123,11 @@ class LicenceRepository {
   }
 }
 
-/// Builds the JSON payload sent to eq_cards_upsert_my_licence. Pure —
-/// no Supabase client involved — so it's unit-testable.
+/// Builds the JSON payload for eq_cards_upsert_my_licence. Pure — no
+/// Supabase client involved — so it's unit-testable.
 ///
 /// `user_id` is NOT in the payload. The RPC auto-resolves it from the
-/// JWT app_metadata. This matches the Phase 1.F security stance —
-/// server-derived tenancy / identity, never client-supplied.
-///
-/// Transient signed URLs (`photoFrontSignedUrl`, `photoBackSignedUrl`)
-/// are excluded from JSON via `@JsonKey(includeToJson: false)` on the
-/// model and also are never written here.
+/// JWT app_metadata (server-derived identity, never client-supplied).
 @visibleForTesting
 Map<String, dynamic> licenceToUpsertPayload(Licence l) {
   final payload = <String, dynamic>{
@@ -157,16 +138,10 @@ Map<String, dynamic> licenceToUpsertPayload(Licence l) {
     'metadata': l.metadata,
   };
   if (l.id != null) payload['id'] = l.id;
-  if (l.issuingAuthority != null) {
-    payload['issuing_authority'] = l.issuingAuthority;
-  }
+  if (l.issuingAuthority != null) payload['issuing_authority'] = l.issuingAuthority;
   if (l.state != null) payload['state'] = l.state;
-  if (l.photoFrontPath != null) {
-    payload['photo_front_url'] = l.photoFrontPath;
-  }
-  if (l.photoBackPath != null) {
-    payload['photo_back_url'] = l.photoBackPath;
-  }
+  if (l.photoFrontPath != null) payload['photo_front_url'] = l.photoFrontPath;
+  if (l.photoBackPath != null) payload['photo_back_url'] = l.photoBackPath;
   if (l.notes != null) payload['notes'] = l.notes;
   return payload;
 }
@@ -180,8 +155,5 @@ String _isoDate(DateTime d) {
 
 @riverpod
 LicenceRepository licenceRepository(LicenceRepositoryRef ref) {
-  return LicenceRepository(
-    ref.watch(supabaseClientProvider),
-    ref.watch(cardsApiProvider),
-  );
+  return LicenceRepository(ref.watch(supabaseClientProvider));
 }
