@@ -18,10 +18,8 @@
   to     = "/index.html"
   status = 200
 
-[[headers]]
-  for = "/*"
-  [headers.values]
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "microphone=(), geolocation=()"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://eu-assets.i.posthog.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://jvknxcmbtrfnxfrwfimn.supabase.co; connect-src 'self' blob: https://jvknxcmbtrfnxfrwfimn.supabase.co https://*.supabase.co wss://jvknxcmbtrfnxfrwfimn.supabase.co https://eu.i.posthog.com https://eu-assets.i.posthog.com https://*.sentry.io; worker-src 'self' blob:; manifest-src 'self'; frame-ancestors 'self' https://*.eq.solutions; base-uri 'self'; form-action 'self'"
+# Security headers are defined in web/_headers (copied to build/web/ at build time).
+# That file is the single source of truth for CSP and framing rules — it includes
+# https://www.gstatic.com for Flutter's CanvasKit renderer which loads from the CDN
+# when engineRevision is set. Defining headers here too causes duplicate CSP headers;
+# browsers apply the more restrictive one, which blocks gstatic.com and breaks rendering.
