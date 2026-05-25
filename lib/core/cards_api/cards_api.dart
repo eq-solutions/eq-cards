@@ -35,10 +35,12 @@ import '../supabase/supabase_client_provider.dart';
 
 part 'cards_api.g.dart';
 
-/// Production base URL for the Shell. Hardcoded for now (Cards mobile
-/// has no env/config layer). If a non-prod build target lands, surface
-/// this through whatever config provider the rest of the app adopts.
-const String _shellBaseUrl = 'https://core.eq.solutions';
+/// Shell base URL. Defaults to production; override for dev/staging via:
+///   flutter run --dart-define=SHELL_BASE_URL=http://localhost:8888
+const String _shellBaseUrl = String.fromEnvironment(
+  'SHELL_BASE_URL',
+  defaultValue: 'https://core.eq.solutions',
+);
 
 /// Single shared Dio instance configured with the Shell base URL and a
 /// short timeout. Auth headers are attached per-request because the JWT
@@ -73,11 +75,12 @@ class CardsApi {
 
   /// GET /cards-api?op=list_my_licences → { ok, licences: [...] }
   Future<List<Map<String, dynamic>>> listMyLicences() async {
-    final res = await _request(
-      method: 'GET',
-      op: 'list_my_licences',
-    );
-    return (res['licences'] as List).cast<Map<String, dynamic>>();
+    final res = await _request(method: 'GET', op: 'list_my_licences');
+    final licences = res['licences'];
+    if (licences is! List) {
+      throw const ServerFailure(500, 'missing licences in response');
+    }
+    return licences.cast<Map<String, dynamic>>();
   }
 
   /// POST /cards-api?op=upsert_my_licence  body: { payload } → { ok, licence }
@@ -87,7 +90,11 @@ class CardsApi {
       op: 'upsert_my_licence',
       body: {'payload': payload},
     );
-    return res['licence'] as Map<String, dynamic>;
+    final licence = res['licence'];
+    if (licence is! Map<String, dynamic>) {
+      throw const ServerFailure(500, 'missing licence in response');
+    }
+    return licence;
   }
 
   /// POST /cards-api?op=soft_delete_my_licence  body: { licence_id } → { ok }
@@ -106,7 +113,11 @@ class CardsApi {
       op: 'upsert_my_profile',
       body: {'payload': payload},
     );
-    return res['profile'] as Map<String, dynamic>;
+    final profile = res['profile'];
+    if (profile is! Map<String, dynamic>) {
+      throw const ServerFailure(500, 'missing profile in response');
+    }
+    return profile;
   }
 
   // ────────────────────────────────────────────────────────────────────
@@ -118,10 +129,26 @@ class CardsApi {
     required String op,
     Map<String, dynamic>? body,
   }) async {
-    final token = _supabase.auth.currentSession?.accessToken;
-    if (token == null) {
-      throw const NotAuthenticatedFailure();
+    var session = _supabase.auth.currentSession;
+    if (session == null) throw const NotAuthenticatedFailure();
+
+    // Refresh proactively if expiring within 60 s — Supabase's auto-refresh
+    // timer can lag after a background/foreground cycle, sending a stale token
+    // that causes a 401 even though a silent refresh would have succeeded.
+    final expiresAt = session.expiresAt;
+    final nearExpiry = expiresAt != null &&
+        DateTime.fromMillisecondsSinceEpoch(expiresAt * 1000)
+            .isBefore(DateTime.now().add(const Duration(seconds: 60)));
+    if (nearExpiry) {
+      try {
+        final refreshed = await _supabase.auth.refreshSession();
+        session = refreshed.session;
+      } on AuthException {
+        throw const NotAuthenticatedFailure();
+      }
     }
+    final token = session?.accessToken;
+    if (token == null) throw const NotAuthenticatedFailure();
 
     final Response<dynamic> res;
     try {

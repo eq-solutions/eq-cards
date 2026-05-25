@@ -102,6 +102,10 @@ class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
         accessToken: token,
       );
       HandoffPlatform.replaceHashWithCleanPath();
+      // Navigate explicitly — GoRouter's redirect intentionally excludes
+      // /auth/handoff to allow stale-session replacement, so we must drive
+      // the final navigation ourselves.
+      if (mounted) context.go(Routes.licencesList);
     } catch (e) {
       setState(
         () => _error =

@@ -12,8 +12,11 @@
 // The `id` returned IS still the canonical staff_id (cards-api just
 // proxies; same id, same meaning, just routed to a different DB).
 
+import 'dart:async';
+
 import 'package:meta/meta.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/cards_api/cards_api.dart';
@@ -32,17 +35,36 @@ class ProfileRepository {
     if (_client.auth.currentUser == null) {
       throw const NotAuthenticatedFailure();
     }
-    final row = await _api.currentStaff();
-    if (row == null) return null;
-    return Profile.fromJson(row);
+    try {
+      final row = await _api.currentStaff();
+      if (row == null) return null;
+      return Profile.fromJson(row);
+    } catch (e) {
+      unawaited(_breadcrumb('profile_fetch_failed', {'error': e.toString()}));
+      rethrow;
+    }
   }
 
   Future<Profile> upsert(Profile profile) async {
     if (_client.auth.currentUser == null) {
       throw const NotAuthenticatedFailure();
     }
-    final row = await _api.upsertMyProfile(profileToUpsertPayload(profile));
-    return Profile.fromJson(row);
+    unawaited(_breadcrumb('profile_upsert_started'));
+    try {
+      final row = await _api.upsertMyProfile(profileToUpsertPayload(profile));
+      final saved = Profile.fromJson(row);
+      unawaited(_breadcrumb('profile_upsert_succeeded'));
+      return saved;
+    } catch (e) {
+      unawaited(_breadcrumb('profile_upsert_failed', {'error': e.toString()}));
+      rethrow;
+    }
+  }
+
+  Future<void> _breadcrumb(String message, [Map<String, dynamic>? data]) {
+    return Sentry.addBreadcrumb(
+      Breadcrumb(category: 'profile', message: message, data: data),
+    );
   }
 }
 

@@ -9,14 +9,7 @@
 
 [build]
   publish = "build/web"
-  command = "bash scripts/netlify_build.sh"
-  # Required env vars (set in Netlify UI → Site → Environment variables):
-  #   SUPABASE_URL, SUPABASE_ANON_KEY, SENTRY_DSN, POSTHOG_API_KEY, POSTHOG_HOST
-  # Netlify caches $HOME between builds so Flutter is only downloaded once.
-
-[build.environment]
-  # Pin to stable channel. Bump to upgrade Flutter in CI.
-  FLUTTER_CHANNEL = "stable"
+  # No build command — deploy with pre-built assets: flutter build web && netlify deploy --prod --dir=build/web
 
 # SPA routing — all paths serve index.html so go_router handles the route
 # (required for /share?licence_id=... deep links to work on direct access).
@@ -24,3 +17,11 @@
   from   = "/*"
   to     = "/index.html"
   status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "microphone=(), geolocation=()"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://eu-assets.i.posthog.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://jvknxcmbtrfnxfrwfimn.supabase.co; connect-src 'self' blob: https://jvknxcmbtrfnxfrwfimn.supabase.co https://*.supabase.co wss://jvknxcmbtrfnxfrwfimn.supabase.co https://eu.i.posthog.com https://eu-assets.i.posthog.com https://*.sentry.io; worker-src 'self' blob:; manifest-src 'self'; frame-ancestors 'self' https://*.eq.solutions; base-uri 'self'; form-action 'self'"

@@ -57,8 +57,15 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     final email = flowState is AuthFlowAwaitingOtp
         ? flowState.email
         : flowState is AuthFlowError
-            ? '' // error — email shown from previous state; fallback gracefully
+            ? flowState.email // preserved from the failed attempt
             : '';
+
+    // Clear the code field exactly once when the state transitions to error,
+    // so the user must enter a fresh code. A postFrameCallback in build() would
+    // re-fire on every rebuild, silently deleting digits the user just typed.
+    ref.listen<AuthFlowState>(authFlowNotifierProvider, (_, next) {
+      if (next is AuthFlowError) _codeController.clear();
+    });
 
     final isLoading = flowState is AuthFlowVerifying;
     final error = flowState is AuthFlowError ? flowState.message : null;

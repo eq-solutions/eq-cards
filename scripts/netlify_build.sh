@@ -10,6 +10,9 @@
 #   SENTRY_DSN           https://...@sentry.io/...
 #   POSTHOG_API_KEY      phc_...
 #   POSTHOG_HOST         https://eu.i.posthog.com
+#
+# Optional:
+#   SHELL_BASE_URL       defaults to https://core.eq.solutions (override for staging)
 set -euo pipefail
 
 FLUTTER_DIR="$HOME/.flutter"
@@ -32,6 +35,7 @@ flutter build web --release \
   --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
   --dart-define=SENTRY_DSN="$SENTRY_DSN" \
   --dart-define=POSTHOG_API_KEY="$POSTHOG_API_KEY" \
-  --dart-define=POSTHOG_HOST="$POSTHOG_HOST"
+  --dart-define=POSTHOG_HOST="$POSTHOG_HOST" \
+  --dart-define=SHELL_BASE_URL="${SHELL_BASE_URL:-https://core.eq.solutions}"
 
 echo "==> Build complete: build/web"
