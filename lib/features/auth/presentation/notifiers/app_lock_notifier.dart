@@ -11,26 +11,28 @@ part 'app_lock_notifier.g.dart';
 class AppLockNotifier extends _$AppLockNotifier {
   @override
   AppLockPhase build() {
-    // Re-evaluate whenever auth state changes (sign-out, token refresh, etc.).
-    //
-    // We only run the PIN check on cold start — i.e. when the notifier is
-    // first built with a pre-existing session (handled below). Once the user
-    // is unlocked (either by PIN entry or by a fresh OTP that proves identity)
-    // we do NOT re-gate on subsequent auth events such as tokenRefreshed or a
-    // second signedIn event. This prevents two bugs:
-    //   1. Fresh OTP on any browser looping back to PIN entry.
-    //   2. A tokenRefreshed event kicking the user out of the crop/OCR flow.
+    // Fresh sign-in (Google OAuth, OTP, etc.) — user just proved identity,
+    // skip PIN entirely for this session.
+    ref.listen(rawAuthEventsProvider, (_, next) {
+      next.whenData((supabaseAuthState) {
+        if (supabaseAuthState.event == AuthChangeEvent.signedIn) {
+          state = AppLockPhase.unlocked;
+        } else if (supabaseAuthState.event == AuthChangeEvent.signedOut) {
+          state = AppLockPhase.unlocked;
+        }
+      });
+    });
+
+    // Cold-start: re-check PIN when notifier rebuilds with a live session
+    // (e.g. app reopened, token refreshed). Skip if already unlocked this
+    // session — avoids gating on tokenRefreshed events mid-flow.
     ref.listen(authStateChangesProvider, (_, next) {
       next.whenData((authState) {
         final session = Supabase.instance.client.auth.currentSession;
         final hasSession = session != null && !session.isExpired;
         if (!hasSession) {
-          state = AppLockPhase.unlocked; // OTP is the gate, not PIN
-        } else if (state != AppLockPhase.unlocked) {
-          // Only re-check if we're not already unlocked this session.
-          // Cold-start re-authentication (state == checking or pinEntryRequired)
-          // is handled here; active-session token refreshes are ignored.
-          state = AppLockPhase.checking;
+          state = AppLockPhase.unlocked;
+        } else if (state == AppLockPhase.checking) {
           _checkLockState();
         }
       });
@@ -50,12 +52,15 @@ class AppLockNotifier extends _$AppLockNotifier {
   Future<void> _checkLockState() async {
     try {
       final hasPinSet = await ref.read(pinRepositoryProvider).hasPin();
-      state =
-          hasPinSet ? AppLockPhase.pinEntryRequired : AppLockPhase.pinSetupRequired;
+      // A fresh signedIn event may have already unlocked us while the RPC
+      // was in flight — don't overwrite that.
+      if (state == AppLockPhase.checking) {
+        state = hasPinSet ? AppLockPhase.pinEntryRequired : AppLockPhase.pinSetupRequired;
+      }
     } catch (_) {
-      // If the RPC fails (e.g. JWT very fresh, network hiccup) default to
-      // setup so the user can always get in — worst case they re-set their PIN.
-      state = AppLockPhase.pinSetupRequired;
+      if (state == AppLockPhase.checking) {
+        state = AppLockPhase.unlocked;
+      }
     }
   }
 

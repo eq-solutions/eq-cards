@@ -1,4 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase
+    show AuthChangeEvent, AuthState;
 
 import '../../../../core/supabase/supabase_client_provider.dart';
 import '../../domain/auth_state.dart';
@@ -13,4 +15,12 @@ Stream<AuthState> authStateChanges(AuthStateChangesRef ref) {
         ? AuthState.authenticated
         : AuthState.unauthenticated;
   });
+}
+
+/// Raw Supabase auth events — used by AppLockNotifier to distinguish a fresh
+/// sign-in (skip PIN, user just proved identity) from a cold-start session
+/// restore (check PIN as normal).
+@riverpod
+Stream<supabase.AuthState> rawAuthEvents(RawAuthEventsRef ref) {
+  return ref.watch(supabaseClientProvider).auth.onAuthStateChange;
 }
