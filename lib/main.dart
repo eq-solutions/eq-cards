@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
@@ -9,6 +10,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
 import 'core/analytics/analytics_service.dart';
+import 'core/invite/invite_context_provider.dart';
 import 'core/privacy/privacy_prefs.dart';
 
 const _supabaseUrl = String.fromEnvironment('SUPABASE_URL');
@@ -21,6 +23,11 @@ const _posthogHost = String.fromEnvironment(
 );
 
 Future<void> main() async {
+  // Capture invite org name BEFORE usePathUrlStrategy() — once the URL
+  // strategy is changed, GoRouter rewrites window.location and the original
+  // query params are lost. Read them now while the raw URL is still intact.
+  final inviteOrgName = kIsWeb ? Uri.base.queryParameters['org'] : null;
+
   // Path-based URLs — required for the #sh=<jwt> Shell handoff. Hash strategy
   // would treat #sh=<jwt> as a route path; path strategy treats it as a URL
   // fragment so GoRouter sees "/" and IframeHandoffScreen reads the hash.
@@ -81,7 +88,15 @@ Future<void> main() async {
         );
       }
 
-      runApp(const ProviderScope(child: EqCardsApp()));
+      runApp(
+        ProviderScope(
+          overrides: [
+            if (inviteOrgName != null)
+              initialOrgNameProvider.overrideWithValue(inviteOrgName),
+          ],
+          child: const EqCardsApp(),
+        ),
+      );
     },
     (error, stack) {
       // Uncaught zone errors → Sentry, if it's wired up.

@@ -10,6 +10,8 @@ import '../../features/auth/presentation/screens/pin_entry_screen.dart';
 import '../../features/certificates/certificates.dart';
 import '../../features/legal/presentation/screens/legal_document_screen.dart';
 import '../../features/licences/licences.dart';
+import '../../features/onboarding/presentation/screens/onboarding_done_screen.dart';
+import '../../features/onboarding/presentation/screens/onboarding_welcome_screen.dart';
 import '../../features/profile/profile.dart';
 import '../../features/settings/settings.dart';
 import '../shell/home_shell_screen.dart';
@@ -26,6 +28,7 @@ GoRouter appRouter(AppRouterRef ref) {
   final notifier = _AuthRouterNotifier();
   ref.listen(authStateChangesProvider, (_, __) => notifier.bump());
   ref.listen(appLockNotifierProvider, (_, __) => notifier.bump());
+  ref.listen(profileNotifierProvider, (_, __) => notifier.bump());
   ref.onDispose(notifier.dispose);
 
   return GoRouter(
@@ -33,7 +36,8 @@ GoRouter appRouter(AppRouterRef ref) {
     refreshListenable: notifier,
     redirect: (context, state) {
       final lockPhase = ref.read(appLockNotifierProvider);
-      return _redirect(context, state, lockPhase);
+      final profile = ref.read(profileNotifierProvider);
+      return _redirect(context, state, lockPhase, profile);
     },
     routes: [
       GoRoute(
@@ -63,6 +67,20 @@ GoRouter appRouter(AppRouterRef ref) {
       GoRoute(
         path: Routes.pinEntry,
         builder: (context, state) => const PinEntryScreen(),
+      ),
+      // Onboarding wizard — shown on first sign-in when profile is incomplete.
+      // Full-screen flows outside the shell (no bottom nav).
+      GoRoute(
+        path: Routes.onboarding,
+        builder: (context, state) => const OnboardingWelcomeScreen(),
+      ),
+      GoRoute(
+        path: Routes.onboardingProfile,
+        builder: (context, state) => const ProfileEditScreen(isOnboarding: true),
+      ),
+      GoRoute(
+        path: Routes.onboardingDone,
+        builder: (context, state) => const OnboardingDoneScreen(),
       ),
       // Legal documents — top-level routes outside the shell so they can be
       // reached from anywhere (Settings, share sheet, etc.) and present as
@@ -193,7 +211,12 @@ GoRouter appRouter(AppRouterRef ref) {
   );
 }
 
-String? _redirect(BuildContext context, GoRouterState state, AppLockPhase lockPhase) {
+String? _redirect(
+  BuildContext context,
+  GoRouterState state,
+  AppLockPhase lockPhase,
+  AsyncValue<Profile?> profile,
+) {
   // Treat an expired session the same as no session. Without this, an
   // offline user whose token expired (and `tokenRefreshed` never fired)
   // stays on signed-in routes while every Supabase call returns 401 —
@@ -203,14 +226,29 @@ String? _redirect(BuildContext context, GoRouterState state, AppLockPhase lockPh
   final loc = state.matchedLocation;
   final isAuthRoute = loc.startsWith('/auth/');
   final isPinRoute = loc == Routes.pinSetup || loc == Routes.pinEntry;
+  final isOnboardingRoute = loc.startsWith('/onboarding');
   // Legal documents are reachable without sign-in so users can review the
   // Privacy Policy and Terms before sign-in.
   final isLegalRoute = loc.startsWith('/legal/');
   // /share is a public licence-verification page — no sign-in needed.
   final isShareRoute = loc.startsWith('/share');
 
+  // Onboarding routes require sign-in; bounce unauthenticated visitors.
+  if (!isSignedIn && isOnboardingRoute) return Routes.email;
+  // Once profile is complete, onboarding routes redirect to the wallet.
+  if (isSignedIn && isOnboardingRoute) {
+    final isComplete = profile.valueOrNull?.isComplete ?? false;
+    if (isComplete) return Routes.licencesList;
+  }
+
   if (loc == Routes.splash || loc == Routes.home) {
-    return isSignedIn ? Routes.licencesList : Routes.handoff;
+    if (!isSignedIn) return Routes.handoff;
+    // Wait for profile to load before deciding where to send the user. The
+    // notifier listens to profileNotifierProvider so a second bump fires once
+    // the AsyncData arrives and this branch is re-evaluated.
+    if (profile is! AsyncData) return null;
+    final isComplete = profile.value?.isComplete ?? false;
+    return isComplete ? Routes.licencesList : Routes.onboarding;
   }
 
   // Unauthenticated: PIN routes are off-limits.
