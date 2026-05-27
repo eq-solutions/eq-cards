@@ -118,12 +118,12 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
                     disabled: _isVerifying,
                   ),
                   const SizedBox(height: EqSpacing.xl),
-                  TextButton(
+                  TextButton.icon(
                     onPressed: _isVerifying ? null : _useEmail,
-                    child: Text(
-                      'Use email instead',
-                      style: EqTypography.bodyM
-                          .copyWith(color: EqColours.sky),
+                    icon: const Icon(Icons.logout, size: 16),
+                    label: const Text('Forgot PIN? Sign out'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: EqColours.grey,
                     ),
                   ),
                   const SizedBox(height: EqSpacing.md),
