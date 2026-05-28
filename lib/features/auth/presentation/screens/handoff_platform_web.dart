@@ -3,6 +3,7 @@
 // blow up trying to resolve it.
 
 // ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use
+import 'dart:async';
 import 'dart:convert';
 import 'dart:html' as html;
 
@@ -27,6 +28,58 @@ class HandoffPlatform {
 
   static void redirectTo(String url) {
     html.window.location.href = url;
+  }
+
+  /// Sends REQUEST_SHELL_TOKEN to the parent shell and waits (up to 5 s) for
+  /// SHELL_TOKEN_RESPONSE. Returns the JWT on success, null on timeout or any
+  /// error. This is the preferred initial-auth path — the JWT never appears in
+  /// the URL hash or browser history, and it works for both the first load and
+  /// subsequent 15-min refresh cycles.
+  static Future<String?> requestShellToken() async {
+    if (!isInIframe()) return null;
+    const shellOrigin = 'https://core.eq.solutions';
+    final completer = Completer<String?>();
+
+    late StreamSubscription<html.MessageEvent> sub;
+    sub = html.window.onMessage.listen((html.MessageEvent event) {
+      if (event.origin != shellOrigin) return;
+      try {
+        final data = event.data;
+        String? type;
+        String? token;
+        if (data is Map) {
+          type = data['type'] as String?;
+          token = data['token'] as String?;
+        } else if (data is String) {
+          final decoded = jsonDecode(data) as Map<String, dynamic>?;
+          type = decoded?['type'] as String?;
+          token = decoded?['token'] as String?;
+        }
+        if (type != 'SHELL_TOKEN_RESPONSE') return;
+        sub.cancel();
+        completer.complete(token != null && token.isNotEmpty ? token : null);
+      } catch (_) {
+        // ignore malformed messages
+      }
+    });
+
+    try {
+      html.window.parent?.postMessage(
+        {'type': 'REQUEST_SHELL_TOKEN'},
+        shellOrigin,
+      );
+    } catch (_) {
+      sub.cancel();
+      return null;
+    }
+
+    return completer.future.timeout(
+      const Duration(seconds: 5),
+      onTimeout: () {
+        sub.cancel();
+        return null;
+      },
+    );
   }
 
   /// Calls /.netlify/functions/shell-verify (same-origin GET) and returns
