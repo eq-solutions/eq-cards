@@ -53,7 +53,44 @@ class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _consumeHash());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _consumeShellAuth());
+  }
+
+  // Tries cookie-based shell auth first when inside an iframe, then falls
+  // back to the URL hash path for backward compatibility.
+  Future<void> _consumeShellAuth() async {
+    if (!kIsWeb) {
+      if (mounted) context.go(Routes.email);
+      return;
+    }
+
+    if (HandoffPlatform.isInIframe()) {
+      final token = await HandoffPlatform.fetchShellVerify();
+      if (token != null && token.isNotEmpty) {
+        try {
+          await Supabase.instance.client.auth.signOut(
+            scope: SignOutScope.local,
+          );
+          await Supabase.instance.client.auth.setSession(
+            token,
+            accessToken: token,
+          );
+          HandoffPlatform.replaceHashWithCleanPath();
+          if (mounted) context.go(Routes.licencesList);
+        } catch (e, stack) {
+          debugPrint('IframeHandoffScreen: shell-verify setSession failed: $e');
+          unawaited(Sentry.captureException(e, stackTrace: stack));
+          setState(
+            () => _error =
+                'Sign-in failed. Reload EQ Cards from your portal at core.eq.solutions.',
+          );
+        }
+        return;
+      }
+      // Cookie path gave nothing — fall through to hash check.
+    }
+
+    await _consumeHash();
   }
 
   Future<void> _consumeHash() async {
@@ -64,7 +101,17 @@ class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
 
     final hash = HandoffPlatform.currentHash();
     if (hash.isEmpty || !hash.contains('sh=')) {
-      // No shell token — send user to the email OTP flow.
+      // No shell token. If we're embedded in the Shell iframe, don't redirect
+      // to the email form — the Google/OTP flows are sandbox-blocked inside an
+      // iframe and just confuse users. Show a clear "reload from portal" prompt.
+      if (HandoffPlatform.isInIframe()) {
+        setState(
+          () => _error =
+              'Session expired. Reload EQ Cards from your portal at core.eq.solutions.',
+        );
+        return;
+      }
+      // Standalone access (direct to cards.eq.solutions) — email OTP is fine.
       if (mounted) context.go(Routes.email);
       return;
     }
@@ -111,8 +158,9 @@ class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
       debugPrint('IframeHandoffScreen: setSession failed: $e');
       unawaited(Sentry.captureException(e, stackTrace: stack));
       setState(
-        () => _error =
-            'Sign-in failed. Sign out and back in at your tenant shell, then retry.',
+        () => _error = HandoffPlatform.isInIframe()
+            ? 'Sign-in failed. Reload EQ Cards from your portal at core.eq.solutions.'
+            : 'Sign-in failed. Sign out and back in at your tenant shell, then retry.',
       );
     }
   }
@@ -157,15 +205,19 @@ class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
                               .copyWith(color: EqColours.ink),
                           textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: EqSpacing.lg),
-                        FilledButton(
-                          onPressed: _goToEmail,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: EqColours.sky,
-                            minimumSize: const Size.fromHeight(48),
+                        // In iframe mode the Google/OTP flows are sandbox-blocked;
+                        // show email fallback only for standalone (direct) access.
+                        if (!kIsWeb || !HandoffPlatform.isInIframe()) ...[
+                          const SizedBox(height: EqSpacing.lg),
+                          FilledButton(
+                            onPressed: _goToEmail,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: EqColours.sky,
+                              minimumSize: const Size.fromHeight(48),
+                            ),
+                            child: const Text('Sign in with email'),
                           ),
-                          child: const Text('Sign in with email'),
-                        ),
+                        ],
                       ],
                     )
                   else

@@ -9,5 +9,7 @@ class HandoffPlatform {
   static String currentHash() => '';
   static void replaceHashWithCleanPath() {}
   static String currentHostname() => '';
+  static bool isInIframe() => false;
   static void redirectTo(String url) {}
+  static Future<String?> fetchShellVerify() async => null;
 }

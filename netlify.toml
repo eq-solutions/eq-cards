@@ -11,6 +11,10 @@
   publish = "build/web"
   # No build command — deploy with pre-built assets: flutter build web && netlify deploy --prod --dir=build/web
 
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
 # SPA routing — all paths serve index.html so go_router handles the route
 # (required for /share?licence_id=... deep links to work on direct access).
 [[redirects]]
