@@ -1,27 +1,18 @@
 // Cards Unit 4 (2026-05-21) — replaces email-OTP entry.
 //
-// Cards no longer authenticates against its own Supabase. Instead, the
-// EQ Shell mints a canonical Supabase JWT and passes it to the Cards
-// iframe via the URL hash on the handoff route:
+// Auth priority (most secure → least):
 //
-//     https://cards.eq.solutions/auth/handoff#sh=<jwt>
+//   1. postMessage  — Flutter sends REQUEST_SHELL_TOKEN to the parent shell;
+//                     shell responds with SHELL_TOKEN_RESPONSE containing a
+//                     fresh JWT. JWT never touches the URL. Works for both
+//                     initial load and 15-min refresh cycles.
 //
-// Targeting /auth/handoff directly avoids a GoRouter redirect from "/"
-// that would strip the hash fragment before this screen can read it.
+//   2. URL hash     — Legacy path: shell injects #sh=<jwt> into the iframe
+//                     src. Kept as fallback until postMessage is confirmed
+//                     stable across all tenants; will be removed once Phase 2
+//                     ships (shell stops injecting the hash).
 //
-// This screen runs as the unauthenticated landing route. It:
-//
-//   1. Pulls #sh=<jwt> out of window.location.hash (web only — Cards
-//      is web-first per RUNBOOK; native gets a "open via shell" prompt)
-//   2. Calls Supabase.auth.setSession(jwt) — once that succeeds the
-//      GoRouter redirect logic kicks in and lands the user on /licences
-//   3. Clears the hash from history so the JWT doesn't end up in
-//      browser screenshots / pasted URLs
-//   4. On no token, shows a clear "open via your tenant shell" prompt
-//      with a link to the shell origin
-//
-// Browser DOM access is behind a conditional import so flutter test
-// (VM target, no dart:html) still loads the screen for widget tests.
+//   3. Email OTP    — Non-iframe / non-web fallback (native, direct URL).
 
 import 'dart:async';
 
@@ -56,8 +47,7 @@ class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _consumeShellAuth());
   }
 
-  // Tries cookie-based shell auth first when inside an iframe, then falls
-  // back to the URL hash path for backward compatibility.
+  /// Tries to establish a Supabase session from the shell JWT, in priority order.
   Future<void> _consumeShellAuth() async {
     if (!kIsWeb) {
       if (mounted) context.go(Routes.email);
@@ -65,32 +55,40 @@ class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
     }
 
     if (HandoffPlatform.isInIframe()) {
-      final token = await HandoffPlatform.fetchShellVerify();
-      if (token != null && token.isNotEmpty) {
-        try {
-          await Supabase.instance.client.auth.signOut(
-            scope: SignOutScope.local,
-          );
-          await Supabase.instance.client.auth.setSession(
-            token,
-            accessToken: token,
-          );
-          HandoffPlatform.replaceHashWithCleanPath();
-          if (mounted) context.go(Routes.licencesList);
-        } catch (e, stack) {
-          debugPrint('IframeHandoffScreen: shell-verify setSession failed: $e');
-          unawaited(Sentry.captureException(e, stackTrace: stack));
-          setState(
-            () => _error =
-                'Sign-in failed. Reload EQ Cards from your portal at core.eq.solutions.',
-          );
-        }
-        return;
+      // 1. postMessage — preferred path, JWT never in URL.
+      final pmToken = await HandoffPlatform.requestShellToken();
+      if (pmToken != null && pmToken.isNotEmpty) {
+        final ok = await _applyToken(pmToken);
+        if (ok) return;
       }
-      // Cookie path gave nothing — fall through to hash check.
     }
 
+    // 2. URL hash — legacy fallback (#sh=<jwt> injected by shell).
     await _consumeHash();
+  }
+
+  /// Calls setSession with [token], navigates to licences on success.
+  /// Returns true on success, false on failure (error state already set).
+  Future<bool> _applyToken(String token) async {
+    try {
+      await Supabase.instance.client.auth.signOut(scope: SignOutScope.local);
+      await Supabase.instance.client.auth.setSession(
+        token,
+        accessToken: token,
+      );
+      HandoffPlatform.replaceHashWithCleanPath();
+      if (mounted) context.go(Routes.licencesList);
+      return true;
+    } catch (e, stack) {
+      debugPrint('IframeHandoffScreen: setSession failed: $e');
+      unawaited(Sentry.captureException(e, stackTrace: stack));
+      setState(
+        () => _error = HandoffPlatform.isInIframe()
+            ? 'Sign-in failed. Reload EQ Cards from your portal at core.eq.solutions.'
+            : 'Sign-in failed. Sign out and back in at your tenant shell, then retry.',
+      );
+      return false;
+    }
   }
 
   Future<void> _consumeHash() async {
@@ -101,9 +99,6 @@ class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
 
     final hash = HandoffPlatform.currentHash();
     if (hash.isEmpty || !hash.contains('sh=')) {
-      // No shell token. If we're embedded in the Shell iframe, don't redirect
-      // to the email form — the Google/OTP flows are sandbox-blocked inside an
-      // iframe and just confuse users. Show a clear "reload from portal" prompt.
       if (HandoffPlatform.isInIframe()) {
         setState(
           () => _error =
@@ -111,7 +106,6 @@ class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
         );
         return;
       }
-      // Standalone access (direct to cards.eq.solutions) — email OTP is fine.
       if (mounted) context.go(Routes.email);
       return;
     }
@@ -127,42 +121,7 @@ class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
       return;
     }
 
-    try {
-      // Clear any prior session (e.g. a stale email-OTP session from
-      // before Unit 4) so the Shell JWT always wins. scope: local means
-      // no network call — just wipes localStorage.
-      await Supabase.instance.client.auth.signOut(
-        scope: SignOutScope.local,
-      );
-
-      // gotrue's setSession is (refreshToken, {accessToken}). The shell
-      // mints an HS256 access token, NOT a refresh token. Passing it
-      // ONLY as positional arg would hit _callRefreshToken which POSTs
-      // /token?grant_type=refresh_token and 400s. Passing it as BOTH
-      // hits the "accessToken provided + not expired" branch which
-      // decodes the JWT, calls getUser(accessToken) to validate (the
-      // auth.users row exists, mirrored to shell_control.users), and
-      // constructs a Session directly — no /token round-trip.
-      // The refreshToken slot will never be used because we never call
-      // .refreshSession(); the JWT-cache is renewed by the shell.
-      await Supabase.instance.client.auth.setSession(
-        token,
-        accessToken: token,
-      );
-      HandoffPlatform.replaceHashWithCleanPath();
-      // Navigate explicitly — GoRouter's redirect intentionally excludes
-      // /auth/handoff to allow stale-session replacement, so we must drive
-      // the final navigation ourselves.
-      if (mounted) context.go(Routes.licencesList);
-    } catch (e, stack) {
-      debugPrint('IframeHandoffScreen: setSession failed: $e');
-      unawaited(Sentry.captureException(e, stackTrace: stack));
-      setState(
-        () => _error = HandoffPlatform.isInIframe()
-            ? 'Sign-in failed. Reload EQ Cards from your portal at core.eq.solutions.'
-            : 'Sign-in failed. Sign out and back in at your tenant shell, then retry.',
-      );
-    }
+    await _applyToken(token);
   }
 
   void _goToEmail() => context.go(Routes.email);
@@ -205,8 +164,6 @@ class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
                               .copyWith(color: EqColours.ink),
                           textAlign: TextAlign.center,
                         ),
-                        // In iframe mode the Google/OTP flows are sandbox-blocked;
-                        // show email fallback only for standalone (direct) access.
                         if (!kIsWeb || !HandoffPlatform.isInIframe()) ...[
                           const SizedBox(height: EqSpacing.lg),
                           FilledButton(
