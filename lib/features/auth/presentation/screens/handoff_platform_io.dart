@@ -11,5 +11,6 @@ class HandoffPlatform {
   static String currentHostname() => '';
   static bool isInIframe() => false;
   static void redirectTo(String url) {}
+  static Future<String?> requestShellToken() async => null;
   static Future<String?> fetchShellVerify() async => null;
 }
