@@ -1,29 +1,16 @@
-# Netlify config for eq-cards.netlify.app.
-#
-# Deploys are manual zip-drop OR `netlify deploy --prod` from a local build.
-# There is no GitHub auto-deploy wired up — production releases are gated
-# by an explicit step (per global EQ rules: "Never deploy without explicit
-# instruction").
-#
+﻿# Netlify config for eq-cards.netlify.app.
+# Deploys are manual only - use deploy.ps1 or netlify deploy --prod --dir=build/web
 # Site ID: c1bf4b4d-3131-4dd6-977f-2c0dd5cc4d72
 
 [build]
   publish = "build/web"
-  # No build command — deploy with pre-built assets: flutter build web && netlify deploy --prod --dir=build/web
+  ignore = "exit 0"
 
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
-# SPA routing — all paths serve index.html so go_router handles the route
-# (required for /share?licence_id=... deep links to work on direct access).
 [[redirects]]
   from   = "/*"
   to     = "/index.html"
   status = 200
-
-# Security headers are defined in web/_headers (copied to build/web/ at build time).
-# That file is the single source of truth for CSP and framing rules — it includes
-# https://www.gstatic.com for Flutter's CanvasKit renderer which loads from the CDN
-# when engineRevision is set. Defining headers here too causes duplicate CSP headers;
-# browsers apply the more restrictive one, which blocks gstatic.com and breaks rendering.
