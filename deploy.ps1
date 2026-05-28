@@ -57,4 +57,4 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-Write-Host "`n✓ Deployed to https://cards.eq.solutions" -ForegroundColor Green
+Write-Host "`nDeployed to https://cards.eq.solutions" -ForegroundColor Green
