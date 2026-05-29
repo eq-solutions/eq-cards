@@ -27,11 +27,18 @@
 //   supabase/tenant-migrations/0007_cards_profile_rpc.sql (eq-shell repo)
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../error/failure.dart';
 import '../supabase/supabase_client_provider.dart';
+// Platform bridge for the Shell iframe handoff. Conditional import: the web
+// build pulls the dart:html impl; the VM (test) build the stub (returns null,
+// so the native-refresh fallback runs). Lets the client renew shell-minted
+// JWTs — which have no Supabase refresh_token — via a fresh mint from the shell.
+import '../../features/auth/presentation/screens/handoff_platform_io.dart'
+    if (dart.library.html) '../../features/auth/presentation/screens/handoff_platform_web.dart';
 
 part 'cards_api.g.dart';
 
@@ -140,11 +147,25 @@ class CardsApi {
         DateTime.fromMillisecondsSinceEpoch(expiresAt * 1000)
             .isBefore(DateTime.now().add(const Duration(seconds: 60)));
     if (nearExpiry) {
-      try {
-        final refreshed = await _supabase.auth.refreshSession();
-        session = refreshed.session;
-      } on AuthException {
-        throw const NotAuthenticatedFailure();
+      // Shell-minted JWTs (iframe handoff) carry no Supabase refresh_token, so
+      // auth.refreshSession() throws — surfacing a false "session expired".
+      // Re-request a fresh JWT from the parent shell instead (silent
+      // postMessage handshake). Native / direct-URL sessions DO have a
+      // refresh_token, so they fall through to the standard refresh.
+      String? shellToken;
+      if (kIsWeb && HandoffPlatform.isInIframe()) {
+        shellToken = await HandoffPlatform.requestShellToken();
+      }
+      if (shellToken != null && shellToken.isNotEmpty) {
+        await _supabase.auth.setSession(shellToken, accessToken: shellToken);
+        session = _supabase.auth.currentSession;
+      } else {
+        try {
+          final refreshed = await _supabase.auth.refreshSession();
+          session = refreshed.session;
+        } on AuthException {
+          throw const NotAuthenticatedFailure();
+        }
       }
     }
     final token = session?.accessToken;

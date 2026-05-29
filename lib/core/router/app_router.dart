@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -7,6 +8,10 @@ import '../../features/auth/auth.dart';
 import '../../features/auth/domain/app_lock_state.dart';
 import '../../features/auth/presentation/notifiers/app_lock_notifier.dart';
 import '../../features/auth/presentation/screens/pin_entry_screen.dart';
+// Platform bridge for the Shell iframe handoff. Conditional import: the web
+// build pulls in the dart:html implementation, the VM (test) build the stub.
+import '../../features/auth/presentation/screens/handoff_platform_io.dart'
+    if (dart.library.html) '../../features/auth/presentation/screens/handoff_platform_web.dart';
 import '../../features/certificates/certificates.dart';
 import '../../features/legal/presentation/screens/legal_document_screen.dart';
 import '../../features/licences/licences.dart';
@@ -233,8 +238,15 @@ String? _redirect(
   // /share is a public licence-verification page — no sign-in needed.
   final isShareRoute = loc.startsWith('/share');
 
+  // Inside the Shell iframe, a missing/expired session must re-run the silent
+  // handoff (postMessage re-auth) — NOT bounce to email OTP. Shell-minted JWTs
+  // carry no Supabase refresh_token, so the only way to renew is a fresh mint
+  // from the parent shell, which the handoff screen requests on entry.
+  final inShellIframe = kIsWeb && HandoffPlatform.isInIframe();
+  final signedOutDestination = inShellIframe ? Routes.handoff : Routes.email;
+
   // Onboarding routes require sign-in; bounce unauthenticated visitors.
-  if (!isSignedIn && isOnboardingRoute) return Routes.email;
+  if (!isSignedIn && isOnboardingRoute) return signedOutDestination;
   // Once profile is complete, onboarding routes redirect to the wallet.
   if (isSignedIn && isOnboardingRoute) {
     final isComplete = profile.valueOrNull?.isComplete ?? false;
@@ -252,7 +264,7 @@ String? _redirect(
   }
 
   // Unauthenticated: PIN routes are off-limits.
-  if (!isSignedIn && isPinRoute) return Routes.email;
+  if (!isSignedIn && isPinRoute) return signedOutDestination;
 
   // Handoff is always processed even when a session exists — it needs to
   // clear any stale session and apply the fresh Shell JWT.
@@ -261,7 +273,7 @@ String? _redirect(
     return Routes.licencesList;
   }
   if (!isSignedIn && !isAuthRoute && !isLegalRoute && !isShareRoute) {
-    return Routes.email;
+    return signedOutDestination;
   }
 
   // PIN gate — only applies to signed-in users on non-auth/legal/share routes,
