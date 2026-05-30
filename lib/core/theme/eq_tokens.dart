@@ -4,8 +4,23 @@
 //
 // ignore: flutter_style_todos
 // TODO: once eq-design-tokens gains a pubspec.yaml, wire this as a proper Flutter git dep.
+//
+// Path A consolidation (2026-05-30):
+// EqSpacingTokens and EqTypographyTokens were dead code (zero callsites outside
+// this file). Removed. EqColors retained — eq_colours.dart delegates to it.
+// EqRadius retained — no hand-written equivalent; adds genuine value.
+// Barrel exports added so this file is the single theme import entry point.
+// Typography consolidation is explicitly deferred — see cards-token-consolidation-2026-05-30.md.
 
 import 'package:flutter/material.dart';
+
+// Barrel export — hand-written spacing tokens (source of truth for app callsites).
+// eq_spacing.dart has no imports so this is cycle-free.
+export 'eq_spacing.dart';
+// TODO(barrel): eq_typography.dart cannot be exported here — it imports eq_colours.dart
+// which imports eq_tokens.dart, creating a circular export. Feature files must continue
+// to import eq_typography.dart directly until that cycle is resolved (e.g. by removing
+// the eq_colours.dart → eq_tokens.dart import and inlining EqColors into eq_colours.dart).
 
 class EqColors {
   EqColors._();
@@ -36,20 +51,6 @@ class EqColors {
   static const Color errorText   = Color(0xFFB91C1C);
 }
 
-class EqSpacingTokens {
-  EqSpacingTokens._();
-  static const double s1  = 4;
-  static const double s2  = 8;
-  static const double s3  = 12;
-  static const double s4  = 16;
-  static const double s5  = 20;
-  static const double s6  = 24;
-  static const double s8  = 32;
-  static const double s10 = 40;
-  static const double s12 = 48;
-  static const double s16 = 64;
-}
-
 class EqRadius {
   EqRadius._();
   static const double chip  = 4;
@@ -57,24 +58,4 @@ class EqRadius {
   static const double card  = 8;
   static const double shell = 12;
   static const double pill  = 9999;
-}
-
-class EqTypographyTokens {
-  EqTypographyTokens._();
-  static const String fontFamily = 'PlusJakartaSans';
-  static const double xs   = 11;
-  static const double sm   = 12;
-  static const double base = 14;
-  static const double md   = 15;
-  static const double lg   = 18;
-  static const double xl   = 22;
-  static const double xl2  = 28;
-  static const double xl3  = 36;
-  static const double xl4  = 48;
-
-  static const FontWeight regular = FontWeight.w400;
-  static const FontWeight medium  = FontWeight.w500;
-  static const FontWeight semi    = FontWeight.w600;
-  static const FontWeight bold    = FontWeight.w700;
-  static const FontWeight black   = FontWeight.w800;
 }
