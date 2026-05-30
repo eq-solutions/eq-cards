@@ -1,5 +1,3 @@
-import 'package:eq_cards/features/certificates/certificates.dart' show CertificateRepository;
-import 'package:eq_cards/features/certificates/data/certificate_repository.dart' show CertificateRepository;
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'certificate.freezed.dart';
@@ -13,7 +11,7 @@ part 'certificate.g.dart';
 /// attached post-fetch by `CertificateRepository`, expires after 1 hour,
 /// never persisted.
 @freezed
-class Certificate with _$Certificate {
+abstract class Certificate with _$Certificate {
   const factory Certificate({
     String? id,
     required String userId,

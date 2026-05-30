@@ -4,7 +4,7 @@ part 'licence_type.freezed.dart';
 part 'licence_type.g.dart';
 
 @freezed
-class LicenceType with _$LicenceType {
+abstract class LicenceType with _$LicenceType {
   const factory LicenceType({
     required String id,
     required String code,

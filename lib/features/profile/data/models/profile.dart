@@ -13,7 +13,7 @@ part 'profile.g.dart';
 /// drafts (e.g. a brand-new profile in the edit form) don't have them yet —
 /// the server populates them on insert/update via Postgres triggers.
 @freezed
-class Profile with _$Profile {
+abstract class Profile with _$Profile {
   const factory Profile({
     required String id,
     String? fullName,
