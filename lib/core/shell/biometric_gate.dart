@@ -91,7 +91,7 @@ class _BiometricGateState extends ConsumerState<BiometricGate>
       }
       final ok = await auth.authenticate(
         localizedReason: 'Unlock EQ Cards',
-        options: const AuthenticationOptions(stickyAuth: true),
+        persistAcrossBackgrounding: true,
       );
       if (mounted) {
         setState(() {

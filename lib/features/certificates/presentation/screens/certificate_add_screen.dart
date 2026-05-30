@@ -96,7 +96,7 @@ class _CertificateAddScreenState extends ConsumerState<CertificateAddScreen> {
 
   Future<void> _pickFile() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png', 'webp'],
         withData: true,
