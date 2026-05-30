@@ -100,7 +100,7 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
                       const Expanded(child: Divider()),
                       Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: EqSpacing.md),
+                            horizontal: EqSpacing.md,),
                         child: Text(
                           'or',
                           style: EqTypography.label

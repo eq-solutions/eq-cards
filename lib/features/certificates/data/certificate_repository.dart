@@ -36,7 +36,7 @@ class CertificateRepository {
           .eq('active', true)
           .order('created_at', ascending: false);
       final list = rows
-          .map((r) => Certificate.fromJson(r as Map<String, dynamic>))
+          .map((r) => Certificate.fromJson(r))
           .toList();
       return Future.wait(list.map(_withSignedUrl));
     } catch (e) {

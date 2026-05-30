@@ -160,8 +160,8 @@ class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
                       children: [
                         Text(
                           _error!,
-                          style: EqTypography.bodyM
-                              .copyWith(color: EqColours.ink),
+                          style:
+                              EqTypography.bodyM.copyWith(color: EqColours.ink),
                           textAlign: TextAlign.center,
                         ),
                         if (!kIsWeb || !HandoffPlatform.isInIframe()) ...[

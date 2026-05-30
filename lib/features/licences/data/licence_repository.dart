@@ -61,7 +61,7 @@ class LicenceRepository {
     unawaited(_breadcrumb(
       isInsert ? 'licence_insert_started' : 'licence_update_started',
       {'licence_type': licence.licenceType},
-    ));
+    ),);
     try {
       final rows = await _client.rpc<List<dynamic>>(
         'eq_cards_upsert_my_licence',
@@ -73,13 +73,13 @@ class LicenceRepository {
       unawaited(_breadcrumb(
         isInsert ? 'licence_insert_succeeded' : 'licence_update_succeeded',
         {'licence_id': saved.id ?? '', 'type': saved.licenceType},
-      ));
+      ),);
       return saved;
     } catch (e) {
       unawaited(_breadcrumb(
         isInsert ? 'licence_insert_failed' : 'licence_update_failed',
         {'error': e.toString()},
-      ));
+      ),);
       throw mapSupabaseError(e);
     }
   }

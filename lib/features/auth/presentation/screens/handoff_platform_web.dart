@@ -2,7 +2,7 @@
 // here behind a conditional import so flutter test (VM target) doesn't
 // blow up trying to resolve it.
 
-// ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use
+// ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use, use_setters_to_change_properties
 import 'dart:async';
 import 'dart:convert';
 import 'dart:html' as html;
@@ -69,7 +69,7 @@ class HandoffPlatform {
         shellOrigin,
       );
     } catch (_) {
-      sub.cancel();
+      unawaited(sub.cancel());
       return null;
     }
 

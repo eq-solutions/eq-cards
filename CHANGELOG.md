@@ -44,6 +44,23 @@ no behaviour change — every deletion verified zero-reference, codegen rebuilt,
 - **`cards_api.dart` kept + documented.** Decision: retain as intentional built-ahead
   scaffolding for the post-2.B data-plane flip; added a STATUS header so it's not mistaken
   for dead weight. Repos still use direct `eq_cards_*` RPCs until the cutover.
+- **Analyzer brought fully clean (30 → 0).** Cleared every remaining `flutter analyze`
+  finding (all infos/warnings — 0 errors throughout). `dart fix` auto-applied 19 (directive
+  ordering, trailing commas, quote/escape style, an unnecessary cast, null-aware operator,
+  and the `DropdownButtonFormField` `value:`→`initialValue:` deprecation). The rest by hand:
+  explicit `rpc<dynamic>` type args in `pin_repository`, doc-comment `[Symbol]` → inline
+  code where the symbol wasn't in scope, `unawaited()` on a fire-and-forget
+  `subscription.cancel()`, three missing end-of-file newlines, and declaring the SDK package
+  `flutter_web_plugins` explicitly. Also removed a phantom `image_cropper` import in
+  `licence_crop_screen.dart` that existed only to resolve a doc link (the package is still
+  used on mobile via `licence_crop.dart`). The dropdown rename was verified
+  behaviour-preserving against the Flutter source (`didUpdateWidget` re-syncs `initialValue`
+  on rebuild) and by the passing profile/licence hydration tests — test suite unchanged at
+  185 pass / 5 pre-existing environmental golden failures.
+- **README rewritten.** Replaced the default Flutter stub ("A new Flutter project") with a
+  real project README: what Cards is, the stack, local-run + codegen + quality-gate
+  commands, the backend/auth model, deploy guardrails, and pointers to ARCHITECTURE /
+  STATUS / CHANGELOG.
 
 ---
 

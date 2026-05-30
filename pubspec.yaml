@@ -83,6 +83,12 @@ dependencies:
   # community-maintained successor with the same API surface.
   flutter_markdown_plus: ^1.0.0
 
+  # Part of the Flutter SDK (not pub.dev) — provides usePathUrlStrategy() for
+  # clean web URLs in main.dart. Declared explicitly 2026-05-30 to satisfy
+  # depend_on_referenced_packages.
+  flutter_web_plugins:
+    sdk: flutter
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

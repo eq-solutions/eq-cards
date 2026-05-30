@@ -38,14 +38,14 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../error/failure.dart';
-import '../supabase/supabase_client_provider.dart';
 // Platform bridge for the Shell iframe handoff. Conditional import: the web
 // build pulls the dart:html impl; the VM (test) build the stub (returns null,
 // so the native-refresh fallback runs). Lets the client renew shell-minted
 // JWTs — which have no Supabase refresh_token — via a fresh mint from the shell.
 import '../../features/auth/presentation/screens/handoff_platform_io.dart'
     if (dart.library.html) '../../features/auth/presentation/screens/handoff_platform_web.dart';
+import '../error/failure.dart';
+import '../supabase/supabase_client_provider.dart';
 
 part 'cards_api.g.dart';
 

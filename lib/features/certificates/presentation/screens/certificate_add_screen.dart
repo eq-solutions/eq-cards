@@ -246,9 +246,7 @@ class _CertificateAddScreenState extends ConsumerState<CertificateAddScreen> {
               // ── File picker ─────────────────────────────────
               _FilePicker(
                 fileName: _pendingFileName ??
-                    (_existing != null
-                        ? _existing!.filePath.split('/').last
-                        : null),
+                    _existing?.filePath.split('/').last,
                 onPick: _pickFile,
                 required: !_isEdit,
               ),

@@ -65,8 +65,9 @@ completed `scripts/migrate-to-canonical.ts` (+ its README). Code/docs only — n
 behaviour change, not a deploy. `flutter analyze` clean, codegen rebuilt. Full detail
 in CHANGELOG. Follow-up the same day: removed the unused `firebase_*` and
 `flutter_secure_storage` deps, renamed the colliding `0006_certificates.sql` →
-`0009_certificates.sql`, cleared 6 lint dead-code issues (`flutter analyze` 36 → 30,
-0 errors), and kept `cards_api.dart` as documented built-ahead scaffolding.
+`0009_certificates.sql`, cleared every lint finding (`flutter analyze` 36 → 0, still
+0 errors), rewrote the default-stub README into a real project README, and kept
+`cards_api.dart` as documented built-ahead scaffolding.
 
 ---
 

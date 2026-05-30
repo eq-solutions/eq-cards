@@ -1,3 +1,5 @@
+import 'package:eq_cards/features/certificates/certificates.dart' show CertificateRepository;
+import 'package:eq_cards/features/certificates/data/certificate_repository.dart' show CertificateRepository;
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'certificate.freezed.dart';
@@ -8,7 +10,7 @@ part 'certificate.g.dart';
 ///
 /// `filePath` is the persistent storage path in the `certificates` bucket
 /// (format `{userId}/{certificateId}.{ext}`). `fileSignedUrl` is transient —
-/// attached post-fetch by [CertificateRepository], expires after 1 hour,
+/// attached post-fetch by `CertificateRepository`, expires after 1 hour,
 /// never persisted.
 @freezed
 class Certificate with _$Certificate {
@@ -28,7 +30,7 @@ class Certificate with _$Certificate {
     DateTime? createdAt,
     DateTime? updatedAt,
 
-    /// Transient signed URL — populated by [CertificateRepository] post-fetch.
+    /// Transient signed URL — populated by `CertificateRepository` post-fetch.
     /// Expires after 1 hour. NEVER persisted.
     @JsonKey(includeFromJson: false, includeToJson: false)
     String? fileSignedUrl,

@@ -77,7 +77,7 @@ class AuthRepository {
   }
 
   /// Sign in via Google OAuth. On web, redirects to Google then back to the
-  /// app at [redirectTo]. Supabase picks up the session from the URL fragment
+  /// app at `redirectTo`. Supabase picks up the session from the URL fragment
   /// on return — no extra handling needed in the app.
   ///
   /// Requires Google configured as an OAuth provider in Supabase Auth settings
