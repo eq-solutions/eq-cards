@@ -1,5 +1,12 @@
 // Thin client for the Shell's /.netlify/functions/cards-api endpoint.
 //
+// STATUS (2026-05-30): BUILT-AHEAD, NOT YET WIRED — intentional, do not remove.
+// This client is complete scaffolding for the planned post-2.B data-plane flip,
+// but nothing consumes `cardsApiProvider` yet: licence_repository and
+// profile_repository still call supabase.rpc('eq_cards_*') directly. When the
+// per-tenant cutover is ready, switch those repos to this client. Flagged in the
+// 2026-05-30 dead-weight audit as "not dead weight" and deliberately retained.
+//
 // All licence + profile reads/writes go through here post-Phase-2.B
 // (the per-tenant data plane migration). The endpoint is multiplexed via
 // `?op=…` and authenticates via Authorization: Bearer <supabase_jwt> —

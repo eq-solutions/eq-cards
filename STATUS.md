@@ -63,8 +63,10 @@ Removed 8 unused/stale files: dead Dart helpers (`logger.dart`, `result.dart`,
 `eq_snackbar.dart`), the duplicate `docs/` legal copies, `progress.html`, and the
 completed `scripts/migrate-to-canonical.ts` (+ its README). Code/docs only — no
 behaviour change, not a deploy. `flutter analyze` clean, codegen rebuilt. Full detail
-in CHANGELOG. Firebase deps, `cards_api.dart`, and duplicate `0006_*` migration
-filenames are flagged there for a later decision.
+in CHANGELOG. Follow-up the same day: removed the unused `firebase_*` and
+`flutter_secure_storage` deps, renamed the colliding `0006_certificates.sql` →
+`0009_certificates.sql`, cleared 6 lint dead-code issues (`flutter analyze` 36 → 30,
+0 errors), and kept `cards_api.dart` as documented built-ahead scaffolding.
 
 ---
 

@@ -26,8 +26,8 @@ dependencies:
   supabase_flutter: ^2.5.0
   dio: ^5.4.0
 
-  # Local storage (architecture §11.1)
-  flutter_secure_storage: ^9.2.0
+  # Local storage (architecture §11.1). Supabase persists its auth session via
+  # shared_preferences; flutter_secure_storage was unused (removed 2026-05-30).
   shared_preferences: ^2.2.0
 
   # Photos (architecture §11.2). image_picker handles both camera (mobile) and
@@ -44,9 +44,8 @@ dependencies:
   # QR generation (Phase 1)
   qr_flutter: ^4.1.0
 
-  # Push (architecture §16 Q1 — FCM-only assumed)
-  firebase_core: ^3.0.0
-  firebase_messaging: ^15.0.0
+  # Local notifications for licence-expiry alerts (architecture §16). No remote
+  # push yet — firebase_core/firebase_messaging removed 2026-05-30 as unused.
   flutter_local_notifications: ^17.0.0
   timezone: ^0.9.0
 

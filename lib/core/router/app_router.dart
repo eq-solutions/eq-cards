@@ -5,9 +5,6 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../features/auth/auth.dart';
-import '../../features/auth/domain/app_lock_state.dart';
-import '../../features/auth/presentation/notifiers/app_lock_notifier.dart';
-import '../../features/auth/presentation/screens/pin_entry_screen.dart';
 // Platform bridge for the Shell iframe handoff. Conditional import: the web
 // build pulls in the dart:html implementation, the VM (test) build the stub.
 import '../../features/auth/presentation/screens/handoff_platform_io.dart'

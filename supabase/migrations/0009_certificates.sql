@@ -1,4 +1,5 @@
--- 0006_certificates.sql
+-- 0009_certificates.sql  (renamed from 0006_certificates.sql — collided with
+-- 0006_org_layer.sql; applied to eq-canonical 2026-05-24 as migration "certificates")
 -- Certificates wallet — PDFs and photos for First Aid, Working at Heights,
 -- LV CPR, induction cards, and anything else that isn't a structured licence.
 

@@ -26,12 +26,24 @@ no behaviour change — every deletion verified zero-reference, codegen rebuilt,
 - **Docs synced.** `ARCHITECTURE.md` file tree, shared-widgets list, and §18 updated to
   drop references to the removed files.
 
-Flagged but **not** actioned (need a decision): `firebase_core` + `firebase_messaging`
-(unused — push never built), `flutter_secure_storage` (redundant direct dep),
-`core/cards_api/cards_api.dart` (built-ahead post-2.B data plane, wired to nothing yet),
-and the duplicate `0006_*` migration filenames. The deep `flutter analyze` pass also found
-a few unnecessary imports (`app_router.dart`, `licences_list_screen.dart`) and an unused
-`AuthChangeEvent` show clause — left for a follow-up.
+**Follow-up — flagged items resolved (same day):**
+
+- **Unused deps removed.** `firebase_core` + `firebase_messaging` (push never built; FCM
+  stays deferred to v1.1) and `flutter_secure_storage` (orphaned direct dep — Supabase
+  persists its session via `shared_preferences`, not secure storage). Corrected the
+  inaccurate in-code comment and the ARCHITECTURE §11.1 security note, which had claimed
+  tokens lived in encrypted Keychain/EncryptedSharedPreferences (never wired). 13
+  transitive packages dropped; no Dart usage existed.
+- **Migration filename collision fixed.** `0006_certificates.sql` → `0009_certificates.sql`
+  (collided with `0006_org_layer.sql`). Local-only rename — eq-canonical tracks migrations
+  by timestamp via MCP (`org_layer` and `certificates` applied at distinct versions), so
+  the remote is unaffected.
+- **Lint dead code removed.** 3 barrel-redundant imports in `app_router.dart`, an unused
+  `dart:typed_data` import, and an unused `AuthChangeEvent` show clause. `flutter analyze`:
+  36 → 30 issues, 0 errors.
+- **`cards_api.dart` kept + documented.** Decision: retain as intentional built-ahead
+  scaffolding for the post-2.B data-plane flip; added a STATUS header so it's not mistaken
+  for dead weight. Repos still use direct `eq_cards_*` RPCs until the cutover.
 
 ---
 

@@ -48,7 +48,7 @@ class AppLockNotifier extends _$AppLockNotifier {
     });
 
     // Synchronous initial check — Supabase restores the session from
-    // flutter_secure_storage during Supabase.initialize(), so currentSession
+    // shared_preferences during Supabase.initialize(), so currentSession
     // is available immediately at build time.
     final session = Supabase.instance.client.auth.currentSession;
     final hasSession = session != null && !session.isExpired;

@@ -26,13 +26,13 @@
 | Routing | `go_router` | ≥ 14.0 | ✓ |
 | Backend client | `supabase_flutter` | ≥ 2.5 | ✓ |
 | HTTP (non-Supabase) | `dio` | ≥ 5.4 | ✓ |
-| Local storage | `flutter_secure_storage` (auth tokens) + `shared_preferences` (prefs) | latest stable | ✓ (uses IndexedDB on web) |
+| Local storage | `shared_preferences` (prefs + Supabase auth session) | latest stable | ✓ (uses IndexedDB on web) |
 | Local DB cache | (deferred to v1.1) | — | — |
 | Photo capture | `image_picker` | ^1.1.0 | ✓ (file dialog on web) |
 | Image processing | `flutter_image_compress` (EXIF strip + resize + JPEG re-encode) | ^2.3.0 | ✓ |
 | OCR | Google ML Kit (`google_mlkit_text_recognition`) | ^0.13.0 | ✗ — `kIsWeb` returns empty extraction (manual entry on web) |
 | QR generation | `qr_flutter` | ^4.1.0 | ✓ |
-| Push notifications | `firebase_messaging` | ^15.0.0 | ✓ (FCM web supported, deferred to v1.1) |
+| Push notifications | _(deferred to v1.1 — `firebase_*` removed 2026-05-30, never wired)_ | — | — |
 | Local notifications | `flutter_local_notifications` + `timezone` | ^17.0.0 / ^0.9.0 | ✗ on web — fallback is in-app expiring badges |
 | Analytics | `posthog_flutter` | ^4.7.0 | ✓ |
 | Crash reporting | `sentry_flutter` | ^8.0.0 | ✓ |
@@ -494,8 +494,8 @@ class UnknownFailure extends Failure { const UnknownFailure(this.error); final O
 
 ### 11.1 Auth tokens
 
-- Mobile: Supabase session tokens stored in `flutter_secure_storage` (Keychain on iOS, EncryptedSharedPreferences on Android).
-- Web: Supabase JS-equivalent session lives in `localStorage` via `supabase_flutter` web shim. Acceptable for v1; revisit if we add HttpOnly cookie auth.
+- Supabase persists the session via its default `shared_preferences` storage on every platform (NSUserDefaults on iOS, SharedPreferences on Android, `localStorage`/IndexedDB on web). Acceptable for the web-first v1.
+- NB: this is **not** OS-encrypted storage. A dedicated secure store (Keychain / EncryptedSharedPreferences via `flutter_secure_storage`) was speced but never wired; the dep was removed 2026-05-30 as unused. Revisit for the mobile threat model if native builds ship, or if we move to HttpOnly cookie auth.
 - Never written to logs, never in analytics events, never in error reports.
 
 ### 11.2 Photos
