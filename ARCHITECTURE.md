@@ -74,16 +74,14 @@ lib/
 │   │   ├── eq_button.dart
 │   │   ├── eq_card.dart
 │   │   ├── eq_text_field.dart
-│   │   ├── eq_app_bar.dart
-│   │   └── eq_snackbar.dart
+│   │   └── eq_app_bar.dart
 │   │
 │   ├── supabase/
 │   │   ├── supabase_client_provider.dart    # Single Supabase client instance
 │   │   └── supabase_error_handler.dart
 │   │
 │   ├── error/
-│   │   ├── failure.dart           # Sealed Failure types (implements Exception)
-│   │   └── result.dart            # Result<T> = Success<T> | FailureResult<T>
+│   │   └── failure.dart           # Sealed Failure types (implements Exception)
 │   │
 │   ├── analytics/
 │   │   └── analytics_service.dart # PostHog wrapper. Track named events only.
@@ -91,8 +89,7 @@ lib/
 │   └── utils/
 │       ├── date_utils.dart
 │       ├── clipboard_utils.dart   # Single source of truth for copy + haptic + toast
-│       ├── photo_upload.dart      # EXIF-stripped uploader; Uint8List + File overloads
-│       └── logger.dart            # Wraps print, gated by kDebugMode
+│       └── photo_upload.dart      # EXIF-stripped uploader; Uint8List + File overloads
 │
 ├── features/                      # All app features. Each is self-contained.
 │   ├── auth/
@@ -408,7 +405,6 @@ Plus Jakarta Sans bundled as a font asset for mobile. On web, the same .ttf asse
 - `EqCard` — Ice background, 8px corner radius.
 - `EqTextField` — branded text input with consistent error styling.
 - `EqAppBar` — Sky fill, white text.
-- `EqSnackbar` — toast helper (used by the wedge clipboard util, plus general "show toast").
 
 ---
 
@@ -658,8 +654,9 @@ The following are explicitly deferred:
 > **✓ RECONCILIATION RESOLVED (2026-05-21 — Units 3 + 4).**
 >
 > The decision is **Path A: consolidate.** Cards data moved to eq-canonical
-> (`jvknxcmbtrfnxfrwfimn`) via the Unit 3 migration script (`scripts/migrate-to-canonical.ts`)
-> and the Unit 4 canonical flip (`0d14c50`). The module-local cache model (Path B) was rejected.
+> (`jvknxcmbtrfnxfrwfimn`) via the one-time Unit 3 migration (`scripts/migrate-to-canonical.ts`,
+> removed post-migration 2026-05-30 — see CHANGELOG) and the Unit 4 canonical flip (`0d14c50`).
+> The module-local cache model (Path B) was rejected.
 >
 > **What changed:**
 > - `§18.1` below described a "no shared database" model between EQ surfaces. That model is

@@ -1,6 +1,6 @@
 # EQ Cards — Current Status
 
-**Last updated:** 2026-05-25
+**Last updated:** 2026-05-30
 **Branch:** `main` — all fixes live at `cards.eq.solutions`
 
 ---
@@ -54,6 +54,17 @@ entirely — `web/_headers` is the sole source of truth for CSP.
 `netlify.toml` had `X-Frame-Options: DENY` and `frame-ancestors 'none'` — Cards could
 never be embedded in Shell. Fixed: removed `X-Frame-Options`, `frame-ancestors` now
 `'self' https://*.eq.solutions`.
+
+---
+
+## Maintenance 2026-05-30 — repo dead-weight cleanup
+
+Removed 8 unused/stale files: dead Dart helpers (`logger.dart`, `result.dart`,
+`eq_snackbar.dart`), the duplicate `docs/` legal copies, `progress.html`, and the
+completed `scripts/migrate-to-canonical.ts` (+ its README). Code/docs only — no
+behaviour change, not a deploy. `flutter analyze` clean, codegen rebuilt. Full detail
+in CHANGELOG. Firebase deps, `cards_api.dart`, and duplicate `0006_*` migration
+filenames are flagged there for a later decision.
 
 ---
 

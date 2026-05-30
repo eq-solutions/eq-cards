@@ -6,6 +6,35 @@ All notable changes to EQ Cards are documented here. Format follows
 
 ## [Unreleased]
 
+### 2026-05-30 — Repo dead-weight audit + cleanup
+
+Audited the repo for unused code, dependencies, and stale artifacts. Removed 8 files;
+no behaviour change — every deletion verified zero-reference, codegen rebuilt, and
+`flutter analyze` clean (0 errors).
+
+- **Dead Dart removed.** `core/utils/logger.dart` (`logD/logI/logW` — never called),
+  `core/error/result.dart` (`Result`/`Success`/`FailureResult` — abandoned pattern; the
+  codebase throws `Failure` instead), `core/widgets/eq_snackbar.dart` (`EqSnackbar` —
+  never invoked).
+- **Duplicate legal docs removed.** `docs/PRIVACY-POLICY.md` and `docs/TERMS-OF-USE.md`
+  were byte-identical to the shipped `assets/legal/*.md`, with no generator between them.
+  `assets/legal/*` is now the single source of truth; also dropped the internal "Source:"
+  footer that was leaking into the in-app Privacy Policy render.
+- **Stale artifacts removed.** `progress.html` (manual status board, superseded by
+  STATUS.md + this CHANGELOG); `scripts/migrate-to-canonical.ts` (completed one-time
+  Unit 3 migration) and its `scripts/README.md`.
+- **Docs synced.** `ARCHITECTURE.md` file tree, shared-widgets list, and §18 updated to
+  drop references to the removed files.
+
+Flagged but **not** actioned (need a decision): `firebase_core` + `firebase_messaging`
+(unused — push never built), `flutter_secure_storage` (redundant direct dep),
+`core/cards_api/cards_api.dart` (built-ahead post-2.B data plane, wired to nothing yet),
+and the duplicate `0006_*` migration filenames. The deep `flutter analyze` pass also found
+a few unnecessary imports (`app_router.dart`, `licences_list_screen.dart`) and an unused
+`AuthChangeEvent` show clause — left for a follow-up.
+
+---
+
 ### 2026-05-23 — Post-Unit-4 polish (commits `aa43666`, `9afd10c`, `9629fa6`, `2996fb9`, `dad4ad8`, `0471433`, `7db6d3d`)
 
 Six targeted fixes and one feature restore shipped the day after Unit 4 merge.
