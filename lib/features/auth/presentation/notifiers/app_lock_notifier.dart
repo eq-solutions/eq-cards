@@ -43,7 +43,7 @@ class AppLockNotifier extends _$AppLockNotifier {
         if (!hasSession) {
           state = AppLockPhase.unlocked;
         } else if (state == AppLockPhase.checking) {
-          _checkLockState();
+          unawaited(_checkLockState());
         }
       });
     });
@@ -66,7 +66,7 @@ class AppLockNotifier extends _$AppLockNotifier {
       return AppLockPhase.unlocked;
     }
 
-    _checkLockState();
+    unawaited(_checkLockState());
     return AppLockPhase.checking;
   }
 

@@ -275,7 +275,7 @@ class _PhotoFirstVariant extends StatelessWidget {
                     Image.network(
                       licence.photoFrontSignedUrl!,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                      errorBuilder: (_, _, _) => const SizedBox.shrink(),
                     )
                   else
                     const Center(
@@ -364,7 +364,7 @@ class _Thumbnail extends StatelessWidget {
         width: size,
         height: size,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _Placeholder(size: size),
+        errorBuilder: (_, _, _) => _Placeholder(size: size),
       ),
     );
   }

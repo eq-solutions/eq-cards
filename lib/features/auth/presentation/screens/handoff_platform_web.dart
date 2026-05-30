@@ -1,7 +1,10 @@
 // Web implementation of the handoff browser bridge. dart:html lives
 // here behind a conditional import so flutter test (VM target) doesn't
 // blow up trying to resolve it.
-
+//
+// dart:html is required for the postMessage bridge (hence
+// avoid_web_libraries_in_flutter); its legacy API surfaces deprecated members
+// and setter-style properties — all expected on this web-only file.
 // ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use, use_setters_to_change_properties
 import 'dart:async';
 import 'dart:convert';
@@ -41,7 +44,7 @@ class HandoffPlatform {
     final completer = Completer<String?>();
 
     late StreamSubscription<html.MessageEvent> sub;
-    sub = html.window.onMessage.listen((html.MessageEvent event) {
+    sub = html.window.onMessage.listen((event) {
       if (event.origin != shellOrigin) return;
       try {
         final data = event.data;
@@ -56,7 +59,7 @@ class HandoffPlatform {
           token = decoded?['token'] as String?;
         }
         if (type != 'SHELL_TOKEN_RESPONSE') return;
-        sub.cancel();
+        unawaited(sub.cancel());
         completer.complete(token != null && token.isNotEmpty ? token : null);
       } catch (_) {
         // ignore malformed messages
@@ -76,7 +79,7 @@ class HandoffPlatform {
     return completer.future.timeout(
       const Duration(seconds: 5),
       onTimeout: () {
-        sub.cancel();
+        unawaited(sub.cancel());
         return null;
       },
     );

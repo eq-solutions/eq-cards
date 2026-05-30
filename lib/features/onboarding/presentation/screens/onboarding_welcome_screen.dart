@@ -37,7 +37,7 @@ class OnboardingWelcomeScreen extends ConsumerWidget {
                     height: 40,
                     color: EqColours.sky,
                     colorBlendMode: BlendMode.srcIn,
-                    errorBuilder: (_, __, ___) => Text(
+                    errorBuilder: (_, _, _) => Text(
                       'EQ',
                       style: EqTypography.headingM.copyWith(
                         color: EqColours.sky,

@@ -96,7 +96,7 @@ dev_dependencies:
     sdk: flutter
 
   # Lint (architecture §1)
-  very_good_analysis: ^6.0.0
+  very_good_analysis: ^10.0.0
 
   # Codegen (architecture §1). riverpod_generator 3 brings the build v4
   # transition, which also unblocks json_serializable to float to its

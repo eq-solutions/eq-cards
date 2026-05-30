@@ -28,9 +28,9 @@ part 'app_router.g.dart';
 GoRouter appRouter(Ref ref) {
   // Bridge: Riverpod state changes -> ChangeNotifier -> GoRouter refresh.
   final notifier = _AuthRouterNotifier();
-  ref.listen(authStateChangesProvider, (_, __) => notifier.bump());
-  ref.listen(appLockNotifierProvider, (_, __) => notifier.bump());
-  ref.listen(profileNotifierProvider, (_, __) => notifier.bump());
+  ref.listen(authStateChangesProvider, (_, _) => notifier.bump());
+  ref.listen(appLockNotifierProvider, (_, _) => notifier.bump());
+  ref.listen(profileNotifierProvider, (_, _) => notifier.bump());
   ref.onDispose(notifier.dispose);
 
   return GoRouter(
@@ -310,7 +310,7 @@ class _SplashScreen extends StatelessWidget {
                 'assets/icon/launcher.png',
                 width: 96,
                 height: 96,
-                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                errorBuilder: (_, _, _) => const SizedBox.shrink(),
               ),
               const SizedBox(height: EqSpacing.lg),
               Text(

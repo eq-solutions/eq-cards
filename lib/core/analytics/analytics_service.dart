@@ -38,7 +38,7 @@ abstract class AnalyticsService {
   /// - `initialSession` (returning user, persisted session) → identify only
   /// - `signedOut` → reset
   static void startIdentitySync(SupabaseClient client) {
-    _authSub?.cancel();
+    unawaited(_authSub?.cancel());
     _authSub = client.auth.onAuthStateChange.listen((data) {
       final user = data.session?.user;
       switch (data.event) {

@@ -623,7 +623,7 @@ class _IllustrationEmpty extends StatelessWidget {
             'assets/icon/launcher.png',
             width: 96,
             height: 96,
-            errorBuilder: (_, __, ___) => const Icon(
+            errorBuilder: (_, _, _) => const Icon(
               Icons.badge_outlined,
               size: 64,
               color: EqColours.grey,
@@ -893,7 +893,8 @@ class _LicencesSkeletonState extends State<_LicencesSkeleton>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
+    );
+    unawaited(_controller.repeat(reverse: true));
   }
 
   @override

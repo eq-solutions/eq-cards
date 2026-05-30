@@ -231,7 +231,7 @@ class _CertificateDetailBody extends StatelessWidget {
                 child: Image.network(
                   cert.fileSignedUrl!,
                   fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Center(
+                  errorBuilder: (_, _, _) => const Center(
                     child: Icon(Icons.broken_image, color: Colors.white54),
                   ),
                 ),
@@ -284,7 +284,7 @@ class _DetailRow extends StatelessWidget {
               style: EqTypography.bodyM.copyWith(fontWeight: FontWeight.w500),
             ),
           ),
-          if (trailing != null) trailing!,
+          ?trailing,
         ],
       ),
     );

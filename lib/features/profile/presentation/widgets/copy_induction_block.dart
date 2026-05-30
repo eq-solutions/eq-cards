@@ -23,11 +23,11 @@ class CopyInductionBlock extends StatelessWidget {
         onPressed: () {
           final block = _formatBlock(profile);
           unawaited(AnalyticsService.track('copy_induction_block'));
-          copyWithFeedback(
+          unawaited(copyWithFeedback(
             context: context,
             value: block,
             label: 'Profile block',
-          );
+          ));
         },
         fullWidth: true,
       ),

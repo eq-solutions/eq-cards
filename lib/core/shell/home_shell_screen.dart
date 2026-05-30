@@ -23,7 +23,7 @@ class HomeShellScreen extends ConsumerWidget {
     // licences feature itself stays unaware of the alerts feature.
     ref.listen(licencesListNotifierProvider, (_, next) {
       next.whenData((licences) {
-        ref.read(alertsSchedulerProvider).syncAll(licences);
+        unawaited(ref.read(alertsSchedulerProvider).syncAll(licences));
       });
     });
 

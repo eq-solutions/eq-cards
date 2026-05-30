@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -31,7 +33,7 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
       _pin += digit;
       _error = null;
     });
-    if (_pin.length == 4) _submit();
+    if (_pin.length == 4) unawaited(_submit());
   }
 
   void _onBackspace() {
@@ -188,7 +190,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
 
     // Phase 2 — check match
     if (_pin == _firstPin) {
-      _save();
+      unawaited(_save());
     } else {
       setState(() {
         _firstPin = null;

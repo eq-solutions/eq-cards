@@ -143,7 +143,7 @@ class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
                     'assets/icon/launcher.png',
                     width: 64,
                     height: 64,
-                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
                   ),
                   const SizedBox(height: EqSpacing.lg),
                   Text(
