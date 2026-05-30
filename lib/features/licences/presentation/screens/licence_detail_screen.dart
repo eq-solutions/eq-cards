@@ -162,6 +162,12 @@ class LicenceDetailScreen extends ConsumerWidget {
   }
 }
 
+// The exact family type (FutureProviderFamily) is internal to
+// package:riverpod/src in riverpod 3 — flutter_riverpod re-exports provider
+// values but not the family classes, so it can't be named here without a
+// private src import. Inference yields the correct type; specify_nonobvious is
+// not satisfiable for this declaration in riverpod 3.
+// ignore: specify_nonobvious_property_types
 final licenceDetailProvider =
     FutureProvider.family<Licence, String>((ref, id) async {
   return ref.read(licenceRepositoryProvider).getById(id);
@@ -238,7 +244,7 @@ class _LinearDetail extends StatelessWidget {
               child: Image.network(
                 licence.photoFrontSignedUrl!,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const SizedBox(height: 200),
+                errorBuilder: (_, _, _) => const SizedBox(height: 200),
               ),
             ),
           if (licence.photoBackSignedUrl != null) ...[
@@ -248,7 +254,7 @@ class _LinearDetail extends StatelessWidget {
               child: Image.network(
                 licence.photoBackSignedUrl!,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const SizedBox(height: 200),
+                errorBuilder: (_, _, _) => const SizedBox(height: 200),
               ),
             ),
           ],
@@ -519,7 +525,7 @@ class _PhotoFirstDetail extends StatelessWidget {
                     Image.network(
                       licence.photoFrontSignedUrl!,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                      errorBuilder: (_, _, _) => const SizedBox.shrink(),
                     )
                   else
                     const Center(
@@ -615,7 +621,7 @@ class _PhotoFirstDetail extends StatelessWidget {
                   child: Image.network(
                     licence.photoBackSignedUrl!,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const SizedBox(height: 200),
+                    errorBuilder: (_, _, _) => const SizedBox(height: 200),
                   ),
                 ),
               ],
@@ -674,7 +680,7 @@ class _Row extends StatelessWidget {
               ],
             ),
           ),
-          if (trailing != null) trailing!,
+          ?trailing,
         ],
       ),
     );

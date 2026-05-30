@@ -56,7 +56,7 @@ class _LinearIcon extends StatelessWidget {
       child: Image.asset(
         'assets/icon/launcher.png',
         fit: BoxFit.contain,
-        errorBuilder: (_, __, ___) => _LinearWordmarkFallback(size: size),
+        errorBuilder: (_, _, _) => _LinearWordmarkFallback(size: size),
       ),
     );
   }

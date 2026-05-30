@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -50,7 +52,7 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
   Widget build(BuildContext context) {
     ref.listen(authFlowNotifierProvider, (_, next) {
       if (next is AuthFlowAwaitingOtp) {
-        context.push(Routes.otp);
+        unawaited(context.push(Routes.otp));
       }
     });
 
@@ -74,7 +76,7 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
                     'assets/icon/launcher.png',
                     width: 64,
                     height: 64,
-                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
                   ),
                   const SizedBox(height: EqSpacing.lg),
                   Text(
@@ -100,7 +102,7 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
                       const Expanded(child: Divider()),
                       Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: EqSpacing.md),
+                            horizontal: EqSpacing.md,),
                         child: Text(
                           'or',
                           style: EqTypography.label

@@ -5,9 +5,6 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../features/auth/auth.dart';
-import '../../features/auth/domain/app_lock_state.dart';
-import '../../features/auth/presentation/notifiers/app_lock_notifier.dart';
-import '../../features/auth/presentation/screens/pin_entry_screen.dart';
 // Platform bridge for the Shell iframe handoff. Conditional import: the web
 // build pulls in the dart:html implementation, the VM (test) build the stub.
 import '../../features/auth/presentation/screens/handoff_platform_io.dart'
@@ -28,12 +25,12 @@ import 'routes.dart';
 part 'app_router.g.dart';
 
 @riverpod
-GoRouter appRouter(AppRouterRef ref) {
+GoRouter appRouter(Ref ref) {
   // Bridge: Riverpod state changes -> ChangeNotifier -> GoRouter refresh.
   final notifier = _AuthRouterNotifier();
-  ref.listen(authStateChangesProvider, (_, __) => notifier.bump());
-  ref.listen(appLockNotifierProvider, (_, __) => notifier.bump());
-  ref.listen(profileNotifierProvider, (_, __) => notifier.bump());
+  ref.listen(authStateChangesProvider, (_, _) => notifier.bump());
+  ref.listen(appLockNotifierProvider, (_, _) => notifier.bump());
+  ref.listen(profileNotifierProvider, (_, _) => notifier.bump());
   ref.onDispose(notifier.dispose);
 
   return GoRouter(
@@ -249,7 +246,7 @@ String? _redirect(
   if (!isSignedIn && isOnboardingRoute) return signedOutDestination;
   // Once profile is complete, onboarding routes redirect to the wallet.
   if (isSignedIn && isOnboardingRoute) {
-    final isComplete = profile.valueOrNull?.isComplete ?? false;
+    final isComplete = profile.value?.isComplete ?? false;
     if (isComplete) return Routes.licencesList;
   }
 
@@ -313,7 +310,7 @@ class _SplashScreen extends StatelessWidget {
                 'assets/icon/launcher.png',
                 width: 96,
                 height: 96,
-                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                errorBuilder: (_, _, _) => const SizedBox.shrink(),
               ),
               const SizedBox(height: EqSpacing.lg),
               Text(

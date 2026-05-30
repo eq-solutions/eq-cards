@@ -29,3 +29,11 @@ linter:
     unnecessary_lambdas: false
     prefer_const_literals_to_create_immutables: false
     prefer_const_constructors: false
+    # The app deliberately uses broad `catch` blocks in defensive paths —
+    # platform-channel calls (biometric, OCR, image crop), best-effort
+    # telemetry, JWT decode, and repository fallbacks — where any throwable
+    # (Exception or Error) must degrade gracefully rather than crash the UI.
+    # very_good_analysis 10 added avoid_catches_without_on_clauses; rewriting
+    # 43 such sites to `on Object catch` would be pure noise with no behaviour
+    # change. Disabled deliberately. (Tier 6 dependency upgrade, 2026-05-30.)
+    avoid_catches_without_on_clauses: false

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -24,7 +23,6 @@ import '../../../../core/widgets/eq_button.dart';
 import '../../../auth/auth.dart';
 import '../../../profile/presentation/screens/profile_fill_from_licence_screen.dart'
     show DlProfileFill;
-import 'licence_crop_screen.dart';
 import '../../data/models/licence.dart';
 import '../../data/ocr_service.dart';
 import '../helpers/licence_crop.dart';
@@ -32,6 +30,7 @@ import '../helpers/licences_list_helpers.dart';
 import '../notifiers/licence_types_provider.dart';
 import '../notifiers/licences_list_notifier.dart';
 import '../widgets/licence_card.dart';
+import 'licence_crop_screen.dart';
 import 'licence_edit_screen.dart';
 
 class LicencesListScreen extends ConsumerStatefulWidget {
@@ -549,7 +548,7 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text(
-            "That looks like the back of the licence — "
+            'That looks like the back of the licence — '
             'flip to the front and scan again.',
           ),
           duration: const Duration(seconds: 6),
@@ -624,7 +623,7 @@ class _IllustrationEmpty extends StatelessWidget {
             'assets/icon/launcher.png',
             width: 96,
             height: 96,
-            errorBuilder: (_, __, ___) => const Icon(
+            errorBuilder: (_, _, _) => const Icon(
               Icons.badge_outlined,
               size: 64,
               color: EqColours.grey,
@@ -894,7 +893,8 @@ class _LicencesSkeletonState extends State<_LicencesSkeleton>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
+    );
+    unawaited(_controller.repeat(reverse: true));
   }
 
   @override

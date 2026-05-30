@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/pin_repository.dart';
 import '../../domain/app_lock_state.dart';
 import 'auth_state_provider.dart';
+import 'raw_auth_events_provider.dart';
 
 part 'app_lock_notifier.g.dart';
 
@@ -42,13 +43,13 @@ class AppLockNotifier extends _$AppLockNotifier {
         if (!hasSession) {
           state = AppLockPhase.unlocked;
         } else if (state == AppLockPhase.checking) {
-          _checkLockState();
+          unawaited(_checkLockState());
         }
       });
     });
 
     // Synchronous initial check — Supabase restores the session from
-    // flutter_secure_storage during Supabase.initialize(), so currentSession
+    // shared_preferences during Supabase.initialize(), so currentSession
     // is available immediately at build time.
     final session = Supabase.instance.client.auth.currentSession;
     final hasSession = session != null && !session.isExpired;
@@ -65,7 +66,7 @@ class AppLockNotifier extends _$AppLockNotifier {
       return AppLockPhase.unlocked;
     }
 
-    _checkLockState();
+    unawaited(_checkLockState());
     return AppLockPhase.checking;
   }
 

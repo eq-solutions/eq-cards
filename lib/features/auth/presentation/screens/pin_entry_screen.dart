@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -31,7 +33,7 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
       _pin += digit;
       _error = null;
     });
-    if (_pin.length == 4) _submit();
+    if (_pin.length == 4) unawaited(_submit());
   }
 
   void _onBackspace() {
@@ -60,7 +62,7 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
       _isVerifying = false;
       _pin = '';
       _error = _attempts >= _maxAttempts - 1
-          ? 'Incorrect PIN. One attempt left — then you\'ll need to sign in with email.'
+          ? "Incorrect PIN. One attempt left — then you'll need to sign in with email."
           : 'Incorrect PIN. Try again.';
     });
   }
@@ -160,7 +162,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
 
   String get _subtitle => _isConfirming
       ? 'Enter your PIN again to confirm.'
-      : 'Pick a 4-digit PIN. You\'ll use it every time you open EQ Cards.';
+      : "Pick a 4-digit PIN. You'll use it every time you open EQ Cards.";
 
   void _onDigit(String digit) {
     if (_pin.length >= 4 || _isSaving) return;
@@ -188,12 +190,12 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
 
     // Phase 2 — check match
     if (_pin == _firstPin) {
-      _save();
+      unawaited(_save());
     } else {
       setState(() {
         _firstPin = null;
         _pin = '';
-        _error = 'PINs didn\'t match. Start again.';
+        _error = "PINs didn't match. Start again.";
       });
     }
   }

@@ -140,6 +140,6 @@ Future<Uint8List> stripExifAndCompress(Uint8List input) async {
 }
 
 @Riverpod(keepAlive: true)
-PhotoUpload photoUpload(PhotoUploadRef ref) {
+PhotoUpload photoUpload(Ref ref) {
   return PhotoUpload(ref.watch(supabaseClientProvider));
 }

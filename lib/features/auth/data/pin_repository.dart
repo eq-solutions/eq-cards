@@ -13,7 +13,7 @@ class PinRepository {
   /// Returns true if the current user has a PIN set in shell_control.users.
   Future<bool> hasPin() async {
     try {
-      final result = await _client.rpc('has_pin');
+      final result = await _client.rpc<dynamic>('has_pin');
       return result as bool? ?? false;
     } catch (e) {
       throw mapSupabaseError(e);
@@ -23,7 +23,7 @@ class PinRepository {
   /// Hash and store [pin] server-side via pgcrypto. [pin] must be 4 digits.
   Future<void> setPin(String pin) async {
     try {
-      await _client.rpc('set_pin', params: {'p_pin': pin});
+      await _client.rpc<dynamic>('set_pin', params: {'p_pin': pin});
     } catch (e) {
       throw mapSupabaseError(e);
     }
@@ -33,7 +33,7 @@ class PinRepository {
   Future<bool> verifyPin(String pin) async {
     try {
       final result =
-          await _client.rpc('verify_pin', params: {'p_pin': pin});
+          await _client.rpc<dynamic>('verify_pin', params: {'p_pin': pin});
       return result as bool? ?? false;
     } catch (e) {
       throw mapSupabaseError(e);
@@ -42,5 +42,5 @@ class PinRepository {
 }
 
 @riverpod
-PinRepository pinRepository(PinRepositoryRef ref) =>
+PinRepository pinRepository(Ref ref) =>
     PinRepository(ref.watch(supabaseClientProvider));

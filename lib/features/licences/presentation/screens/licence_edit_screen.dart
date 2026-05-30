@@ -25,8 +25,8 @@ import '../../data/models/licence_type.dart';
 import '../../data/ocr_service.dart';
 import '../helpers/licence_crop.dart';
 import '../notifiers/licence_types_provider.dart';
-import 'licence_crop_screen.dart';
 import '../notifiers/licences_list_notifier.dart';
+import 'licence_crop_screen.dart';
 import 'licence_detail_screen.dart';
 
 class LicencePrefill {
@@ -439,7 +439,7 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
               ),
               const SizedBox(height: EqSpacing.md),
               DropdownButtonFormField<String>(
-                value: _selectedState,
+                initialValue: _selectedState,
                 decoration: InputDecoration(
                   labelText: 'State',
                   filled: true,

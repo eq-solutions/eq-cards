@@ -229,5 +229,3 @@ ABN: 40 651 962 935
 ---
 
 **End of Privacy Policy.**
-
-Source: [`docs/PRIVACY-POLICY.md`](PRIVACY-POLICY.md). Generated render lives in the app at Settings → Legal → Privacy Policy.

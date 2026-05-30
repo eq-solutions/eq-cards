@@ -1,5 +1,12 @@
 // Thin client for the Shell's /.netlify/functions/cards-api endpoint.
 //
+// STATUS (2026-05-30): BUILT-AHEAD, NOT YET WIRED — intentional, do not remove.
+// This client is complete scaffolding for the planned post-2.B data-plane flip,
+// but nothing consumes `cardsApiProvider` yet: licence_repository and
+// profile_repository still call supabase.rpc('eq_cards_*') directly. When the
+// per-tenant cutover is ready, switch those repos to this client. Flagged in the
+// 2026-05-30 dead-weight audit as "not dead weight" and deliberately retained.
+//
 // All licence + profile reads/writes go through here post-Phase-2.B
 // (the per-tenant data plane migration). The endpoint is multiplexed via
 // `?op=…` and authenticates via Authorization: Bearer <supabase_jwt> —
@@ -31,14 +38,14 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../error/failure.dart';
-import '../supabase/supabase_client_provider.dart';
 // Platform bridge for the Shell iframe handoff. Conditional import: the web
 // build pulls the dart:html impl; the VM (test) build the stub (returns null,
 // so the native-refresh fallback runs). Lets the client renew shell-minted
 // JWTs — which have no Supabase refresh_token — via a fresh mint from the shell.
 import '../../features/auth/presentation/screens/handoff_platform_io.dart'
     if (dart.library.html) '../../features/auth/presentation/screens/handoff_platform_web.dart';
+import '../error/failure.dart';
+import '../supabase/supabase_client_provider.dart';
 
 part 'cards_api.g.dart';
 
@@ -218,6 +225,6 @@ class CardsApi {
 }
 
 @Riverpod(keepAlive: true)
-CardsApi cardsApi(CardsApiRef ref) {
+CardsApi cardsApi(Ref ref) {
   return CardsApi(ref.watch(supabaseClientProvider));
 }

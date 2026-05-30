@@ -6,6 +6,64 @@ All notable changes to EQ Cards are documented here. Format follows
 
 ## [Unreleased]
 
+### 2026-05-30 — Repo dead-weight audit + cleanup
+
+Audited the repo for unused code, dependencies, and stale artifacts. Removed 8 files;
+no behaviour change — every deletion verified zero-reference, codegen rebuilt, and
+`flutter analyze` clean (0 errors).
+
+- **Dead Dart removed.** `core/utils/logger.dart` (`logD/logI/logW` — never called),
+  `core/error/result.dart` (`Result`/`Success`/`FailureResult` — abandoned pattern; the
+  codebase throws `Failure` instead), `core/widgets/eq_snackbar.dart` (`EqSnackbar` —
+  never invoked).
+- **Duplicate legal docs removed.** `docs/PRIVACY-POLICY.md` and `docs/TERMS-OF-USE.md`
+  were byte-identical to the shipped `assets/legal/*.md`, with no generator between them.
+  `assets/legal/*` is now the single source of truth; also dropped the internal "Source:"
+  footer that was leaking into the in-app Privacy Policy render.
+- **Stale artifacts removed.** `progress.html` (manual status board, superseded by
+  STATUS.md + this CHANGELOG); `scripts/migrate-to-canonical.ts` (completed one-time
+  Unit 3 migration) and its `scripts/README.md`.
+- **Docs synced.** `ARCHITECTURE.md` file tree, shared-widgets list, and §18 updated to
+  drop references to the removed files.
+
+**Follow-up — flagged items resolved (same day):**
+
+- **Unused deps removed.** `firebase_core` + `firebase_messaging` (push never built; FCM
+  stays deferred to v1.1) and `flutter_secure_storage` (orphaned direct dep — Supabase
+  persists its session via `shared_preferences`, not secure storage). Corrected the
+  inaccurate in-code comment and the ARCHITECTURE §11.1 security note, which had claimed
+  tokens lived in encrypted Keychain/EncryptedSharedPreferences (never wired). 13
+  transitive packages dropped; no Dart usage existed.
+- **Migration filename collision fixed.** `0006_certificates.sql` → `0009_certificates.sql`
+  (collided with `0006_org_layer.sql`). Local-only rename — eq-canonical tracks migrations
+  by timestamp via MCP (`org_layer` and `certificates` applied at distinct versions), so
+  the remote is unaffected.
+- **Lint dead code removed.** 3 barrel-redundant imports in `app_router.dart`, an unused
+  `dart:typed_data` import, and an unused `AuthChangeEvent` show clause. `flutter analyze`:
+  36 → 30 issues, 0 errors.
+- **`cards_api.dart` kept + documented.** Decision: retain as intentional built-ahead
+  scaffolding for the post-2.B data-plane flip; added a STATUS header so it's not mistaken
+  for dead weight. Repos still use direct `eq_cards_*` RPCs until the cutover.
+- **Analyzer brought fully clean (30 → 0).** Cleared every remaining `flutter analyze`
+  finding (all infos/warnings — 0 errors throughout). `dart fix` auto-applied 19 (directive
+  ordering, trailing commas, quote/escape style, an unnecessary cast, null-aware operator,
+  and the `DropdownButtonFormField` `value:`→`initialValue:` deprecation). The rest by hand:
+  explicit `rpc<dynamic>` type args in `pin_repository`, doc-comment `[Symbol]` → inline
+  code where the symbol wasn't in scope, `unawaited()` on a fire-and-forget
+  `subscription.cancel()`, three missing end-of-file newlines, and declaring the SDK package
+  `flutter_web_plugins` explicitly. Also removed a phantom `image_cropper` import in
+  `licence_crop_screen.dart` that existed only to resolve a doc link (the package is still
+  used on mobile via `licence_crop.dart`). The dropdown rename was verified
+  behaviour-preserving against the Flutter source (`didUpdateWidget` re-syncs `initialValue`
+  on rebuild) and by the passing profile/licence hydration tests — test suite unchanged at
+  185 pass / 5 pre-existing environmental golden failures.
+- **README rewritten.** Replaced the default Flutter stub ("A new Flutter project") with a
+  real project README: what Cards is, the stack, local-run + codegen + quality-gate
+  commands, the backend/auth model, deploy guardrails, and pointers to ARCHITECTURE /
+  STATUS / CHANGELOG.
+
+---
+
 ### 2026-05-23 — Post-Unit-4 polish (commits `aa43666`, `9afd10c`, `9629fa6`, `2996fb9`, `dad4ad8`, `0471433`, `7db6d3d`)
 
 Six targeted fixes and one feature restore shipped the day after Unit 4 merge.

@@ -7,3 +7,14 @@ targets:
           explicit_to_json: true
           create_to_json: true
           create_factory: true
+      riverpod_generator:
+        options:
+          # riverpod_generator 3 changed the default of
+          # provider_name_strip_pattern to "Notifier$", which would rename
+          # every generated notifier provider (e.g. profileNotifierProvider ->
+          # profileProvider) and force ~55 call-site edits across the app.
+          # Set it back to "" (strip nothing) to preserve the established
+          # xxxNotifierProvider naming — working before refactoring. An empty
+          # string is honoured (the generator only falls back to the default
+          # when the key is absent/null), and RegExp("") replaceAll is a no-op.
+          provider_name_strip_pattern: ""

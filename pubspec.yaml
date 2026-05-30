@@ -4,30 +4,32 @@ publish_to: 'none'
 version: 0.1.0+1
 
 environment:
-  sdk: ">=3.5.0 <4.0.0"
-  flutter: ">=3.24.0"
+  # Floors raised by the riverpod 3 / go_router 17 upgrade: riverpod 3
+  # requires Dart >=3.8, go_router 17 requires Flutter >=3.32.
+  sdk: ">=3.8.0 <4.0.0"
+  flutter: ">=3.32.0"
 
 dependencies:
   flutter:
     sdk: flutter
 
   # State (architecture §1)
-  flutter_riverpod: ^2.5.0
-  riverpod_annotation: ^2.5.0
+  flutter_riverpod: ^3.0.0
+  riverpod_annotation: ^3.0.0
 
   # Models (architecture §5)
-  freezed_annotation: ^2.4.0
+  freezed_annotation: ^3.0.0
   json_annotation: ^4.9.0
 
   # Routing (architecture §6)
-  go_router: ^14.0.0
+  go_router: ^17.0.0
 
   # Backend (architecture §4)
   supabase_flutter: ^2.5.0
   dio: ^5.4.0
 
-  # Local storage (architecture §11.1)
-  flutter_secure_storage: ^9.2.0
+  # Local storage (architecture §11.1). Supabase persists its auth session via
+  # shared_preferences; flutter_secure_storage was unused (removed 2026-05-30).
   shared_preferences: ^2.2.0
 
   # Photos (architecture §11.2). image_picker handles both camera (mobile) and
@@ -35,27 +37,26 @@ dependencies:
   # frame the licence card before OCR (better extraction quality + smaller
   # uploads).
   image_picker: ^1.1.0
-  image_cropper: ^9.0.0
+  image_cropper: ^12.0.0
   flutter_image_compress: ^2.3.0
 
   # OCR — on-device (architecture §16 Q3 starting position)
-  google_mlkit_text_recognition: ^0.13.0
+  google_mlkit_text_recognition: ^0.15.0
 
   # QR generation (Phase 1)
   qr_flutter: ^4.1.0
 
-  # Push (architecture §16 Q1 — FCM-only assumed)
-  firebase_core: ^3.0.0
-  firebase_messaging: ^15.0.0
-  flutter_local_notifications: ^17.0.0
-  timezone: ^0.9.0
+  # Local notifications for licence-expiry alerts (architecture §16). No remote
+  # push yet — firebase_core/firebase_messaging removed 2026-05-30 as unused.
+  flutter_local_notifications: ^21.0.0
+  timezone: ^0.11.0
 
   # Analytics + crash
-  posthog_flutter: ^4.7.0
-  sentry_flutter: ^8.0.0
+  posthog_flutter: ^5.0.0
+  sentry_flutter: ^9.0.0
 
   # Biometric (architecture §11.4)
-  local_auth: ^2.2.0
+  local_auth: ^3.0.0
 
   # Image decoding / cropping — pure Dart, used by LicenceCropScreen to
   # decode the captured photo, apply the user's crop rect, and re-encode
@@ -68,13 +69,13 @@ dependencies:
 
   # File picking — PDF + image selection for certificates.
   # file_picker handles <input type="file"> on web and native pickers on mobile.
-  file_picker: ^8.0.0
+  file_picker: ^11.0.0
 
   # Open signed URLs (PDFs) in the device browser / PDF viewer.
   url_launcher: ^6.3.0
 
   # Date formatting
-  intl: ^0.19.0
+  intl: ^0.20.0
 
   # Annotations (`@visibleForTesting` etc.) — used by repository helpers
   meta: ^1.10.0
@@ -84,18 +85,26 @@ dependencies:
   # community-maintained successor with the same API surface.
   flutter_markdown_plus: ^1.0.0
 
+  # Part of the Flutter SDK (not pub.dev) — provides usePathUrlStrategy() for
+  # clean web URLs in main.dart. Declared explicitly 2026-05-30 to satisfy
+  # depend_on_referenced_packages.
+  flutter_web_plugins:
+    sdk: flutter
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
   # Lint (architecture §1)
-  very_good_analysis: ^6.0.0
+  very_good_analysis: ^10.0.0
 
-  # Codegen (architecture §1)
+  # Codegen (architecture §1). riverpod_generator 3 brings the build v4
+  # transition, which also unblocks json_serializable to float to its
+  # latest 6.x (it was previously capped by riverpod_generator 2's build ^2).
   build_runner: ^2.4.0
-  riverpod_generator: ^2.4.0
-  freezed: ^2.5.0
-  json_serializable: ^6.8.0
+  riverpod_generator: ^3.0.0
+  freezed: ^3.0.0
+  json_serializable: ^6.9.0
 
   # Launcher icon generation. Source PNG lives at assets/icon/launcher.png
   # (1024x1024). Run `dart run flutter_launcher_icons` after replacing the

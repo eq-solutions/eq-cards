@@ -16,7 +16,7 @@ import '../../../../core/theme/eq_typography.dart';
 /// bytes, or `null` if the user cancels.
 ///
 /// Works identically on web and native — no JS bridge, no platform plugin.
-/// Replaces [ImageCropper] on web, which has a Flutter web interop bug
+/// Replaces `ImageCropper` on web, which has a Flutter web interop bug
 /// where its confirm button resolves to `null`.
 ///
 /// Usage:
@@ -114,7 +114,8 @@ class _LicenceCropScreenState extends State<LicenceCropScreen> {
     }
     final imgAspect = _imgW / _imgH;
     final ctnAspect = _containerSize.width / _containerSize.height;
-    final double dw, dh;
+    final double dw;
+    final double dh;
     if (imgAspect > ctnAspect) {
       dw = _containerSize.width;
       dh = dw / imgAspect;

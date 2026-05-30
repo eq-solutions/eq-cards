@@ -21,7 +21,7 @@ part 'licence.g.dart';
 /// for the per-type key conventions; document new keys there before shipping
 /// a licence type that uses them.
 @freezed
-class Licence with _$Licence {
+abstract class Licence with _$Licence {
   const factory Licence({
     /// Null for unsaved drafts; populated by Postgres on insert.
     String? id,

@@ -17,7 +17,11 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'
+          # Must satisfy the pubspec floors raised by the riverpod 3 / go_router
+          # 17 upgrade: Flutter >=3.32.0 (Dart >=3.8.0). Pinned to the version
+          # the upgrade was validated against locally so CI rendering (incl.
+          # golden tests) matches the developer toolchain.
+          flutter-version: '3.41.9'
           channel: stable
           cache: true
 

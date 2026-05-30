@@ -266,7 +266,7 @@ bool _looksLikeCompactDate(String s) {
 }
 
 @Riverpod(keepAlive: true)
-OcrService ocrService(OcrServiceRef ref) {
+OcrService ocrService(Ref ref) {
   final service = OcrService(Supabase.instance.client);
   ref.onDispose(service.dispose);
   return service;

@@ -143,7 +143,7 @@ class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
                     'assets/icon/launcher.png',
                     width: 64,
                     height: 64,
-                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
                   ),
                   const SizedBox(height: EqSpacing.lg),
                   Text(
@@ -160,8 +160,8 @@ class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
                       children: [
                         Text(
                           _error!,
-                          style: EqTypography.bodyM
-                              .copyWith(color: EqColours.ink),
+                          style:
+                              EqTypography.bodyM.copyWith(color: EqColours.ink),
                           textAlign: TextAlign.center,
                         ),
                         if (!kIsWeb || !HandoffPlatform.isInIframe()) ...[

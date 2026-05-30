@@ -70,7 +70,7 @@ class _BrandedTitle extends StatelessWidget {
           width: 36,
           height: 36,
           fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => const _BrandedFallback(),
+          errorBuilder: (_, _, _) => const _BrandedFallback(),
         ),
         const SizedBox(width: 8),
         Text(

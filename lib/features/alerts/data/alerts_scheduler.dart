@@ -41,7 +41,7 @@ class AlertsScheduler {
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       iOS: DarwinInitializationSettings(),
     );
-    await _plugin.initialize(initSettings);
+    await _plugin.initialize(settings: initSettings);
 
     if (Platform.isAndroid) {
       final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
@@ -95,12 +95,12 @@ class AlertsScheduler {
       final fireAt = licence.expiryDate.subtract(Duration(days: daysBefore));
       if (fireAt.isBefore(now)) continue;
       await _plugin.zonedSchedule(
-        _idFor(licence.id!, daysBefore),
-        'Licence expires in $daysBefore days',
-        '${licence.licenceType} ${licence.licenceNumber} expires '
+        id: _idFor(licence.id!, daysBefore),
+        title: 'Licence expires in $daysBefore days',
+        body: '${licence.licenceType} ${licence.licenceNumber} expires '
             '${_formatDate(licence.expiryDate)}',
-        tz.TZDateTime.from(fireAt, tz.local),
-        const NotificationDetails(
+        scheduledDate: tz.TZDateTime.from(fireAt, tz.local),
+        notificationDetails: const NotificationDetails(
           android: AndroidNotificationDetails(
             _channelId,
             _channelName,
@@ -110,10 +110,6 @@ class AlertsScheduler {
           iOS: DarwinNotificationDetails(),
         ),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        // Required by flutter_local_notifications ≥ 17 — fires at the
-        // wall-clock time on iOS regardless of TZ changes.
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
         payload: licence.id ?? '',
       );
     }
@@ -121,7 +117,7 @@ class AlertsScheduler {
 
   Future<void> _cancelForLicenceId(String licenceId) async {
     for (final daysBefore in _alertDays) {
-      await _plugin.cancel(_idFor(licenceId, daysBefore));
+      await _plugin.cancel(id: _idFor(licenceId, daysBefore));
     }
   }
 
@@ -145,6 +141,6 @@ class AlertsScheduler {
 }
 
 @Riverpod(keepAlive: true)
-AlertsScheduler alertsScheduler(AlertsSchedulerRef ref) {
+AlertsScheduler alertsScheduler(Ref ref) {
   return AlertsScheduler();
 }

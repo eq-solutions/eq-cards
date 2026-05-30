@@ -8,10 +8,10 @@ part 'certificate.g.dart';
 ///
 /// `filePath` is the persistent storage path in the `certificates` bucket
 /// (format `{userId}/{certificateId}.{ext}`). `fileSignedUrl` is transient —
-/// attached post-fetch by [CertificateRepository], expires after 1 hour,
+/// attached post-fetch by `CertificateRepository`, expires after 1 hour,
 /// never persisted.
 @freezed
-class Certificate with _$Certificate {
+abstract class Certificate with _$Certificate {
   const factory Certificate({
     String? id,
     required String userId,
@@ -28,7 +28,7 @@ class Certificate with _$Certificate {
     DateTime? createdAt,
     DateTime? updatedAt,
 
-    /// Transient signed URL — populated by [CertificateRepository] post-fetch.
+    /// Transient signed URL — populated by `CertificateRepository` post-fetch.
     /// Expires after 1 hour. NEVER persisted.
     @JsonKey(includeFromJson: false, includeToJson: false)
     String? fileSignedUrl,

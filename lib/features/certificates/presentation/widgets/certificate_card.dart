@@ -5,8 +5,8 @@ import '../../../../core/theme/eq_colours.dart';
 import '../../../../core/theme/eq_spacing.dart';
 import '../../../../core/theme/eq_typography.dart';
 import '../../../../core/widgets/eq_card.dart';
-import '../../data/models/certificate.dart';
 import '../../../licences/presentation/widgets/expiry_badge.dart';
+import '../../data/models/certificate.dart';
 
 class CertificateCard extends StatelessWidget {
   const CertificateCard({

@@ -76,7 +76,7 @@ bool _isExpired(String yyyyMmDd) {
 /// Public, no-auth screen — displays a read-only verification card for a
 /// shared licence. Reached by scanning the QR code from LicenceDetailScreen.
 ///
-/// URL: /share?licence_id=<uuid>
+/// URL: `/share?licence_id=<uuid>`
 class ShareLicenceScreen extends StatelessWidget {
   const ShareLicenceScreen({super.key, required this.licenceId});
 

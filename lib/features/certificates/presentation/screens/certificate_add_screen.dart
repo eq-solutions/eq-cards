@@ -96,7 +96,7 @@ class _CertificateAddScreenState extends ConsumerState<CertificateAddScreen> {
 
   Future<void> _pickFile() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png', 'webp'],
         withData: true,
@@ -246,9 +246,7 @@ class _CertificateAddScreenState extends ConsumerState<CertificateAddScreen> {
               // ── File picker ─────────────────────────────────
               _FilePicker(
                 fileName: _pendingFileName ??
-                    (_existing != null
-                        ? _existing!.filePath.split('/').last
-                        : null),
+                    _existing?.filePath.split('/').last,
                 onPick: _pickFile,
                 required: !_isEdit,
               ),

@@ -1,8 +1,15 @@
 name: Build & Deploy
 
 on:
+  # Deploy is a DELIBERATE action, not automatic on every merge. Previously this
+  # fired on every push to main, so merging a PR silently shipped to prod —
+  # which conflicts with the "never deploy without explicit instruction" and
+  # "auth changes need approval before deploy" rules. Now it runs only when
+  # triggered by hand (Actions -> Build & Deploy -> Run workflow) or by pushing
+  # a release tag. Merging to main no longer deploys.
+  workflow_dispatch:
   push:
-    branches: [main]
+    tags: ['release/v*']
 
 jobs:
   deploy:
