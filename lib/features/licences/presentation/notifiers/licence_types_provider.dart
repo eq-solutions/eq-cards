@@ -6,7 +6,7 @@ import '../../data/models/licence_type.dart';
 part 'licence_types_provider.g.dart';
 
 @Riverpod(keepAlive: true)
-Future<List<LicenceType>> licenceTypes(LicenceTypesRef ref) async {
+Future<List<LicenceType>> licenceTypes(Ref ref) async {
   final repo = ref.read(licenceTypesRepositoryProvider);
   return repo.getAll();
 }

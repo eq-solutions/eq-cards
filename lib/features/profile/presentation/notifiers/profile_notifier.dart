@@ -1,3 +1,7 @@
+// flutter_riverpod (not just riverpod_annotation) is needed for the
+// `ProviderListenable.select` extension — riverpod_annotation 3 exports the
+// ProviderListenable type but not the select extension method.
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../auth/presentation/notifiers/auth_state_provider.dart';
@@ -18,7 +22,7 @@ class ProfileNotifier extends _$ProfileNotifier {
     // shows a false "session expired" while the rest of the app is signed in.
     // select() dedupes so a 15-min token refresh (still authenticated) does
     // not trigger a needless refetch.
-    ref.watch(authStateChangesProvider.select((s) => s.valueOrNull));
+    ref.watch(authStateChangesProvider.select((s) => s.value));
     final repo = ref.read(profileRepositoryProvider);
     return repo.getCurrent();
   }

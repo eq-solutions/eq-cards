@@ -25,7 +25,7 @@ import 'routes.dart';
 part 'app_router.g.dart';
 
 @riverpod
-GoRouter appRouter(AppRouterRef ref) {
+GoRouter appRouter(Ref ref) {
   // Bridge: Riverpod state changes -> ChangeNotifier -> GoRouter refresh.
   final notifier = _AuthRouterNotifier();
   ref.listen(authStateChangesProvider, (_, __) => notifier.bump());
@@ -246,7 +246,7 @@ String? _redirect(
   if (!isSignedIn && isOnboardingRoute) return signedOutDestination;
   // Once profile is complete, onboarding routes redirect to the wallet.
   if (isSignedIn && isOnboardingRoute) {
-    final isComplete = profile.valueOrNull?.isComplete ?? false;
+    final isComplete = profile.value?.isComplete ?? false;
     if (isComplete) return Routes.licencesList;
   }
 

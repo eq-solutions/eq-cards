@@ -225,6 +225,6 @@ class CardsApi {
 }
 
 @Riverpod(keepAlive: true)
-CardsApi cardsApi(CardsApiRef ref) {
+CardsApi cardsApi(Ref ref) {
   return CardsApi(ref.watch(supabaseClientProvider));
 }

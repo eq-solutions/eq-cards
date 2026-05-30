@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/pin_repository.dart';
 import '../../domain/app_lock_state.dart';
 import 'auth_state_provider.dart';
+import 'raw_auth_events_provider.dart';
 
 part 'app_lock_notifier.g.dart';
 

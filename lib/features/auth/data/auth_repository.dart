@@ -115,6 +115,6 @@ class AuthRepository {
 }
 
 @riverpod
-AuthRepository authRepository(AuthRepositoryRef ref) {
+AuthRepository authRepository(Ref ref) {
   return AuthRepository(ref.watch(supabaseClientProvider));
 }

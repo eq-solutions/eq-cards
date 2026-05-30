@@ -163,5 +163,5 @@ class CertificateRepository {
 }
 
 @riverpod
-CertificateRepository certificateRepository(CertificateRepositoryRef ref) =>
+CertificateRepository certificateRepository(Ref ref) =>
     CertificateRepository(ref.watch(supabaseClientProvider));

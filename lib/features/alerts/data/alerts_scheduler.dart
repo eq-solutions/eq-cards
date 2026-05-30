@@ -141,6 +141,6 @@ class AlertsScheduler {
 }
 
 @Riverpod(keepAlive: true)
-AlertsScheduler alertsScheduler(AlertsSchedulerRef ref) {
+AlertsScheduler alertsScheduler(Ref ref) {
   return AlertsScheduler();
 }

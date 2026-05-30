@@ -292,8 +292,8 @@ class SettingsScreen extends ConsumerWidget {
   Future<void> _exportData(BuildContext context, WidgetRef ref) async {
     final profileAsync = ref.read(profileNotifierProvider);
     final licencesAsync = ref.read(licencesListNotifierProvider);
-    final profile = profileAsync.valueOrNull;
-    final licences = licencesAsync.valueOrNull ?? const <Licence>[];
+    final profile = profileAsync.value;
+    final licences = licencesAsync.value ?? const <Licence>[];
 
     final payload = buildExportPayload(
       profile: profile,
@@ -370,7 +370,7 @@ class _BiometricRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final value = asyncEnabled.valueOrNull ?? true;
+    final value = asyncEnabled.value ?? true;
     final ready = asyncEnabled.hasValue;
 
     return Padding(

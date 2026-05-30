@@ -42,5 +42,5 @@ class PinRepository {
 }
 
 @riverpod
-PinRepository pinRepository(PinRepositoryRef ref) =>
+PinRepository pinRepository(Ref ref) =>
     PinRepository(ref.watch(supabaseClientProvider));

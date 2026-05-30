@@ -57,7 +57,7 @@ class LicenceTypesRepository {
 
 @riverpod
 LicenceTypesRepository licenceTypesRepository(
-  LicenceTypesRepositoryRef ref,
+  Ref ref,
 ) {
   return LicenceTypesRepository(ref.watch(supabaseClientProvider));
 }

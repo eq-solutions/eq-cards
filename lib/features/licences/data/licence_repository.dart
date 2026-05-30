@@ -154,6 +154,6 @@ String _isoDate(DateTime d) {
 }
 
 @riverpod
-LicenceRepository licenceRepository(LicenceRepositoryRef ref) {
+LicenceRepository licenceRepository(Ref ref) {
   return LicenceRepository(ref.watch(supabaseClientProvider));
 }

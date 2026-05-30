@@ -96,6 +96,6 @@ String _isoDate(DateTime d) {
 }
 
 @riverpod
-ProfileRepository profileRepository(ProfileRepositoryRef ref) {
+ProfileRepository profileRepository(Ref ref) {
   return ProfileRepository(ref.watch(supabaseClientProvider));
 }
