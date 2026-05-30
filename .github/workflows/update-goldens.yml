@@ -1,0 +1,51 @@
+name: Update Goldens
+
+# One-shot helper to re-baseline golden images in the canonical environment:
+# Linux + the Flutter version pinned in ci.yml. Golden PNGs are only
+# deterministic for a fixed (OS + Flutter version) pair, so they must be
+# generated where CI checks them. This runs when the workflow file itself is
+# pushed on a feature branch, regenerates every golden, and uploads them as an
+# artifact. Download with `gh run download <run-id> -n goldens`, extract at the
+# repo root (`tar xzf goldens.tgz`), and commit the changes.
+#
+# The path filter keeps it dormant: ordinary pushes don't re-run it, only a
+# push that touches this file does. It never pushes commits itself, so there is
+# no risk of a CI loop.
+on:
+  push:
+    branches: ['claude/**']
+    paths: ['.github/workflows/update-goldens.yml']
+
+jobs:
+  update-goldens:
+    name: Regenerate goldens
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.9'
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate code
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Re-baseline goldens
+        run: flutter test --update-goldens
+
+      - name: Archive regenerated goldens
+        run: tar czf goldens.tgz $(find test -type f -path '*/goldens/*.png')
+
+      - name: Upload goldens artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: goldens
+          path: goldens.tgz
+          retention-days: 1
