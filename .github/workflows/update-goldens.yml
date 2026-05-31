@@ -11,6 +11,8 @@ name: Update Goldens
 # The path filter keeps it dormant: ordinary pushes don't re-run it, only a
 # push that touches this file does. It never pushes commits itself, so there is
 # no risk of a CI loop.
+#
+# Re-baseline trigger: Direction D warm-sand tokens v1.1.0 (gray-200 border shift).
 on:
   push:
     branches: ['claude/**']
