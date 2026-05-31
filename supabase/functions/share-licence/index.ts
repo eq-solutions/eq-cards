@@ -21,20 +21,37 @@
 //     "holder_name": string | null
 //   }
 
-const CORS_HEADERS = {
-  'access-control-allow-origin': '*',
-  'access-control-allow-headers': 'content-type',
-  'access-control-allow-methods': 'GET, OPTIONS',
-} as const;
+// Origins permitted to call this function from a browser. The share page is
+// reachable standalone (https://cards.eq.solutions) and when EQ Cards is
+// embedded in the EQ Shell iframe (https://core.eq.solutions); localhost
+// covers local dev. We echo the request's Origin when it matches the
+// allow-list; otherwise we fall back to the canonical prod origin (never a
+// wildcard).
+const ALLOWED_ORIGINS = new Set([
+  'https://cards.eq.solutions',
+  'https://core.eq.solutions',
+]);
+const DEFAULT_ALLOW_ORIGIN = 'https://cards.eq.solutions';
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      'content-type': 'application/json; charset=utf-8',
-      ...CORS_HEADERS,
-    },
-  });
+function isAllowedOrigin(origin: string | null): origin is string {
+  if (!origin) return false;
+  if (ALLOWED_ORIGINS.has(origin)) return true;
+  // Any localhost / 127.0.0.1 origin (any port) for local development.
+  return /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+}
+
+// CORS headers tailored to the incoming request's Origin. Must be recomputed
+// per request because the allowed origin is echoed back, not a constant.
+function corsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get('Origin');
+  return {
+    'access-control-allow-origin': isAllowedOrigin(origin)
+      ? origin
+      : DEFAULT_ALLOW_ORIGIN,
+    'access-control-allow-headers': 'content-type',
+    'access-control-allow-methods': 'GET, OPTIONS',
+    'vary': 'Origin',
+  };
 }
 
 const REST_HEADERS = (key: string) => ({
@@ -47,8 +64,19 @@ const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 Deno.serve(async (req) => {
+  // Recompute per request — CORS now echoes the caller's Origin.
+  const cors = corsHeaders(req);
+  const jsonResponse = (body: unknown, status = 200): Response =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: {
+        'content-type': 'application/json; charset=utf-8',
+        ...cors,
+      },
+    });
+
   if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: CORS_HEADERS });
+    return new Response(null, { status: 204, headers: cors });
   }
   if (req.method !== 'GET') {
     return jsonResponse({ error: 'method_not_allowed' }, 405);
