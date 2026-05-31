@@ -472,5 +472,57 @@ live); all are fixed on this branch:
 Deferred (documented, not patched): `getById` still lists all licences then
 filters — a pre-existing read-amplification not worth changing in this PR.
 
-Once 1–2 are resolved and the hook + migration are live and verified, the §7 rewire
-is a small, flag-guarded change I can land on request.
+---
+
+## 12. Cutover runbook (tick-list)
+
+Everything above the line is **code, done and on the branch**. Everything below
+is **live / out-of-repo and yours** — I can't apply it (auth + prod-data changes
+need your explicit go-ahead per the non-negotiables).
+
+> ⚠️ **As-built, the flag is a single build-time `--dart-define`, so it is
+> GLOBAL to a build — you cannot have SKS on `gateway` and EQ on `direct` at the
+> same time from one deployed build.** That makes the first cutover effectively
+> **big-bang: both tenants must be migrated before you flip.** If you want a true
+> SKS-first/EQ-later rollout, say so and I'll make the transport resolve
+> per-tenant at runtime (choose from the session's `tenant_id`) instead of at
+> build time — a small, separate change.
+
+### Gate A — auth hook (eq-canonical `jvknxcmbtrfnxfrwfimn`)
+- [ ] Pre-check: confirm `shell_control.users` has a row (with `tenant_id`) for
+      **every** user who can OTP/OAuth into Cards. (Open Q1.)
+- [ ] Apply `supabase/manual/custom_access_token_hook.sql` (SQL editor / MCP).
+- [ ] Enable it: Dashboard → Authentication → Hooks → *Customize Access Token
+      (JWT)* → `public.custom_access_token_hook` → Enable.
+- [ ] Verify OTP: sign in on `cards.eq.solutions`, decode the token, assert
+      `app_metadata.tenant_id` == that user's `shell_control.users.tenant_id`.
+- [ ] Verify Google OAuth: same assertion.
+- [ ] Verify refresh: force a token refresh; claim survives.
+- [ ] Verify gateway: `cards-api?op=current_staff` with the OTP token → 200
+      (not `401 jwt_missing_tenant_or_user`).
+
+### Gate B — per-tenant data migration
+- [ ] EQ tenant dry-run: `pnpm tsx scripts/migrate-to-canonical.ts --tenant-id <eq> --dry-run`; review counts.
+- [ ] EQ tenant apply: re-run with `--apply`.
+- [ ] Verify on the EQ per-tenant DB (`zaapmfdkgedqupfjtchl`): `profiles` +
+      `licences` rows present; `eq_cards_*` RPCs exist (eq-shell
+      `tenant-migrations/0006_cards_rpcs.sql`, `0007_cards_profile_rpc.sql`).
+- [ ] Photo-storage decision (Open Q3): keep signing on the shared bucket, or
+      move signing to the tenant project / a gateway `op=sign_photo`. Until
+      resolved, post-cutover photos may 404 on signing (silently → blank image).
+
+### Flip (big-bang, reversible)
+- [ ] Build with `--dart-define=CARDS_DATA_TRANSPORT=gateway`.
+- [ ] Smoke-test (both tenants): list licences, upsert, soft-delete, profile
+      read + write, OCR magic-scan, photo render, PIN unlock.
+- [ ] **Rollback** at any point: rebuild with `=direct` (or omit the define).
+      The eq-canonical RPCs + data stay intact through the window, so `direct`
+      keeps working.
+
+### Bake & cleanup (later, code — I can do these on request)
+- [ ] After the bake window: delete `DirectCardsDataSource` + the direct/gateway
+      leaf providers, make `CardsApi` the sole `CardsDataSource`.
+- [ ] Later still: retire the `eq_cards_*` RPCs on eq-canonical (migration 0008).
+- [ ] Decide PIN ops (Open Q4): move onto the gateway, or leave on eq-canonical.
+
+Once Gates A + B are green, the flip is one build flag — small and reversible.
