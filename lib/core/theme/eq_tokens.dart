@@ -1,4 +1,4 @@
-// Generated from @eq-solutions/tokens v1.0.0 (eq-design-tokens/tokens.dart).
+// Generated from @eq-solutions/tokens v1.1.0 (eq-design-tokens/tokens.dart).
 // Do not edit manually — regenerate by running `npm run build` in the
 // eq-design-tokens repo and copying the output here.
 //
@@ -33,11 +33,16 @@ class EqColors {
   static const Color grey  = Color(0xFF666666);
   static const Color white = Color(0xFFFFFFFF);
 
-  // Neutral scale
-  static const Color gray50  = Color(0xFFF9FAFB);
-  static const Color gray100 = Color(0xFFF3F4F6);
-  static const Color gray200 = Color(0xFFE5E7EB);
-  static const Color gray300 = Color(0xFFD1D5DB);
+  // Accent — secondary warmth (clay). Brand decoration only (~5%), never status.
+  static const Color clay     = Color(0xFFA8572B);
+  static const Color clayDeep = Color(0xFF8A4521);
+  static const Color clayBg   = Color(0xFFFBF1E9);
+
+  // Neutral scale — Direction D warm-sand surfaces (50-300); text greys (400-600) stay neutral.
+  static const Color gray50  = Color(0xFFF6F3EE);
+  static const Color gray100 = Color(0xFFEFEAE1);
+  static const Color gray200 = Color(0xFFE4DDD2);
+  static const Color gray300 = Color(0xFFD4CCBE);
   static const Color gray400 = Color(0xFF9CA3AF);
   static const Color gray500 = Color(0xFF6B7280);
   static const Color gray600 = Color(0xFF4B5563);
