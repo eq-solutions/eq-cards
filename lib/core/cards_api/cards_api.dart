@@ -66,10 +66,14 @@ class CardsApi implements CardsDataSource {
                 connectTimeout: const Duration(seconds: 15),
                 sendTimeout: const Duration(seconds: 15),
                 receiveTimeout: const Duration(seconds: 30),
-                // Don't throw on 4xx — we read the error envelope from
-                // the body and map to a typed Failure. 5xx propagates as
-                // DioException so the caller's catch path runs.
-                validateStatus: (s) => s != null && s < 500,
+                // Don't throw on 4xx/5xx — the cards-api gateway returns a
+                // typed error envelope ({ ok:false, error, detail }), using 5xx
+                // for tenant_rpc_failed / tenant_inactive / rpc_returned_empty.
+                // We read the body and map to a Failure rather than letting Dio
+                // collapse every 5xx into a generic DioException. Genuine
+                // transport errors (no response at all) still throw below and
+                // become a NetworkFailure.
+                validateStatus: (s) => s != null && s < 600,
               ),
             );
 
@@ -117,11 +121,18 @@ class CardsApi implements CardsDataSource {
   /// POST /cards-api?op=soft_delete_my_licence  body: { licence_id } → { ok }
   @override
   Future<void> softDeleteMyLicence(String licenceId) async {
-    await _request(
-      method: 'POST',
-      op: 'soft_delete_my_licence',
-      body: {'licence_id': licenceId},
-    );
+    try {
+      await _request(
+        method: 'POST',
+        op: 'soft_delete_my_licence',
+        body: {'licence_id': licenceId},
+      );
+    } on NotFoundFailure {
+      // Idempotent delete: a missing / already-deleted / not-owned licence is
+      // treated as success, matching DirectCardsDataSource (whose RPC runs an
+      // unconditional UPDATE and never signals "not found"). Keeps delete
+      // semantics identical across transports.
+    }
   }
 
   /// POST /cards-api?op=upsert_my_profile  body: { payload } → { ok, profile }
@@ -225,7 +236,12 @@ class CardsApi implements CardsDataSource {
     if (status == 401 || code == 'not_signed_in') {
       throw const NotAuthenticatedFailure();
     }
-    if (status == 404 || code == 'licence_not_found') {
+    // `rpc_returned_empty` (gateway 500) means the upsert/RPC matched no row —
+    // the same condition DirectCardsDataSource reports as NotFoundFailure, so
+    // map it identically here instead of surfacing a generic 500.
+    if (status == 404 ||
+        code == 'licence_not_found' ||
+        code == 'rpc_returned_empty') {
       throw const NotFoundFailure();
     }
     throw ServerFailure(status, detail ?? code);

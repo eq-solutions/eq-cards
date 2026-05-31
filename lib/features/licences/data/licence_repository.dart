@@ -16,6 +16,7 @@ import '../../../core/cards_api/cards_data_source_providers.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/supabase/supabase_client_provider.dart';
 import '../../../core/supabase/supabase_error_handler.dart';
+import '../../../core/utils/date_utils.dart';
 import 'models/licence.dart';
 
 part 'licence_repository.g.dart';
@@ -114,9 +115,14 @@ class LicenceRepository {
       }
     }
 
+    // Front and back are independent storage round-trips — sign concurrently.
+    final signed = await Future.wait([
+      sign(l.photoFrontPath),
+      sign(l.photoBackPath),
+    ]);
     return l.copyWith(
-      photoFrontSignedUrl: await sign(l.photoFrontPath),
-      photoBackSignedUrl: await sign(l.photoBackPath),
+      photoFrontSignedUrl: signed[0],
+      photoBackSignedUrl: signed[1],
     );
   }
 }
@@ -131,26 +137,26 @@ Map<String, dynamic> licenceToUpsertPayload(Licence l) {
   final payload = <String, dynamic>{
     'licence_type': l.licenceType,
     'licence_number': l.licenceNumber,
-    'expiry_date': _isoDate(l.expiryDate),
+    'expiry_date': EqDates.iso(l.expiryDate),
     'metadata': l.metadata,
   };
-  if (l.issueDate != null) payload['issue_date'] = _isoDate(l.issueDate!);
+  if (l.issueDate != null) payload['issue_date'] = EqDates.iso(l.issueDate!);
   if (l.id != null) payload['id'] = l.id;
   if (l.issuingAuthority != null) {
     payload['issuing_authority'] = l.issuingAuthority;
   }
-  if (l.state != null) payload['state'] = l.state;
+  // Normalise state to a trimmed upper-case code so the SAVED value is
+  // identical across transports: the per-tenant gateway RPC stores
+  // UPPER(NULLIF(state)), while the direct eq-canonical RPC stores it verbatim.
+  // Blank/whitespace-only -> omitted (matches the gateway's NULLIF).
+  final state = l.state?.trim();
+  if (state != null && state.isNotEmpty) {
+    payload['state'] = state.toUpperCase();
+  }
   if (l.photoFrontPath != null) payload['photo_front_url'] = l.photoFrontPath;
   if (l.photoBackPath != null) payload['photo_back_url'] = l.photoBackPath;
   if (l.notes != null) payload['notes'] = l.notes;
   return payload;
-}
-
-String _isoDate(DateTime d) {
-  final y = d.year.toString().padLeft(4, '0');
-  final m = d.month.toString().padLeft(2, '0');
-  final day = d.day.toString().padLeft(2, '0');
-  return '$y-$m-$day';
 }
 
 @riverpod

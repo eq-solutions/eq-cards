@@ -398,19 +398,23 @@ These are self-contained, carry no SSO risk, and are **not** deployed.
   are **not** captured (expected, not noise).
 
 ### 9.2 CORS lockdown on the two Edge Functions
-- `supabase/functions/ocr-licence/index.ts` — `access-control-allow-origin: '*'` →
-  `'https://cards.eq.solutions'`.
-- `supabase/functions/share-licence/index.ts` — same.
+- New shared module **`supabase/functions/_shared/cors.ts`** — an origin-echo
+  allow-list (`buildCorsHeaders` + `isAllowedOrigin`). It echoes the request
+  `Origin` back as `access-control-allow-origin` **only** when it matches the
+  allow-list, always sets `Vary: Origin`, and omits the header entirely (fail
+  closed) otherwise.
+- Allow-list: `https://cards.eq.solutions` (prod) + `http://localhost:<port>` /
+  `127.0.0.1` (web dev) + `https://deploy-preview-<n>--eq-cards.netlify.app`
+  (Netlify previews) — mirroring eq-shell's `cards-api.ts`.
+- `ocr-licence/index.ts` and `share-licence/index.ts` both replaced their inline
+  `'*'` `CORS_HEADERS` with `buildCorsHeaders(req.headers.get('origin'), …)`.
+- **Why the change from the first cut:** a single hardcoded
+  `'https://cards.eq.solutions'` would have CORS-blocked the web OCR "magic scan"
+  and the share fetch in **local dev and every Netlify preview** (those run on
+  `localhost` / `*.netlify.app`). The allow-list keeps prod locked down while
+  unblocking first-party dev/preview origins. (Native iOS/Android send no
+  `Origin` and are unaffected either way.)
 - **Takes effect only on `supabase functions deploy`** (source-only change here).
-- **Assumption to sanity-check:** the public licence-share page is served *from*
-  `cards.eq.solutions` (so its browser fetch to `share-licence` is same-listed).
-  Third-party verification works because the QR link opens that page (a top-level
-  navigation, to which CORS doesn't apply) — not because some other origin fetches
-  the function. If a non-`cards.eq.solutions` page is expected to `fetch()`
-  `share-licence`, this lock would block it; tell me and I'll widen the allow-list.
-- **Dev note:** local OCR testing that calls the *deployed* function from
-  `localhost` will now be CORS-blocked. Mirror `cards-api`'s localhost/preview
-  allow-list if you need that.
 
 ---
 
@@ -426,8 +430,47 @@ These are self-contained, carry no SSO risk, and are **not** deployed.
    signing to the tenant project / gateway? (§6 secondary)
 4. **PIN ops** — leave PIN RPCs on eq-canonical, or move onto the gateway so nothing
    Cards-related stays on the shared project post-cutover? (§4 note 1)
-5. **`share-licence` CORS assumption** — confirm the share page is first-party on
-   `cards.eq.solutions`. (§9.2)
+5. **`share-licence` consumers** — the CORS allow-list now covers first-party
+   origins (prod + dev + preview). If a *genuine third party* (a partner
+   compliance portal) must `fetch()` the share JSON cross-origin, that origin
+   isn't on the list — tell me and I'll add it (or we revisit whether that
+   endpoint should be `*` by design, since it's already UUID-gated). (§9.2)
+
+## 11. Post-review hardening (2026-05-31, after `/code-review`)
+
+A max-effort multi-agent review of the diff surfaced transport-parity and
+cleanup issues. The correctness ones matter at cutover (when `gateway` goes
+live); all are fixed on this branch:
+
+- **Gateway 5xx envelope was unreadable (`cards_api.dart`).** Dio's
+  `validateStatus` was `s < 500`, so every gateway `500/503` (`tenant_inactive`,
+  `tenant_rpc_failed`, `rpc_returned_empty`, …) was thrown as a generic
+  `DioException` *before* the `{ok:false,error,detail}` body was read — collapsing
+  all of them to `ServerFailure(status, dioMessage)` and making the body-level
+  5xx handling dead code. Changed to `s < 600`; the envelope now drives the typed
+  `Failure`. A genuine no-response transport error still becomes `NetworkFailure`.
+- **`softDelete` parity.** Direct transport's RPC runs an unconditional `UPDATE`
+  and never signals "not found"; the gateway returned 404 for a
+  missing/already-deleted/not-owned id. `CardsApi.softDeleteMyLicence` now
+  swallows `NotFoundFailure`, so delete is idempotent on both transports.
+- **Empty-upsert parity.** Direct throws `NotFoundFailure` on a zero-row upsert;
+  the gateway returns `rpc_returned_empty` (500). `CardsApi` now maps that code
+  to `NotFoundFailure`, matching direct.
+- **`state` round-trip parity.** The gateway tenant RPC stores
+  `UPPER(NULLIF(state))`; the direct RPC stored it verbatim. `licenceToUpsertPayload`
+  now trims + upper-cases `state` (and omits blank), so the saved/returned value
+  is identical regardless of transport.
+- **CORS allow-list** (§9.2) — replaced the single hardcoded origin with the
+  shared `_shared/cors.ts` allow-list so dev/preview aren't broken.
+- **Observability:** the bare `catch (_)` arms in `sendOtp`/`verifyOtp` now
+  `Sentry.captureException` the non-`Failure` throw instead of dropping it.
+- **Cleanup:** the four drifting `_isoDate` copies (licence/profile/certificate
+  repos + data export) are consolidated into `EqDates.iso` in
+  `lib/core/utils/date_utils.dart`; the two licence-photo signed URLs are now
+  signed concurrently in `_withSignedUrls` instead of serially.
+
+Deferred (documented, not patched): `getById` still lists all licences then
+filters — a pre-existing read-amplification not worth changing in this PR.
 
 Once 1–2 are resolved and the hook + migration are live and verified, the §7 rewire
 is a small, flag-guarded change I can land on request.

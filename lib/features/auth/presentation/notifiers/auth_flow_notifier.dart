@@ -21,7 +21,10 @@ class AuthFlowNotifier extends _$AuthFlowNotifier {
       state = AuthFlowAwaitingOtp(email.trim());
     } on Failure catch (f) {
       _setError(f);
-    } catch (_) {
+    } catch (e, st) {
+      // Non-Failure throw (shouldn't normally happen — the repo maps via
+      // mapSupabaseError). Capture it so the one untyped path isn't silent.
+      unawaited(Sentry.captureException(e, stackTrace: st));
       state = const AuthFlowError('Something went wrong. Please try again.');
     }
   }
@@ -33,7 +36,10 @@ class AuthFlowNotifier extends _$AuthFlowNotifier {
       // GoRouter's authStateChangesProvider listener handles redirect on success.
     } on Failure catch (f) {
       _setError(f);
-    } catch (_) {
+    } catch (e, st) {
+      // Non-Failure throw (shouldn't normally happen — the repo maps via
+      // mapSupabaseError). Capture it so the one untyped path isn't silent.
+      unawaited(Sentry.captureException(e, stackTrace: st));
       state = const AuthFlowError('Something went wrong. Please try again.');
     }
   }

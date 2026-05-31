@@ -14,6 +14,7 @@ import '../../../core/cards_api/cards_data_source_providers.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/supabase/supabase_client_provider.dart';
 import '../../../core/supabase/supabase_error_handler.dart';
+import '../../../core/utils/date_utils.dart';
 import 'models/profile.dart';
 
 part 'profile_repository.g.dart';
@@ -74,7 +75,7 @@ Map<String, dynamic> profileToUpsertPayload(Profile p) {
   final payload = <String, dynamic>{};
   if (p.fullName != null) payload['full_name'] = p.fullName;
   if (p.dateOfBirth != null) {
-    payload['date_of_birth'] = _isoDate(p.dateOfBirth!);
+    payload['date_of_birth'] = EqDates.iso(p.dateOfBirth!);
   }
   if (p.mobile != null) payload['mobile'] = p.mobile;
   if (p.email != null) payload['email'] = p.email;
@@ -94,13 +95,6 @@ Map<String, dynamic> profileToUpsertPayload(Profile p) {
     payload['emergency_contact_mobile'] = p.emergencyContactMobile;
   }
   return payload;
-}
-
-String _isoDate(DateTime d) {
-  final y = d.year.toString().padLeft(4, '0');
-  final m = d.month.toString().padLeft(2, '0');
-  final day = d.day.toString().padLeft(2, '0');
-  return '$y-$m-$day';
 }
 
 @riverpod

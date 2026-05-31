@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/supabase/supabase_client_provider.dart';
 import '../../../core/supabase/supabase_error_handler.dart';
+import '../../../core/utils/date_utils.dart';
 import 'models/certificate.dart';
 
 part 'certificate_repository.g.dart';
@@ -48,11 +49,7 @@ class CertificateRepository {
     final uid = _uid;
     try {
       final payload = _toPayload(cert, uid: uid);
-      final row = await _client
-          .from(_table)
-          .insert(payload)
-          .select()
-          .single();
+      final row = await _client.from(_table).insert(payload).select().single();
       return _withSignedUrl(
         Certificate.fromJson(row),
       );
@@ -145,20 +142,13 @@ class CertificateRepository {
       'title': c.title,
       'certificate_type': c.certificateType,
       if (c.issuer != null) 'issuer': c.issuer,
-      if (c.issueDate != null) 'issue_date': _isoDate(c.issueDate!),
-      if (c.expiryDate != null) 'expiry_date': _isoDate(c.expiryDate!),
+      if (c.issueDate != null) 'issue_date': EqDates.iso(c.issueDate!),
+      if (c.expiryDate != null) 'expiry_date': EqDates.iso(c.expiryDate!),
       'file_path': c.filePath,
       'file_type': c.fileType,
       if (c.notes != null) 'notes': c.notes,
       'active': c.active,
     };
-  }
-
-  String _isoDate(DateTime d) {
-    final y = d.year.toString().padLeft(4, '0');
-    final m = d.month.toString().padLeft(2, '0');
-    final day = d.day.toString().padLeft(2, '0');
-    return '$y-$m-$day';
   }
 }
 
