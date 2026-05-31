@@ -1,10 +1,9 @@
-// Cards Unit 4 (2026-05-21) — All reads + writes go directly to
-// eq-canonical (jvknxcmbtrfnxfrwfimn) via public.eq_cards_* RPCs.
-//
-// The cards-api Shell proxy (Unit 5) was rolled back because it requires
-// app_metadata.tenant_id in the JWT, which direct OTP sign-ins don't carry.
-// Routing stays on eq-canonical until tenant provisioning is wired for all
-// auth paths.
+// Licence data ops route through CardsDataSource, selected by the
+// CARDS_DATA_TRANSPORT dart-define (default: direct eq_cards_* RPCs on
+// eq-canonical; `gateway` proxies via the Shell cards-api to the per-tenant
+// DB). Storage (signed photo URLs) and the auth pre-check stay on the direct
+// Supabase client regardless of transport — see
+// docs/cards-canonical-api-rewire.md.
 
 import 'dart:async';
 
@@ -13,6 +12,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/cards_api/cards_data_source_providers.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/supabase/supabase_client_provider.dart';
 import '../../../core/supabase/supabase_error_handler.dart';
@@ -21,7 +21,13 @@ import 'models/licence.dart';
 part 'licence_repository.g.dart';
 
 class LicenceRepository {
-  LicenceRepository(this._client);
+  LicenceRepository(this._data, this._client);
+
+  /// Transport for licence data ops (direct RPC vs cards-api gateway).
+  final CardsDataSource _data;
+
+  /// Direct Supabase client — used only for storage signing and the auth
+  /// pre-check, never for licence data ops.
   final SupabaseClient _client;
 
   static const _bucket = 'licence-photos';
@@ -32,8 +38,8 @@ class LicenceRepository {
       throw const NotAuthenticatedFailure();
     }
     try {
-      final rows = await _client.rpc<List<dynamic>>('eq_cards_list_my_licences');
-      final list = rows.cast<Map<String, dynamic>>().map(Licence.fromJson).toList();
+      final rows = await _data.listMyLicences();
+      final list = rows.map(Licence.fromJson).toList();
       return Future.wait(list.map(_withSignedUrls));
     } catch (e) {
       throw mapSupabaseError(e);
@@ -63,13 +69,8 @@ class LicenceRepository {
       {'licence_type': licence.licenceType},
     ),);
     try {
-      final rows = await _client.rpc<List<dynamic>>(
-        'eq_cards_upsert_my_licence',
-        params: {'p_payload': licenceToUpsertPayload(licence)},
-      );
-      final list = rows.cast<Map<String, dynamic>>();
-      if (list.isEmpty) throw const NotFoundFailure();
-      final saved = await _withSignedUrls(Licence.fromJson(list.first));
+      final row = await _data.upsertMyLicence(licenceToUpsertPayload(licence));
+      final saved = await _withSignedUrls(Licence.fromJson(row));
       unawaited(_breadcrumb(
         isInsert ? 'licence_insert_succeeded' : 'licence_update_succeeded',
         {'licence_id': saved.id ?? '', 'type': saved.licenceType},
@@ -87,10 +88,7 @@ class LicenceRepository {
   Future<void> softDelete(String id) async {
     unawaited(_breadcrumb('licence_delete_started', {'licence_id': id}));
     try {
-      await _client.rpc<void>(
-        'eq_cards_soft_delete_my_licence',
-        params: {'p_licence_id': id},
-      );
+      await _data.softDeleteMyLicence(id);
       unawaited(_breadcrumb('licence_delete_succeeded'));
     } catch (e) {
       unawaited(_breadcrumb('licence_delete_failed', {'error': e.toString()}));
@@ -138,7 +136,9 @@ Map<String, dynamic> licenceToUpsertPayload(Licence l) {
   };
   if (l.issueDate != null) payload['issue_date'] = _isoDate(l.issueDate!);
   if (l.id != null) payload['id'] = l.id;
-  if (l.issuingAuthority != null) payload['issuing_authority'] = l.issuingAuthority;
+  if (l.issuingAuthority != null) {
+    payload['issuing_authority'] = l.issuingAuthority;
+  }
   if (l.state != null) payload['state'] = l.state;
   if (l.photoFrontPath != null) payload['photo_front_url'] = l.photoFrontPath;
   if (l.photoBackPath != null) payload['photo_back_url'] = l.photoBackPath;
@@ -154,6 +154,9 @@ String _isoDate(DateTime d) {
 }
 
 @riverpod
-LicenceRepository licenceRepository(Ref ref) {
-  return LicenceRepository(ref.watch(supabaseClientProvider));
+LicenceRepository licenceRepository(LicenceRepositoryRef ref) {
+  return LicenceRepository(
+    ref.watch(cardsDataSourceProvider),
+    ref.watch(supabaseClientProvider),
+  );
 }

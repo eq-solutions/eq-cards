@@ -1,18 +1,15 @@
 // Thin client for the Shell's /.netlify/functions/cards-api endpoint.
 //
-// STATUS (2026-05-30): BUILT-AHEAD, NOT YET WIRED — intentional, do not remove.
-// This client is complete scaffolding for the planned post-2.B data-plane flip,
-// but nothing consumes `cardsApiProvider` yet: licence_repository and
-// profile_repository still call supabase.rpc('eq_cards_*') directly. When the
-// per-tenant cutover is ready, switch those repos to this client. Flagged in the
-// 2026-05-30 dead-weight audit as "not dead weight" and deliberately retained.
+// One of the two CardsDataSource transports (see cards_data_source.dart). It
+// proxies all licence + profile reads/writes through the Shell gateway, which
+// resolves the caller's tenant from the JWT's app_metadata and routes to the
+// tenant's dedicated Supabase project. Selected at build time via
+// CARDS_DATA_TRANSPORT=gateway; the direct-RPC source is the default. See
+// docs/cards-canonical-api-rewire.md for the cutover preconditions.
 //
-// All licence + profile reads/writes go through here post-Phase-2.B
-// (the per-tenant data plane migration). The endpoint is multiplexed via
-// `?op=…` and authenticates via Authorization: Bearer <supabase_jwt> —
-// the same JWT Cards already holds in its Supabase session. The Shell
-// function resolves the caller's tenant from the JWT's app_metadata and
-// routes the request to the tenant's dedicated Supabase project.
+// The endpoint is multiplexed via `?op=…` and authenticates via
+// Authorization: Bearer <supabase_jwt> — the same JWT Cards already holds in
+// its Supabase session.
 //
 // Migration history:
 //   Cards Unit 4 (2026-05-21): repos called supabase.rpc('eq_cards_*')
@@ -46,6 +43,7 @@ import '../../features/auth/presentation/screens/handoff_platform_io.dart'
     if (dart.library.html) '../../features/auth/presentation/screens/handoff_platform_web.dart';
 import '../error/failure.dart';
 import '../supabase/supabase_client_provider.dart';
+import 'cards_data_source.dart';
 
 part 'cards_api.g.dart';
 
@@ -59,7 +57,7 @@ const String _shellBaseUrl = String.fromEnvironment(
 /// Single shared Dio instance configured with the Shell base URL and a
 /// short timeout. Auth headers are attached per-request because the JWT
 /// rotates (15-min TTL by default).
-class CardsApi {
+class CardsApi implements CardsDataSource {
   CardsApi(this._supabase, {Dio? dio, String baseUrl = _shellBaseUrl})
       : _dio = dio ??
             Dio(
@@ -79,6 +77,7 @@ class CardsApi {
   final Dio _dio;
 
   /// GET /cards-api?op=current_staff → { ok, staff }
+  @override
   Future<Map<String, dynamic>?> currentStaff() async {
     final res = await _request(
       method: 'GET',
@@ -88,6 +87,7 @@ class CardsApi {
   }
 
   /// GET /cards-api?op=list_my_licences → { ok, licences: [...] }
+  @override
   Future<List<Map<String, dynamic>>> listMyLicences() async {
     final res = await _request(method: 'GET', op: 'list_my_licences');
     final licences = res['licences'];
@@ -98,7 +98,10 @@ class CardsApi {
   }
 
   /// POST /cards-api?op=upsert_my_licence  body: { payload } → { ok, licence }
-  Future<Map<String, dynamic>> upsertMyLicence(Map<String, dynamic> payload) async {
+  @override
+  Future<Map<String, dynamic>> upsertMyLicence(
+    Map<String, dynamic> payload,
+  ) async {
     final res = await _request(
       method: 'POST',
       op: 'upsert_my_licence',
@@ -112,6 +115,7 @@ class CardsApi {
   }
 
   /// POST /cards-api?op=soft_delete_my_licence  body: { licence_id } → { ok }
+  @override
   Future<void> softDeleteMyLicence(String licenceId) async {
     await _request(
       method: 'POST',
@@ -121,7 +125,10 @@ class CardsApi {
   }
 
   /// POST /cards-api?op=upsert_my_profile  body: { payload } → { ok, profile }
-  Future<Map<String, dynamic>> upsertMyProfile(Map<String, dynamic> payload) async {
+  @override
+  Future<Map<String, dynamic>> upsertMyProfile(
+    Map<String, dynamic> payload,
+  ) async {
     final res = await _request(
       method: 'POST',
       op: 'upsert_my_profile',
@@ -208,8 +215,9 @@ class CardsApi {
 
     if (data['ok'] == true) return data;
 
-    // Error envelope from cards-api: { ok: false, error: '<code>', detail?: '<human>' }
-    final code   = data['error']  as String? ?? 'unknown';
+    // Error envelope from cards-api:
+    // { ok: false, error: '<code>', detail?: '<human>' }
+    final code = data['error'] as String? ?? 'unknown';
     final detail = data['detail'] as String?;
     final status = res.statusCode ?? 500;
 

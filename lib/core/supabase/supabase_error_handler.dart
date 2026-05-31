@@ -5,6 +5,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../error/failure.dart';
 
 Failure mapSupabaseError(Object error) {
+  // Already-typed failures pass straight through — never re-wrap a Failure as
+  // UnknownFailure. This matters now that the gateway transport (CardsApi)
+  // throws typed Failures directly, and DirectCardsDataSource throws
+  // NotFoundFailure on an empty result; both flow up through the repositories'
+  // `catch (e) => mapSupabaseError(e)`.
+  if (error is Failure) return error;
   // Network-class errors first — both dart:io (mobile) and the
   // web-platform "ClientException: Failed to fetch" string surface
   // through here. Detecting them produces the user-friendly
