@@ -47,7 +47,7 @@ class ShellSessionRefresh extends _$ShellSessionRefresh {
     // use the shell JWT as a refresh_token → 401 → signedOut. Catch that and
     // immediately re-request a fresh shell token.
     final client = ref.read(supabaseClientProvider);
-    final authSub = client.auth.onAuthStateChange.listen((AuthState event) {
+    final authSub = client.auth.onAuthStateChange.listen((event) {
       if (event.event == AuthChangeEvent.signedOut) {
         _timer?.cancel();
         unawaited(_tick());

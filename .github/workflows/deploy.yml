@@ -38,6 +38,7 @@ jobs:
             --dart-define=POSTHOG_HOST="${{ secrets.POSTHOG_HOST }}"
 
       - name: Upload source maps to Sentry
+        continue-on-error: true
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: |
