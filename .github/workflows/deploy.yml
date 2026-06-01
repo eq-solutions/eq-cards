@@ -30,12 +30,26 @@ jobs:
 
       - name: Build web
         run: |
-          flutter build web --release \
+          flutter build web --release --source-maps \
             --dart-define=SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
             --dart-define=SUPABASE_ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}" \
             --dart-define=SENTRY_DSN="${{ secrets.SENTRY_DSN }}" \
             --dart-define=POSTHOG_API_KEY="${{ secrets.POSTHOG_API_KEY }}" \
             --dart-define=POSTHOG_HOST="${{ secrets.POSTHOG_HOST }}"
+
+      - name: Upload source maps to Sentry
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          if [ -z "$SENTRY_AUTH_TOKEN" ]; then
+            echo "SENTRY_AUTH_TOKEN not set — skipping source map upload"
+            exit 0
+          fi
+          curl -sL https://sentry.io/get-cli/ | bash
+          sentry-cli sourcemaps upload \
+            --org eq-solutions \
+            --project eq-cards \
+            build/web
 
       - name: Deploy to Netlify
         run: |

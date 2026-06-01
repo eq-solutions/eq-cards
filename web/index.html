@@ -49,9 +49,10 @@
 
   <!-- Cropper.js — required by image_cropper on web. Must load synchronously
        before flutter_bootstrap.js so Cropper is available when Flutter calls
-       new Cropper(...). Missing this produces "undefined is not a constructor". -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+       new Cropper(...). Bundled locally (web/cropper.min.*) — CDN approach
+       was being blocked by ad/privacy tools causing "Cropper is not a constructor". -->
+  <link rel="stylesheet" href="cropper.min.css">
+  <script src="cropper.min.js"></script>
 
   <!--
     Service-worker kill-switch.
