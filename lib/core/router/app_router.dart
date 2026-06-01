@@ -22,6 +22,7 @@ import '../../features/workers/presentation/screens/admin_members_screen.dart';
 import '../../features/workers/presentation/screens/admin_worker_detail_screen.dart';
 import '../../features/workers/presentation/screens/admin_worker_form_screen.dart';
 import '../../features/workers/presentation/screens/claim_invite_screen.dart';
+import '../../features/workers/presentation/screens/worker_hr_record_screen.dart';
 import '../shell/home_shell_screen.dart';
 import '../theme/eq_colours.dart';
 import '../theme/eq_spacing.dart';
@@ -145,6 +146,11 @@ GoRouter appRouter(Ref ref) {
           final token = state.uri.queryParameters['token'] ?? '';
           return ClaimInviteScreen(token: token);
         },
+      ),
+      // Worker self-service: APP 12 access to own employment record.
+      GoRoute(
+        path: Routes.workerHrRecord,
+        builder: (context, state) => const WorkerHrRecordScreen(),
       ),
       // D2: public licence-verification page — no auth required.
       // Reached by scanning a QR code from a tradie's EQ Cards wallet.

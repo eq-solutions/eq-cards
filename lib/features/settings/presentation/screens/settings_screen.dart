@@ -16,6 +16,7 @@ import '../../../auth/auth.dart';
 import '../../../licences/data/models/licence.dart';
 import '../../../licences/presentation/notifiers/licences_list_notifier.dart';
 import '../../../profile/presentation/notifiers/profile_notifier.dart';
+import '../../../workers/data/worker_self_repository.dart';
 import '../../../workers/presentation/providers/org_admin_provider.dart';
 import '../helpers/data_export.dart';
 import '../notifiers/biometric_settings_notifier.dart';
@@ -91,6 +92,12 @@ class SettingsScreen extends ConsumerWidget {
                   onChanged: (v) => ref
                       .read(biometricSettingsNotifierProvider.notifier)
                       .setEnabled(value: v),
+                ),
+                const Divider(height: 1),
+                _LegalRow(
+                  icon: Icons.work_outline,
+                  label: 'My employment record',
+                  onTap: () => context.push(Routes.workerHrRecord),
                 ),
                 const Divider(height: 1),
                 const _StaticRow(
@@ -183,6 +190,10 @@ class SettingsScreen extends ConsumerWidget {
                   icon: Icons.download_outlined,
                   label: 'Export my data',
                   onTap: () => _exportData(context, ref),
+                ),
+                const Divider(height: 1),
+                _DeleteAccountRow(
+                  onTap: () => _confirmAndDeleteAccount(context, ref),
                 ),
               ],
             ),
@@ -356,6 +367,51 @@ class SettingsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _confirmAndDeleteAccount(
+      BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete your account?'),
+        content: const Text(
+          'This will:\n'
+          '• Remove your profile and anonymise your credentials\n'
+          '• Revoke your access to all organisations\n\n'
+          'Employment records held by your employer cannot be deleted '
+          'here — contact your admin directly for those.\n\n'
+          'This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text(
+              'Delete my account',
+              style: TextStyle(color: EqColours.error),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await ref.read(workerSelfRepositoryProvider).deleteAccount();
+      await ref.read(authRepositoryProvider).signOut();
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not delete account. Please try again.'),
+          backgroundColor: EqColours.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Future<void> _confirmAndSignOut(BuildContext context, WidgetRef ref) async {
@@ -712,6 +768,45 @@ class _SignOutRow extends StatelessWidget {
               ),
             ),
             Icon(Icons.chevron_right, color: EqColours.grey),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DeleteAccountRow extends StatelessWidget {
+  const _DeleteAccountRow({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(EqSpacing.md),
+        child: Row(
+          children: [
+            const Icon(Icons.delete_forever_outlined, color: EqColours.error),
+            const SizedBox(width: EqSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Delete my account',
+                    style: EqTypography.bodyL.copyWith(color: EqColours.error),
+                  ),
+                  const SizedBox(height: EqSpacing.xs),
+                  Text(
+                    'Removes your profile and credential data.',
+                    style: EqTypography.label,
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: EqColours.grey),
           ],
         ),
       ),
