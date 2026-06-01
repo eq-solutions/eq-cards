@@ -10,9 +10,15 @@ import '../../data/auth_repository.dart';
 /// but their account has not been provisioned to any EQ workspace — i.e.
 /// app_metadata.tenant_id is absent from the JWT.
 ///
-/// This happens when a user self-registers via phone or email OTP without
-/// going through an invite link. The fix is for their manager to send them
-/// an invite link, which provisions them and sets tenant_id on next sign-in.
+/// For phone OTP: AuthRepository.verifyPhoneOtp() calls the Shell's
+/// shell-login-phone-otp function to get a tenant-aware JWT. This screen is
+/// reached only when that exchange fails (user not in shell_control.users,
+/// Shell misconfigured, or network error). The fix is for their manager to
+/// provision them in the Shell admin, then ask the user to sign in again.
+///
+/// For email OTP / Google OAuth: the custom_access_token_hook on eq-canonical
+/// is not yet enabled, so those sessions never carry tenant_id. See
+/// docs/cards-canonical-api-rewire.md §5 for the hook enablement plan.
 class NotProvisionedScreen extends ConsumerStatefulWidget {
   const NotProvisionedScreen({super.key});
 

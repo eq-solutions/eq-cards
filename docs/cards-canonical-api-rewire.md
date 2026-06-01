@@ -12,6 +12,15 @@ hook and the EQ-tenant data migration); the hook SQL is staged for review under
 `supabase/manual/`. The two smaller findings (auth error leak + CORS) are also
 fixed here. **Nothing has been deployed.**
 
+**Update (2026-06-01, branch `claude/otp-tenant-fix`):** Phone OTP `tenant_id`
+bridge implemented — `AuthRepository.verifyPhoneOtp()` now calls
+`phoneOtpShellExchange()` after GoTrue verifies the code. The exchange calls
+`shell-login-phone-otp` on the Shell and replaces the raw GoTrue session with a
+shell-minted JWT that carries `tenant_id`. This is a runtime bridge that works
+today without the custom_access_token_hook. When the hook is enabled (Gate A),
+the exchange becomes redundant and can be removed. Email OTP and Google OAuth
+sessions still land on `notProvisioned` until the hook is live.
+
 ---
 
 ## 1. TL;DR for Royce
