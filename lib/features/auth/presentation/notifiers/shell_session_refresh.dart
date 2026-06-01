@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'
+    show AuthChangeEvent, AuthState;
 
 import '../../../../core/supabase/supabase_client_provider.dart';
 import '../screens/handoff_platform_io.dart'
@@ -27,9 +29,11 @@ part 'shell_session_refresh.g.dart';
 class ShellSessionRefresh extends _$ShellSessionRefresh {
   Timer? _timer;
 
-  // Re-mint comfortably inside the 15-min TTL so a slow round-trip never
-  // races expiry; on failure retry on [_retryDelay] until it lands.
-  static const Duration _refreshInterval = Duration(minutes: 12);
+  // Re-mint at 9 min, well inside the 15-min TTL and before Supabase's own
+  // auto-refresh fires (it fires at ~70 % of TTL = 10.5 min). If we let
+  // Supabase's auto-refresh run first it tries to use the shell JWT as a
+  // refresh_token, which the server rejects with "Refresh token invalid".
+  static const Duration _refreshInterval = Duration(minutes: 9);
   static const Duration _retryDelay = Duration(seconds: 30);
 
   @override
@@ -37,6 +41,19 @@ class ShellSessionRefresh extends _$ShellSessionRefresh {
     if (!kIsWeb || !HandoffPlatform.isInIframe()) return;
     ref.onDispose(() => _timer?.cancel());
     _schedule(_refreshInterval);
+
+    // Safety-net: if Supabase's auto-refresh fires before our timer (shouldn't
+    // happen with the 9-min interval, but belt-and-suspenders) it will try to
+    // use the shell JWT as a refresh_token → 401 → signedOut. Catch that and
+    // immediately re-request a fresh shell token.
+    final client = ref.read(supabaseClientProvider);
+    final authSub = client.auth.onAuthStateChange.listen((AuthState event) {
+      if (event.event == AuthChangeEvent.signedOut) {
+        _timer?.cancel();
+        unawaited(_tick());
+      }
+    });
+    ref.onDispose(() => unawaited(authSub.cancel()));
   }
 
   void _schedule(Duration delay) {
@@ -46,22 +63,18 @@ class ShellSessionRefresh extends _$ShellSessionRefresh {
 
   Future<void> _tick() async {
     final client = ref.read(supabaseClientProvider);
-
-    // A null session means pre-handoff or an explicit sign-out — do NOT
-    // silently re-establish one; just check back shortly. (An EXPIRED session
-    // still returns a non-null currentSession, so it does get refreshed.)
-    if (client.auth.currentSession == null) {
-      _schedule(_retryDelay);
-      return;
-    }
-
+    // In iframe context always try to get a fresh shell token — even if the
+    // session is null (which happens when Supabase's auto-refresh fails and
+    // fires signedOut). The shell's response is the true gate: if it returns
+    // a token we re-establish; if it returns null the user has intentionally
+    // signed out of the shell and we let the app redirect to auth.
     var next = _refreshInterval;
     try {
       final token = await HandoffPlatform.requestShellToken();
       if (token != null && token.isNotEmpty) {
         await client.auth.setSession(token, accessToken: token);
       } else {
-        next = _retryDelay; // shell didn't respond — retry before the TTL lapses
+        next = _retryDelay;
       }
     } catch (e, stack) {
       unawaited(Sentry.captureException(e, stackTrace: stack));

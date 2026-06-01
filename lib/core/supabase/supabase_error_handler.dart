@@ -31,7 +31,8 @@ Failure mapSupabaseError(Object error) {
 
 bool _looksLikeNetworkError(Object error) {
   final s = error.toString().toLowerCase();
-  return s.contains('clientexception') ||
+  return s.contains('authretryablefetchexception') ||
+      s.contains('clientexception') ||
       s.contains('failed host lookup') ||
       s.contains('failed to fetch') ||
       s.contains('connection closed') ||

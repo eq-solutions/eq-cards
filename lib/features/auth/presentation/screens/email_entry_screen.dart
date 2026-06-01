@@ -230,61 +230,30 @@ class _GoogleSignInButton extends StatelessWidget {
   }
 }
 
-/// Google "G" logo rendered as a pure Flutter widget — no assets needed.
+/// Google "G" logo — plain widget, no CustomPainter / WebGL surface.
+/// (The previous arc-based CustomPainter triggered "getParameter is not a
+/// function" on mobile browsers where CanvasKit's WebGL context initialises
+/// lazily and isn't ready by the time the first frame paints.)
 class _GoogleLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    return Container(
       width: 20,
       height: 20,
-      child: CustomPaint(painter: _GoogleLogoPainter()),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+      ),
+      alignment: Alignment.center,
+      child: const Text(
+        'G',
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: Color(0xFF4285F4),
+          height: 1,
+        ),
+      ),
     );
   }
-}
-
-class _GoogleLogoPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final cx = size.width / 2;
-    final cy = size.height / 2;
-    final r = size.width / 2;
-
-    // Background circle (white)
-    canvas.drawCircle(
-      Offset(cx, cy),
-      r,
-      Paint()..color = Colors.white,
-    );
-
-    // Four colour arcs — simplified Google G shape
-    final arcs = [
-      (-0.26, 1.83, const Color(0xFF4285F4)), // blue
-      (1.57,  1.05, const Color(0xFF34A853)), // green
-      (2.62,  0.52, const Color(0xFFFBBC05)), // yellow
-      (3.14,  1.10, const Color(0xFFEA4335)), // red
-    ];
-
-    for (final (start, sweep, color) in arcs) {
-      final paint = Paint()
-        ..color = color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = size.width * 0.28;
-      canvas.drawArc(
-        Rect.fromCircle(center: Offset(cx, cy), radius: r * 0.6),
-        start,
-        sweep,
-        false,
-        paint,
-      );
-    }
-
-    // White cutout for the horizontal bar of the G
-    canvas.drawRect(
-      Rect.fromLTWH(cx, cy - size.height * 0.14, r * 0.65, size.height * 0.28),
-      Paint()..color = Colors.white,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

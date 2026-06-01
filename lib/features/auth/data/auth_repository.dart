@@ -87,7 +87,13 @@ class AuthRepository {
     try {
       await _client.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: kIsWeb ? 'https://cards.eq.solutions' : null,
+        // Web: redirect back to the PWA root after Google auth.
+        // Native iOS/Android: use the custom URL scheme registered in
+        // AndroidManifest.xml and Info.plist so the OS routes the callback
+        // back to the app and supabase_flutter's deep-link listener picks it up.
+        redirectTo: kIsWeb
+            ? 'https://cards.eq.solutions'
+            : 'io.supabase.eqcards://login-callback/',
       );
       // On web, the page redirects — execution doesn't continue here.
       // Session is established when the app reloads on the callback URL.
