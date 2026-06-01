@@ -21,38 +21,7 @@
 //     "holder_name": string | null
 //   }
 
-// Origins permitted to call this function from a browser. The share page is
-// reachable standalone (https://cards.eq.solutions) and when EQ Cards is
-// embedded in the EQ Shell iframe (https://core.eq.solutions); localhost
-// covers local dev. We echo the request's Origin when it matches the
-// allow-list; otherwise we fall back to the canonical prod origin (never a
-// wildcard).
-const ALLOWED_ORIGINS = new Set([
-  'https://cards.eq.solutions',
-  'https://core.eq.solutions',
-]);
-const DEFAULT_ALLOW_ORIGIN = 'https://cards.eq.solutions';
-
-function isAllowedOrigin(origin: string | null): origin is string {
-  if (!origin) return false;
-  if (ALLOWED_ORIGINS.has(origin)) return true;
-  // Any localhost / 127.0.0.1 origin (any port) for local development.
-  return /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
-}
-
-// CORS headers tailored to the incoming request's Origin. Must be recomputed
-// per request because the allowed origin is echoed back, not a constant.
-function corsHeaders(req: Request): Record<string, string> {
-  const origin = req.headers.get('Origin');
-  return {
-    'access-control-allow-origin': isAllowedOrigin(origin)
-      ? origin
-      : DEFAULT_ALLOW_ORIGIN,
-    'access-control-allow-headers': 'content-type',
-    'access-control-allow-methods': 'GET, OPTIONS',
-    'vary': 'Origin',
-  };
-}
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
 const REST_HEADERS = (key: string) => ({
   'apikey': key,
@@ -64,15 +33,17 @@ const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 Deno.serve(async (req) => {
-  // Recompute per request — CORS now echoes the caller's Origin.
-  const cors = corsHeaders(req);
+  // CORS: public endpoint, but echo only allow-listed first-party origins
+  // (prod + Shell iframe + localhost + deploy previews) via the shared allow-list.
+  // Access to a share is gated by the unguessable licence-id UUID, not by CORS.
+  const cors = buildCorsHeaders(req.headers.get('origin'), {
+    methods: 'GET, OPTIONS',
+    headers: 'content-type',
+  });
   const jsonResponse = (body: unknown, status = 200): Response =>
     new Response(JSON.stringify(body), {
       status,
-      headers: {
-        'content-type': 'application/json; charset=utf-8',
-        ...cors,
-      },
+      headers: { 'content-type': 'application/json; charset=utf-8', ...cors },
     });
 
   if (req.method === 'OPTIONS') {

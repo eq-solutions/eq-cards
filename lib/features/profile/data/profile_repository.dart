@@ -1,9 +1,7 @@
-// Cards Unit 4 (2026-05-21) — Profile reads/writes go directly to
-// eq-canonical via public.eq_cards_current_staff +
-// public.eq_cards_upsert_my_profile RPCs.
-//
-// The cards-api Shell proxy (Unit 5) was rolled back — see
-// licence_repository.dart for the reason.
+// Profile data ops route through CardsDataSource, selected by the
+// CARDS_DATA_TRANSPORT dart-define (see licence_repository.dart and
+// docs/cards-canonical-api-rewire.md). The auth pre-check stays on the direct
+// Supabase client regardless of transport.
 
 import 'dart:async';
 
@@ -12,15 +10,22 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/cards_api/cards_data_source_providers.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/supabase/supabase_client_provider.dart';
 import '../../../core/supabase/supabase_error_handler.dart';
+import '../../../core/utils/date_utils.dart';
 import 'models/profile.dart';
 
 part 'profile_repository.g.dart';
 
 class ProfileRepository {
-  ProfileRepository(this._client);
+  ProfileRepository(this._data, this._client);
+
+  /// Transport for profile data ops (direct RPC vs cards-api gateway).
+  final CardsDataSource _data;
+
+  /// Direct Supabase client — used only for the auth pre-check.
   final SupabaseClient _client;
 
   Future<Profile?> getCurrent() async {
@@ -28,10 +33,9 @@ class ProfileRepository {
       throw const NotAuthenticatedFailure();
     }
     try {
-      final rows = await _client.rpc<List<dynamic>>('eq_cards_current_staff');
-      final list = rows.cast<Map<String, dynamic>>();
-      if (list.isEmpty) return null;
-      return Profile.fromJson(list.first);
+      final row = await _data.currentStaff();
+      if (row == null) return null;
+      return Profile.fromJson(row);
     } catch (e) {
       unawaited(_breadcrumb('profile_fetch_failed', {'error': e.toString()}));
       throw mapSupabaseError(e);
@@ -44,13 +48,8 @@ class ProfileRepository {
     }
     unawaited(_breadcrumb('profile_upsert_started'));
     try {
-      final rows = await _client.rpc<List<dynamic>>(
-        'eq_cards_upsert_my_profile',
-        params: {'p_payload': profileToUpsertPayload(profile)},
-      );
-      final list = rows.cast<Map<String, dynamic>>();
-      if (list.isEmpty) throw const NotFoundFailure();
-      final saved = Profile.fromJson(list.first);
+      final row = await _data.upsertMyProfile(profileToUpsertPayload(profile));
+      final saved = Profile.fromJson(row);
       unawaited(_breadcrumb('profile_upsert_succeeded'));
       return saved;
     } catch (e) {
@@ -75,27 +74,33 @@ class ProfileRepository {
 Map<String, dynamic> profileToUpsertPayload(Profile p) {
   final payload = <String, dynamic>{};
   if (p.fullName != null) payload['full_name'] = p.fullName;
-  if (p.dateOfBirth != null) payload['date_of_birth'] = _isoDate(p.dateOfBirth!);
+  if (p.dateOfBirth != null) {
+    payload['date_of_birth'] = EqDates.iso(p.dateOfBirth!);
+  }
   if (p.mobile != null) payload['mobile'] = p.mobile;
   if (p.email != null) payload['email'] = p.email;
   if (p.addressStreet != null) payload['address_street'] = p.addressStreet;
   if (p.addressSuburb != null) payload['address_suburb'] = p.addressSuburb;
   if (p.addressState != null) payload['address_state'] = p.addressState;
-  if (p.addressPostcode != null) payload['address_postcode'] = p.addressPostcode;
-  if (p.emergencyContactName != null) payload['emergency_contact_name'] = p.emergencyContactName;
-  if (p.emergencyContactRelationship != null) payload['emergency_contact_relationship'] = p.emergencyContactRelationship;
-  if (p.emergencyContactMobile != null) payload['emergency_contact_mobile'] = p.emergencyContactMobile;
+  if (p.addressPostcode != null) {
+    payload['address_postcode'] = p.addressPostcode;
+  }
+  if (p.emergencyContactName != null) {
+    payload['emergency_contact_name'] = p.emergencyContactName;
+  }
+  if (p.emergencyContactRelationship != null) {
+    payload['emergency_contact_relationship'] = p.emergencyContactRelationship;
+  }
+  if (p.emergencyContactMobile != null) {
+    payload['emergency_contact_mobile'] = p.emergencyContactMobile;
+  }
   return payload;
 }
 
-String _isoDate(DateTime d) {
-  final y = d.year.toString().padLeft(4, '0');
-  final m = d.month.toString().padLeft(2, '0');
-  final day = d.day.toString().padLeft(2, '0');
-  return '$y-$m-$day';
-}
-
 @riverpod
-ProfileRepository profileRepository(Ref ref) {
-  return ProfileRepository(ref.watch(supabaseClientProvider));
+ProfileRepository profileRepository(ProfileRepositoryRef ref) {
+  return ProfileRepository(
+    ref.watch(cardsDataSourceProvider),
+    ref.watch(supabaseClientProvider),
+  );
 }
