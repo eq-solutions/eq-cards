@@ -7,18 +7,44 @@
 //      On web, redirects to Google then back to the app — no extra package.
 //   - signOut() — the only outbound auth action the Cards UI takes
 //   - Breadcrumb helpers for Sentry diagnostics
+//
+// Phone OTP sign-in requires a second step: after GoTrue verifies the SMS code
+// the raw GoTrue JWT carries no app_metadata.tenant_id (the Supabase
+// custom_access_token_hook that would inject it has not been enabled yet —
+// see docs/cards-canonical-api-rewire.md §5 and supabase/manual/). As a
+// bridge, phoneOtpShellExchange() calls the Shell's shell-login-phone-otp
+// function, which looks up the user in shell_control.users and returns a
+// shell-minted Supabase JWT that already contains tenant_id. Cards then calls
+// setSession() with that JWT so every subsequent operation (RLS, cards-api
+// gateway) sees the tenant claim correctly.
+//
+// Once the custom_access_token_hook is enabled and verified on eq-canonical,
+// the exchange call becomes redundant (the GoTrue JWT will carry tenant_id
+// natively) and can be removed — the auth state listener in
+// auth_state_provider.dart will continue to work unchanged.
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:http/http.dart' as http;
+import 'package:meta/meta.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/error/failure.dart';
 import '../../../core/supabase/supabase_client_provider.dart';
 import '../../../core/supabase/supabase_error_handler.dart';
 
 part 'auth_repository.g.dart';
+
+/// Shell base URL — same constant as CardsApi. Overridable at build time:
+///   flutter run --dart-define=SHELL_BASE_URL=http://localhost:8888
+const _kShellBaseUrl = String.fromEnvironment(
+  'SHELL_BASE_URL',
+  defaultValue: 'https://core.eq.solutions',
+);
 
 class AuthRepository {
   AuthRepository(this._client);
@@ -90,18 +116,118 @@ class AuthRepository {
   }
 
   /// Verify the 6-digit SMS [token] for [e164Phone].
+  ///
+  /// After GoTrue accepts the OTP, the resulting session has no
+  /// app_metadata.tenant_id (the custom_access_token_hook is not yet enabled).
+  /// This method calls [phoneOtpShellExchange] immediately after to swap the
+  /// raw GoTrue JWT for a shell-minted JWT that carries tenant_id, then calls
+  /// setSession() with that JWT. GoRouter's auth listener picks up the new
+  /// session and redirects — no extra plumbing needed at the call site.
   Future<void> verifyPhoneOtp(String e164Phone, String token) async {
     unawaited(_breadcrumb('phone_otp_verify_started'));
     try {
-      await _client.auth.verifyOTP(
+      final res = await _client.auth.verifyOTP(
         phone: e164Phone,
         token: token,
         type: OtpType.sms,
       );
       unawaited(_breadcrumb('phone_otp_verify_succeeded'));
+
+      final accessToken = res.session?.accessToken;
+      if (accessToken != null) {
+        await phoneOtpShellExchange(e164Phone, accessToken);
+      }
     } catch (e) {
       unawaited(_breadcrumb('phone_otp_verify_failed', {'error': e.toString()}));
+      if (e is Failure) rethrow;
       throw mapSupabaseError(e);
+    }
+  }
+
+  /// Exchanges a raw GoTrue phone-OTP access token for a shell-minted Supabase
+  /// JWT that carries app_metadata.tenant_id.
+  ///
+  /// Calls POST /.netlify/functions/shell-login-phone-otp on the Shell with
+  /// { phone, access_token }. On success the Shell returns a supabase_jwt
+  /// (short-lived HS256 JWT with tenant_id in app_metadata); Cards calls
+  /// setSession() to replace the raw GoTrue session with this one.
+  ///
+  /// Failures are non-fatal at the GoRouter level: if the user is not in
+  /// shell_control.users the Shell returns { valid: false }, the exchange
+  /// silently does nothing, auth_state_provider detects the missing tenant_id
+  /// and routes to the notProvisioned screen instead of authenticated. The
+  /// user sees "No workspace access" and is asked to contact their manager.
+  ///
+  /// Note: this method is a bridge until the custom_access_token_hook is
+  /// enabled on eq-canonical. Once it is, the GoTrue JWT will carry tenant_id
+  /// natively and this exchange call becomes redundant. See
+  /// docs/cards-canonical-api-rewire.md §5 and supabase/manual/.
+  @visibleForTesting
+  Future<void> phoneOtpShellExchange(
+    String e164Phone,
+    String accessToken,
+  ) async {
+    unawaited(_breadcrumb('phone_otp_shell_exchange_started'));
+    try {
+      final uri = Uri.parse(
+        '$_kShellBaseUrl/.netlify/functions/shell-login-phone-otp',
+      );
+      final response = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'phone': e164Phone, 'access_token': accessToken}),
+          )
+          .timeout(const Duration(seconds: 15));
+
+      if (response.statusCode != 200) {
+        unawaited(
+          _breadcrumb('phone_otp_shell_exchange_http_error', {
+            'status': response.statusCode,
+          }),
+        );
+        // Non-200 (e.g. 500 from a misconfigured Shell) — don't crash the auth
+        // flow. auth_state_provider will detect missing tenant_id and route to
+        // notProvisioned. Capture for diagnostics.
+        unawaited(
+          Sentry.captureMessage(
+            'phoneOtpShellExchange: unexpected HTTP ${response.statusCode}',
+            level: SentryLevel.warning,
+          ),
+        );
+        return;
+      }
+
+      final Map<String, dynamic> body;
+      try {
+        body = jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (_) {
+        unawaited(_breadcrumb('phone_otp_shell_exchange_parse_error'));
+        return;
+      }
+
+      if (body['valid'] != true) {
+        // User not in shell_control.users — notProvisioned route handles this.
+        unawaited(_breadcrumb('phone_otp_shell_exchange_not_provisioned'));
+        return;
+      }
+
+      final supabaseJwt = body['supabase_jwt'] as String?;
+      if (supabaseJwt == null || supabaseJwt.isEmpty) {
+        unawaited(_breadcrumb('phone_otp_shell_exchange_missing_jwt'));
+        return;
+      }
+
+      // Replace the raw GoTrue session with the shell-minted JWT that carries
+      // tenant_id. Pattern mirrors IframeHandoffScreen._applyToken and the
+      // shell-verify handoff path.
+      await _client.auth.setSession(supabaseJwt, accessToken: supabaseJwt);
+      unawaited(_breadcrumb('phone_otp_shell_exchange_succeeded'));
+    } catch (e, st) {
+      // Exchange failure is non-fatal — user lands on notProvisioned rather
+      // than crashing. Capture for diagnostics.
+      unawaited(_breadcrumb('phone_otp_shell_exchange_exception', {'error': e.toString()}));
+      unawaited(Sentry.captureException(e, stackTrace: st));
     }
   }
 

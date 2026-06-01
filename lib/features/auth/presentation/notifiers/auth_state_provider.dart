@@ -12,13 +12,23 @@ Stream<AuthState> authStateChanges(Ref ref) {
     final session = event.session;
     if (session == null) return AuthState.unauthenticated;
     // Shell handoff tokens are HS256-signed by the Shell and carry tenant_id
-    // by construction — no extra check needed. For all other sign-in paths
-    // (email OTP, phone OTP, Google), the custom_access_token_hook on
-    // eq-canonical injects tenant_id only when the user is provisioned in
-    // shell_control.users. An unprovisioned user gets a valid Supabase session
-    // but no tenant_id, which causes silent 401s on every tenant-aware RPC.
-    // Detect this early and surface it as notProvisioned so the router can
-    // redirect to a friendly error screen before the user hits any data routes.
+    // by construction — no extra check needed.
+    //
+    // Phone OTP: AuthRepository.verifyPhoneOtp() calls phoneOtpShellExchange()
+    // immediately after GoTrue verifies the code. The exchange calls
+    // shell-login-phone-otp on the Shell, which looks up the user in
+    // shell_control.users and returns a shell-minted JWT with tenant_id already
+    // in app_metadata. setSession() fires another onAuthStateChange event with
+    // that JWT — this listener then sees a non-null tenant_id and returns
+    // authenticated. If the exchange fails or the user is not in
+    // shell_control.users, this listener sees null tenant_id and returns
+    // notProvisioned, which routes to the "No workspace access" screen.
+    //
+    // Email OTP / Google OAuth: the raw GoTrue JWT has no tenant_id (the
+    // custom_access_token_hook on eq-canonical is not yet enabled). Those
+    // users land on notProvisioned until the hook is live or they are
+    // redirected via a Shell handoff link. See docs/cards-canonical-api-rewire.md
+    // §5 for the hook design and enablement runbook.
     final tenantId = session.user.appMetadata['tenant_id'];
     if (tenantId == null) return AuthState.notProvisioned;
     return AuthState.authenticated;

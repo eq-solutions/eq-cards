@@ -27,6 +27,7 @@ dependencies:
   # Backend (architecture §4)
   supabase_flutter: ^2.5.0
   dio: ^5.4.0
+  http: ^1.2.0
 
   # Local storage (architecture §11.1). Supabase persists its auth session via
   # shared_preferences; flutter_secure_storage was unused (removed 2026-05-30).
