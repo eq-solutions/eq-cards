@@ -168,8 +168,11 @@ class _CertificateAddScreenState extends ConsumerState<CertificateAddScreen> {
       // as a predictable path prefix; on edit we use the existing row's id.
       final certId = _existing?.id ?? const Uuid().v4();
 
-      String filePath;
-      String fileType;
+      // Initialised here so dart2js never sees these as uninitialised across
+      // the await boundary — a late-init sentinel read is the root cause of
+      // LateInitializationError: Field '' has not been initialized (#EQ-CARDS-B).
+      var filePath = '';
+      var fileType = '';
 
       if (_pendingBytes != null && _pendingMime != null) {
         final mime = _pendingMime!;
@@ -185,6 +188,13 @@ class _CertificateAddScreenState extends ConsumerState<CertificateAddScreen> {
         );
       } else {
         // Edit with no new file — keep existing.
+        if (_existing == null) {
+          setState(() {
+            _saving = false;
+            _error = 'Certificate data not loaded. Please go back and try again.';
+          });
+          return;
+        }
         filePath = _existing!.filePath;
         fileType = _existing!.fileType;
       }
@@ -425,26 +435,35 @@ class _TypeDropdown extends StatelessWidget {
       children: [
         Text('Type', style: EqTypography.label),
         const SizedBox(height: EqSpacing.xs),
-        DropdownButtonFormField<String>(
-          initialValue: value,
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: EqColours.ice,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
+        // Plain DropdownButton — _certType is tracked in CertificateAddScreen
+        // state so there is no need for FormField machinery here, and using
+        // DropdownButtonFormField introduced a late-init hazard via the
+        // FormField/RestorationMixin _errorText field (#EQ-CARDS-B).
+        DropdownButtonHideUnderline(
+          child: Container(
+            padding: const EdgeInsets.symmetric(
               horizontal: EqSpacing.md,
               vertical: EqSpacing.sm,
             ),
+            decoration: BoxDecoration(
+              color: EqColours.ice,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: DropdownButton<String>(
+              value: value,
+              isExpanded: true,
+              isDense: true,
+              underline: const SizedBox.shrink(),
+              style: EqTypography.bodyM.copyWith(color: EqColours.ink),
+              dropdownColor: EqColours.white,
+              items: certTypeLabels.entries
+                  .map(
+                    (e) => DropdownMenuItem(value: e.key, child: Text(e.value)),
+                  )
+                  .toList(),
+              onChanged: (v) => onChanged(v ?? value),
+            ),
           ),
-          items: certTypeLabels.entries
-              .map(
-                (e) => DropdownMenuItem(value: e.key, child: Text(e.value)),
-              )
-              .toList(),
-          onChanged: (v) => onChanged(v ?? value),
         ),
       ],
     );
