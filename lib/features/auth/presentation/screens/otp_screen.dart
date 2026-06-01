@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +11,9 @@ import '../../../../core/theme/eq_spacing.dart';
 import '../../../../core/theme/eq_typography.dart';
 import '../../domain/auth_flow_state.dart';
 import '../notifiers/auth_flow_notifier.dart';
+
+// How long the resend button is disabled after sending a code.
+const _kResendCooldown = Duration(seconds: 30);
 
 class OtpScreen extends ConsumerStatefulWidget {
   const OtpScreen({super.key});
@@ -22,15 +27,41 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   final _formKey = GlobalKey<FormState>();
 
   // Captured from the first AuthFlowAwaitingOtp state we see.
-  // Preserved through error/verifying transitions so retries don't
-  // call verifyOtp with an empty identifier.
-  String _identifier = '';
+  // Preserved through error/verifying transitions so retries always work.
+  String _identifier = ''; // email address or E.164 phone number
   bool _isPhone = false;
+
+  // Resend cooldown
+  Timer? _cooldownTimer;
+  int _cooldownSeconds = _kResendCooldown.inSeconds;
+
+  @override
+  void initState() {
+    super.initState();
+    // Start cooldown immediately — the code was just sent to land here.
+    _startCooldown();
+  }
 
   @override
   void dispose() {
+    _cooldownTimer?.cancel();
     _codeController.dispose();
     super.dispose();
+  }
+
+  void _startCooldown() {
+    _cooldownTimer?.cancel();
+    setState(() => _cooldownSeconds = _kResendCooldown.inSeconds);
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) {
+        t.cancel();
+        return;
+      }
+      setState(() {
+        _cooldownSeconds--;
+        if (_cooldownSeconds <= 0) t.cancel();
+      });
+    });
   }
 
   Future<void> _submit() async {
@@ -45,6 +76,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 
   Future<void> _resend() async {
     _codeController.clear();
+    _startCooldown();
     final notifier = ref.read(authFlowNotifierProvider.notifier);
     if (_isPhone) {
       await notifier.sendPhoneOtp(_identifier);
@@ -57,21 +89,19 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   Widget build(BuildContext context) {
     final flowState = ref.watch(authFlowNotifierProvider);
 
-    // Capture identifier the moment we land in awaiting state — persists through
-    // error/verifying so retries always have the correct address.
+    // Capture identifier + channel the moment we land in awaiting state.
+    // Preserved through error/verifying so retries always have it.
     if (flowState is AuthFlowAwaitingOtp && _identifier.isEmpty) {
       _identifier = flowState.displayTarget;
       _isPhone = flowState.isPhone;
     }
 
-    // Clear code exactly once on error transition.
+    // Clear code on error transition.
     ref.listen<AuthFlowState>(authFlowNotifierProvider, (_, next) {
       if (next is AuthFlowError) _codeController.clear();
     });
 
-
-    // Safety: if state is no longer in an OTP-related phase (e.g. stale
-    // navigation after app restart), go back to email entry.
+    // Safety: stale navigation after app restart → back to entry screen.
     if (flowState is! AuthFlowAwaitingOtp &&
         flowState is! AuthFlowVerifying &&
         flowState is! AuthFlowError) {
@@ -84,6 +114,12 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     final isLoading = flowState is AuthFlowVerifying;
     final error = flowState is AuthFlowError ? flowState.message : null;
     final isSending = flowState is AuthFlowSendingOtp;
+    final canResend = !isLoading && !isSending && _identifier.isNotEmpty &&
+        _cooldownSeconds <= 0;
+
+    final subtitle = _identifier.isNotEmpty
+        ? 'We sent a 6-digit code to $_identifier.'
+        : 'We sent a 6-digit code.';
 
     return Scaffold(
       backgroundColor: EqColours.white,
@@ -120,9 +156,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                     ),
                     const SizedBox(height: EqSpacing.sm),
                     Text(
-                      _identifier.isNotEmpty
-                          ? 'We sent a 6-digit code to $_identifier.'
-                          : 'We sent you a 6-digit sign-in code.',
+                      subtitle,
                       style: EqTypography.bodyM.copyWith(
                         color: EqColours.grey,
                       ),
@@ -143,7 +177,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                         letterSpacing: 8,
                         color: EqColours.ink,
                       ),
-                      onFieldSubmitted: (_) => _submit(),
+                      onFieldSubmitted: (_) => unawaited(_submit()),
                       decoration: const InputDecoration(
                         labelText: 'Sign-in code',
                         hintText: '000000',
@@ -151,11 +185,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                       ),
                       validator: (v) {
                         if (v == null || v.trim().isEmpty) {
-                          return 'Enter the 6-digit code we sent you';
+                          return 'Enter the 6-digit code';
                         }
-                        if (v.trim().length != 6) {
-                          return 'Code is 6 digits';
-                        }
+                        if (v.trim().length != 6) return 'Code is 6 digits';
                         return null;
                       },
                     ),
@@ -171,7 +203,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                     ],
                     const SizedBox(height: EqSpacing.lg),
                     FilledButton(
-                      onPressed: isLoading ? null : _submit,
+                      onPressed: isLoading ? null : () => unawaited(_submit()),
                       style: FilledButton.styleFrom(
                         backgroundColor: EqColours.sky,
                         minimumSize: const Size.fromHeight(48),
@@ -189,13 +221,15 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                     ),
                     const SizedBox(height: EqSpacing.md),
                     TextButton(
-                      onPressed: (isLoading || isSending || _identifier.isEmpty)
-                          ? null
-                          : _resend,
+                      onPressed: canResend ? () => unawaited(_resend()) : null,
                       child: Text(
-                        isSending ? 'Sending…' : 'Resend code',
+                        isSending
+                            ? 'Sending…'
+                            : _cooldownSeconds > 0
+                                ? 'Resend code (${_cooldownSeconds}s)'
+                                : 'Resend code',
                         style: EqTypography.bodyM.copyWith(
-                          color: EqColours.sky,
+                          color: canResend ? EqColours.sky : EqColours.grey,
                         ),
                       ),
                     ),
