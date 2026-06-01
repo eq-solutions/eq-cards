@@ -29,11 +29,14 @@ part 'shell_session_refresh.g.dart';
 class ShellSessionRefresh extends _$ShellSessionRefresh {
   Timer? _timer;
 
-  // Re-mint at 9 min, well inside the 15-min TTL and before Supabase's own
-  // auto-refresh fires (it fires at ~70 % of TTL = 10.5 min). If we let
-  // Supabase's auto-refresh run first it tries to use the shell JWT as a
-  // refresh_token, which the server rejects with "Refresh token invalid".
-  static const Duration _refreshInterval = Duration(minutes: 9);
+  // Re-mint at 7 min — 3.5 min before Supabase's own auto-refresh fires
+  // (~70 % of the 15-min TTL = 10.5 min). Shell JWTs have no real
+  // refresh_token; if Supabase's timer wins the race it tries to refresh
+  // using the shell JWT, gets "Refresh token invalid", and fires signedOut.
+  // The signedOut handler recovers, but the brief gap causes Sentry noise and
+  // a visible auth flicker. 7 min gives enough headroom even when the device
+  // sleeps briefly or the postMessage round-trip is slow.
+  static const Duration _refreshInterval = Duration(minutes: 7);
   static const Duration _retryDelay = Duration(seconds: 30);
 
   @override
