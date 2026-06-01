@@ -40,7 +40,7 @@ void main() {
 
     testWidgets('preferredSize is kToolbarHeight', (tester) async {
       const bar = EqAppBar(title: 'X');
-      expect(bar.preferredSize, const Size.fromHeight(kToolbarHeight));
+      expect(bar.preferredSize, const Size.fromHeight(64));
     });
   });
 
