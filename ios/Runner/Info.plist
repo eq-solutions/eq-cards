@@ -72,5 +72,19 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- OAuth deep-link callback — matches io.supabase.eqcards://login-callback/
+	     registered as redirectTo in signInWithGoogle. iOS routes this URL back
+	     to the app; supabase_flutter's authCallbackUrlHostname listener handles it. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>io.supabase.eqcards</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>io.supabase.eqcards</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

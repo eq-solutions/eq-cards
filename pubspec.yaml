@@ -77,6 +77,9 @@ dependencies:
   # Date formatting
   intl: ^0.20.0
 
+  # SVG rendering — used for the Google sign-in logo on the auth screen.
+  flutter_svg: ^2.0.0
+
   # Annotations (`@visibleForTesting` etc.) — used by repository helpers
   meta: ^1.10.0
 
@@ -124,6 +127,7 @@ flutter:
   assets:
     - assets/icon/launcher.png
     - assets/icon/launcher_foreground.png
+    - assets/icons/google_logo.svg
     - assets/legal/privacy-policy.md
     - assets/legal/terms-of-use.md
 

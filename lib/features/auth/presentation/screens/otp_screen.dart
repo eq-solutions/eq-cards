@@ -23,8 +23,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 
   // Captured from the first AuthFlowAwaitingOtp state we see.
   // Preserved through error/verifying transitions so retries don't
-  // call verifyOtp with an empty email.
-  String _email = '';
+  // call verifyOtp with an empty identifier.
+  String _identifier = '';
+  bool _isPhone = false;
 
   @override
   void dispose() {
@@ -34,24 +35,33 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    await ref
-        .read(authFlowNotifierProvider.notifier)
-        .verifyOtp(_email, _codeController.text);
+    final notifier = ref.read(authFlowNotifierProvider.notifier);
+    if (_isPhone) {
+      await notifier.verifyPhoneOtp(_identifier, _codeController.text);
+    } else {
+      await notifier.verifyOtp(_identifier, _codeController.text);
+    }
   }
 
   Future<void> _resend() async {
     _codeController.clear();
-    await ref.read(authFlowNotifierProvider.notifier).sendOtp(_email);
+    final notifier = ref.read(authFlowNotifierProvider.notifier);
+    if (_isPhone) {
+      await notifier.sendPhoneOtp(_identifier);
+    } else {
+      await notifier.sendOtp(_identifier);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final flowState = ref.watch(authFlowNotifierProvider);
 
-    // Capture email the moment we land in awaiting state — persists through
+    // Capture identifier the moment we land in awaiting state — persists through
     // error/verifying so retries always have the correct address.
-    if (flowState is AuthFlowAwaitingOtp && _email.isEmpty) {
-      _email = flowState.email;
+    if (flowState is AuthFlowAwaitingOtp && _identifier.isEmpty) {
+      _identifier = flowState.displayTarget;
+      _isPhone = flowState.isPhone;
     }
 
     // Clear code exactly once on error transition.
@@ -110,9 +120,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                     ),
                     const SizedBox(height: EqSpacing.sm),
                     Text(
-                      _email.isNotEmpty
-                          ? 'We sent a 6-digit code to $_email.'
-                          : 'We sent a 6-digit code to your email.',
+                      _identifier.isNotEmpty
+                          ? 'We sent a 6-digit code to $_identifier.'
+                          : 'We sent you a 6-digit sign-in code.',
                       style: EqTypography.bodyM.copyWith(
                         color: EqColours.grey,
                       ),
@@ -141,7 +151,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                       ),
                       validator: (v) {
                         if (v == null || v.trim().isEmpty) {
-                          return 'Enter the 6-digit code from your email';
+                          return 'Enter the 6-digit code we sent you';
                         }
                         if (v.trim().length != 6) {
                           return 'Code is 6 digits';
@@ -179,7 +189,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                     ),
                     const SizedBox(height: EqSpacing.md),
                     TextButton(
-                      onPressed: (isLoading || isSending || _email.isEmpty)
+                      onPressed: (isLoading || isSending || _identifier.isEmpty)
                           ? null
                           : _resend,
                       child: Text(

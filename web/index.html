@@ -47,11 +47,10 @@
   <title>EQ Cards</title>
   <link rel="manifest" href="manifest.json">
 
-  <!-- Cropper.js — required by image_cropper_for_web (compiled into the Flutter
-       bundle). The web UI uses LicenceCropScreen (pure Dart) so this is never
-       called directly, but the compiled JS still references window.Cropper at
-       module-load time. Vendored locally (not CDN) to eliminate availability
-       as a Sentry error source. Files: web/cropper.min.{js,css} v1.6.2. -->
+  <!-- Cropper.js — required by image_cropper on web. Must load synchronously
+       before flutter_bootstrap.js so Cropper is available when Flutter calls
+       new Cropper(...). Bundled locally (web/cropper.min.*) — CDN approach
+       was being blocked by ad/privacy tools causing "Cropper is not a constructor". -->
   <link rel="stylesheet" href="cropper.min.css">
   <script src="cropper.min.js"></script>
 

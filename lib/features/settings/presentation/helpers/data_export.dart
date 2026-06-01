@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../../../core/utils/date_utils.dart';
 import '../../../licences/data/models/licence.dart';
 import '../../../profile/data/models/profile.dart';
 
@@ -71,9 +72,6 @@ Map<String, dynamic> _licenceMap(Licence l) {
   };
 }
 
-String? _isoDate(DateTime? d) {
-  if (d == null) return null;
-  return '${d.year.toString().padLeft(4, '0')}-'
-      '${d.month.toString().padLeft(2, '0')}-'
-      '${d.day.toString().padLeft(2, '0')}';
-}
+/// Nullable wrapper around [EqDates.iso] for the optional date fields in the
+/// export payload (a null date stays null rather than throwing).
+String? _isoDate(DateTime? d) => d == null ? null : EqDates.iso(d);

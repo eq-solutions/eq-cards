@@ -31,6 +31,8 @@
 
 // deno-lint-ignore-file no-explicit-any
 
+import { buildCorsHeaders } from '../_shared/cors.ts';
+
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 const ANTHROPIC_MODEL = 'claude-sonnet-4-6';
 
@@ -171,51 +173,17 @@ interface OcrRequest {
   mime_type?: string;
 }
 
-// Origins permitted to call this function from a browser. The browser enforces
-// CORS against the *page* origin, which for EQ Cards may be any of:
-//   - https://cards.eq.solutions  — Cards loaded standalone
-//   - https://core.eq.solutions   — Cards embedded in the EQ Shell iframe
-//   - http://localhost:<port>     — local dev (Flutter web / Netlify dev)
-// We echo the request's Origin when it matches the allow-list; otherwise we
-// fall back to the canonical prod origin (never a wildcard).
-const ALLOWED_ORIGINS = new Set([
-  'https://cards.eq.solutions',
-  'https://core.eq.solutions',
-]);
-const DEFAULT_ALLOW_ORIGIN = 'https://cards.eq.solutions';
-
-function isAllowedOrigin(origin: string | null): origin is string {
-  if (!origin) return false;
-  if (ALLOWED_ORIGINS.has(origin)) return true;
-  // Any localhost / 127.0.0.1 origin (any port) for local development.
-  return /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
-}
-
-// CORS headers tailored to the incoming request's Origin. Must be recomputed
-// per request because the allowed origin is echoed back, not a constant.
-function corsHeaders(req: Request): Record<string, string> {
-  const origin = req.headers.get('Origin');
-  return {
-    'access-control-allow-origin': isAllowedOrigin(origin)
-      ? origin
-      : DEFAULT_ALLOW_ORIGIN,
-    'access-control-allow-headers':
-      'authorization, x-client-info, apikey, content-type',
-    'access-control-allow-methods': 'POST, OPTIONS',
-    'vary': 'Origin',
-  };
-}
-
 Deno.serve(async (req) => {
-  // Recompute per request — CORS now echoes the caller's Origin.
-  const cors = corsHeaders(req);
+  // CORS: allow the first-party Cards web origins (prod + Shell iframe +
+  // localhost + deploy previews) via the shared allow-list. JWT is still
+  // verified manually below; native callers send no Origin and are unaffected.
+  const cors = buildCorsHeaders(req.headers.get('origin'), {
+    methods: 'POST, OPTIONS',
+  });
   const jsonResponse = (body: unknown, status = 200): Response =>
     new Response(JSON.stringify(body), {
       status,
-      headers: {
-        'content-type': 'application/json; charset=utf-8',
-        ...cors,
-      },
+      headers: { 'content-type': 'application/json; charset=utf-8', ...cors },
     });
 
   // 204 No Content per HTTP spec — body MUST be empty. Deno's HTTP server
