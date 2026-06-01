@@ -5,22 +5,27 @@ import '../../../../core/utils/date_utils.dart';
 part 'worker_credential.freezed.dart';
 part 'worker_credential.g.dart';
 
-/// A credential seeded into the worker-house (eq-canonical-internal) by
-/// the SKS Intake flow. Distinct from licences and certificates (which are
-/// worker self-entered on the tenant DB); this data comes from the employer
-/// side via the import and is owned by the worker.
+/// Mirrors public.worker_credentials on eq-canonical.
+///
+/// Credentials are tied to a [Worker] record (not directly to auth.uid()).
+/// Admin-entered via [AdminWorkerRepository]; readable by the worker after
+/// they claim their invite.
 @freezed
 abstract class WorkerCredential with _$WorkerCredential {
   const factory WorkerCredential({
-    required String id,
+    String? id,
     required String workerId,
     required String credentialType,
     String? licenceNumber,
-    required String issuingBody,
+    String? issuingBody,
     String? stateTerritory,
     DateTime? issueDate,
     DateTime? expiryDate,
-    required String status,
+    String? photoFrontPath,
+    String? photoBackPath,
+    String? notes,
+    @Default({}) Map<String, dynamic> metadata,
+    @Default('active') String status,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) = _WorkerCredential;
@@ -30,7 +35,8 @@ abstract class WorkerCredential with _$WorkerCredential {
   factory WorkerCredential.fromJson(Map<String, dynamic> json) =>
       _$WorkerCredentialFromJson(json);
 
-  bool get isExpired => expiryDate != null && EqDates.isExpired(expiryDate!);
+  bool get isExpired =>
+      expiryDate != null && EqDates.isExpired(expiryDate!);
 
   int? get daysUntilExpiry =>
       expiryDate != null ? EqDates.daysUntil(expiryDate!) : null;
@@ -39,13 +45,32 @@ abstract class WorkerCredential with _$WorkerCredential {
       expiryDate != null && EqDates.isExpiringSoon(expiryDate!);
 }
 
-/// Human-readable labels for worker_credential_type enum values.
+/// Human-readable labels for all credential types in the worker_credential_type enum.
 const workerCredentialTypeLabels = <String, String>{
-  'electrical_licence':    'Electrical Licence',
-  'white_card':            'White Card',
-  'first_aid':             'First Aid',
-  'ewp':                   'EWP',
-  'working_at_heights':    'Working at Heights',
-  'confined_space':        'Confined Space',
-  'asbestos_awareness':    'Asbestos Awareness',
+  'electrical_licence':  'Electrical Licence',
+  'white_card':          'White Card (Construction Induction)',
+  'working_at_heights':  'Working at Heights',
+  'confined_space':      'Confined Space Entry',
+  'open_cabling':        'Open Cabling',
+  'scissor_lift':        'Scissor Lift (SL)',
+  'boom_lift':           'Boom Lift (BL ≤11m)',
+  'vertical_lift':       'Vertical Lift (VL ≤11m)',
+  'hrwl_boom_11m':       'HRL — Boom Lift (>11m)',
+  'forklift_hrwl':       'HRL — Forklift',
+  'hrwl_dogging':        'HRL — Dogging',
+  'riw':                 'Rail Industry Worker (RIW)',
+  'first_aid':           'First Aid',
+  'cpr':                 'CPR',
+  'lvr':                 'Low Voltage Rescue (LVR)',
+  'driver_licence':      'Driver Licence',
+  'hv_switching':        'HV Switching',
+  'hv_operators':        'HV Operators',
+  'manual_handling':     'Manual Handling',
+  'silica_awareness':    'Silica Awareness',
+  'asbestos_awareness':  'Asbestos Awareness',
+  'ewp':                 'Elevated Work Platform (EWP)',
+  'medicare':            'Medicare Card',
+  'test_and_tag':        'Test and Tag',
+  'traffic_control':     'Traffic Control',
+  'other':               'Other',
 };
