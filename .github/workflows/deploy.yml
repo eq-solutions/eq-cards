@@ -48,6 +48,7 @@ jobs:
             exit 0
           fi
           curl -sL https://sentry.io/get-cli/ | bash
+          sentry-cli sourcemaps inject build/web
           sentry-cli sourcemaps upload \
             --org eq-solutions \
             --project eq-cards \
