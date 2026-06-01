@@ -98,7 +98,7 @@ Map<String, dynamic> profileToUpsertPayload(Profile p) {
 }
 
 @riverpod
-ProfileRepository profileRepository(ProfileRepositoryRef ref) {
+ProfileRepository profileRepository(Ref ref) {
   return ProfileRepository(
     ref.watch(cardsDataSourceProvider),
     ref.watch(supabaseClientProvider),

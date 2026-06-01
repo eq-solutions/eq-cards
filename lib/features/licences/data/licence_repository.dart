@@ -160,7 +160,7 @@ Map<String, dynamic> licenceToUpsertPayload(Licence l) {
 }
 
 @riverpod
-LicenceRepository licenceRepository(LicenceRepositoryRef ref) {
+LicenceRepository licenceRepository(Ref ref) {
   return LicenceRepository(
     ref.watch(cardsDataSourceProvider),
     ref.watch(supabaseClientProvider),
