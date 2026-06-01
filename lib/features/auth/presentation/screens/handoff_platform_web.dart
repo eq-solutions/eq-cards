@@ -73,8 +73,10 @@ class HandoffPlatform {
       return null;
     }
 
+    // 10s gives mint-cards-iframe-token room to complete including
+    // a cold-start Netlify function + ensureAuthUser admin API call.
     return completer.future.timeout(
-      const Duration(seconds: 5),
+      const Duration(seconds: 10),
       onTimeout: () {
         sub.cancel();
         return null;
