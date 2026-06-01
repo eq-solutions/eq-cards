@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
@@ -21,6 +22,11 @@ Future<XFile?> cropLicencePhoto(
   XFile picked, {
   required String actionLabel,
 }) async {
+  // Web uses LicenceCropScreen (pure Flutter, no JS bridge). This function
+  // should never be called on web — callers guard with kIsWeb checks.
+  assert(!kIsWeb, 'cropLicencePhoto called on web — use LicenceCropScreen');
+  if (kIsWeb) return picked;
+
   try {
     final cropped = await ImageCropper().cropImage(
       sourcePath: picked.path,
