@@ -9,6 +9,7 @@ import '../../../../core/theme/eq_colours.dart';
 import '../../../../core/theme/eq_spacing.dart';
 import '../../../../core/theme/eq_typography.dart';
 import '../../../../core/validators/input_validators.dart';
+import '../../data/aus_phone.dart';
 import '../../data/auth_repository.dart';
 import '../../domain/auth_flow_state.dart';
 import '../notifiers/auth_flow_notifier.dart';
@@ -21,21 +22,26 @@ class EmailEntryScreen extends ConsumerStatefulWidget {
 }
 
 class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
-  final _emailController = TextEditingController();
+  final _identifierController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _googleLoading = false;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _identifierController.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    await ref
-        .read(authFlowNotifierProvider.notifier)
-        .sendOtp(_emailController.text);
+    final raw = _identifierController.text.trim();
+    final phone = normaliseAusMobile(raw);
+    final notifier = ref.read(authFlowNotifierProvider.notifier);
+    if (phone != null && isValidAusMobile(phone)) {
+      await notifier.sendPhoneOtp(phone);
+    } else {
+      await notifier.sendOtp(raw);
+    }
   }
 
   Future<void> _signInWithGoogle() async {
@@ -114,9 +120,9 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
                   ),
                   const SizedBox(height: EqSpacing.lg),
 
-                  // ── Email OTP ────────────────────────────────────────────
+                  // ── Email or phone OTP ───────────────────────────────────
                   Text(
-                    "Enter your email and we'll send you a sign-in code.",
+                    "Enter your email or mobile number and we'll send you a sign-in code.",
                     style: EqTypography.bodyM.copyWith(color: EqColours.grey),
                     textAlign: TextAlign.center,
                   ),
@@ -127,21 +133,26 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         TextFormField(
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
+                          controller: _identifierController,
+                          keyboardType: TextInputType.text,
                           autocorrect: false,
                           autofocus: false,
                           textInputAction: TextInputAction.done,
                           onFieldSubmitted: (_) => _submit(),
                           decoration: const InputDecoration(
-                            labelText: 'Email address',
-                            hintText: 'you@example.com',
+                            labelText: 'Email or mobile number',
+                            hintText: 'you@example.com or 0412 345 678',
                           ),
                           validator: (v) {
                             if (v == null || v.trim().isEmpty) {
-                              return 'Enter your email address';
+                              return 'Enter your email or mobile number';
                             }
-                            return validateEmail(v);
+                            final raw = v.trim();
+                            final phone = normaliseAusMobile(raw);
+                            if (phone != null && isValidAusMobile(phone)) {
+                              return null;
+                            }
+                            return validateEmail(raw);
                           },
                         ),
                         if (error != null) ...[

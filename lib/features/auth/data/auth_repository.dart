@@ -76,6 +76,35 @@ class AuthRepository {
     }
   }
 
+  /// Send a 6-digit SMS OTP to [e164Phone] (E.164 format, e.g. +61412345678).
+  /// Requires Twilio configured as the SMS provider in Supabase Auth settings.
+  Future<void> sendPhoneOtp(String e164Phone) async {
+    unawaited(_breadcrumb('phone_otp_send_started', {'phone': e164Phone}));
+    try {
+      await _client.auth.signInWithOtp(phone: e164Phone);
+      unawaited(_breadcrumb('phone_otp_send_succeeded'));
+    } catch (e) {
+      unawaited(_breadcrumb('phone_otp_send_failed', {'error': e.toString()}));
+      throw mapSupabaseError(e);
+    }
+  }
+
+  /// Verify the 6-digit SMS [token] for [e164Phone].
+  Future<void> verifyPhoneOtp(String e164Phone, String token) async {
+    unawaited(_breadcrumb('phone_otp_verify_started'));
+    try {
+      await _client.auth.verifyOTP(
+        phone: e164Phone,
+        token: token,
+        type: OtpType.sms,
+      );
+      unawaited(_breadcrumb('phone_otp_verify_succeeded'));
+    } catch (e) {
+      unawaited(_breadcrumb('phone_otp_verify_failed', {'error': e.toString()}));
+      throw mapSupabaseError(e);
+    }
+  }
+
   /// Sign in via Google OAuth. On web, redirects to Google then back to the
   /// app at `redirectTo`. Supabase picks up the session from the URL fragment
   /// on return — no extra handling needed in the app.

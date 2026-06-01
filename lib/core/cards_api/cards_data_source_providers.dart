@@ -51,27 +51,27 @@ const String _rawTransport = String.fromEnvironment(
 /// The active transport, resolved at build time from `CARDS_DATA_TRANSPORT`.
 /// Defaults to [CardsDataTransport.direct].
 @Riverpod(keepAlive: true)
-CardsDataTransport cardsDataTransport(CardsDataTransportRef ref) =>
+CardsDataTransport cardsDataTransport(Ref ref) =>
     cardsDataTransportFromString(_rawTransport);
 
 /// Direct-RPC transport: `eq_cards_*` calls on eq-canonical. The load-bearing
 /// default. Exposed as the [CardsDataSource] interface (not the concrete type)
 /// so tests can override it with a fake without a real Supabase client.
 @Riverpod(keepAlive: true)
-CardsDataSource directCardsDataSource(DirectCardsDataSourceRef ref) =>
+CardsDataSource directCardsDataSource(Ref ref) =>
     DirectCardsDataSource(ref.watch(supabaseClientProvider));
 
 /// Gateway transport: the Shell `cards-api` client, surfaced as the
 /// [CardsDataSource] interface so it is overridable in tests.
 @Riverpod(keepAlive: true)
-CardsDataSource gatewayCardsDataSource(GatewayCardsDataSourceRef ref) =>
+CardsDataSource gatewayCardsDataSource(Ref ref) =>
     ref.watch(cardsApiProvider);
 
 /// The active [CardsDataSource]. Both repositories depend on this, so the
 /// dart-define is the single switch for the whole data plane. Only the chosen
 /// branch's provider is watched, so the unused transport is never constructed.
 @Riverpod(keepAlive: true)
-CardsDataSource cardsDataSource(CardsDataSourceRef ref) {
+CardsDataSource cardsDataSource(Ref ref) {
   switch (ref.watch(cardsDataTransportProvider)) {
     case CardsDataTransport.gateway:
       return ref.watch(gatewayCardsDataSourceProvider);
