@@ -136,4 +136,12 @@ class DirectCardsDataSource implements CardsDataSource {
     if (list.isEmpty) throw const NotFoundFailure();
     return list.first;
   }
+
+  @override
+  Future<List<Map<String, dynamic>>> listWorkerCredentials() async {
+    // Worker-house (eq-canonical-internal) is not accessible from the direct
+    // transport — the app authenticates against eq-canonical only. Worker
+    // credentials are only available via the Shell gateway.
+    return const [];
+  }
 }

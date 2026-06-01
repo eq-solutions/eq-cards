@@ -7,6 +7,7 @@ import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../../licences/licences.dart';
+import '../../worker_house/worker_house.dart';
 
 part 'alerts_scheduler.g.dart';
 
@@ -66,12 +67,24 @@ class AlertsScheduler {
   }
 
   /// Cancel everything currently scheduled and re-schedule for the given list.
-  Future<void> syncAll(List<Licence> licences) async {
+  /// Pass [credentials] to also schedule renewal reminders for worker-house
+  /// credentials (seeded via Intake). Both lists are synced in a single
+  /// cancelAll → re-schedule pass so they don't clobber each other.
+  Future<void> syncAll(
+    List<Licence> licences, {
+    List<WorkerCredential> credentials = const [],
+  }) async {
     if (kIsWeb) return;
     await init();
     await _plugin.cancelAll();
     for (final licence in licences) {
-      await _scheduleForLicence(licence);
+      // Individual failures skip the entry rather than aborting the whole
+      // sync — cancelAll already ran, so a mid-loop throw would leave the
+      // user with zero notifications.
+      try { await _scheduleForLicence(licence); } catch (_) {}
+    }
+    for (final credential in credentials) {
+      try { await _scheduleForCredential(credential); } catch (_) {}
     }
   }
 
@@ -111,6 +124,37 @@ class AlertsScheduler {
         ),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         payload: licence.id ?? '',
+      );
+    }
+  }
+
+  Future<void> _scheduleForCredential(WorkerCredential credential) async {
+    if (credential.expiryDate == null) return;
+    final now = DateTime.now();
+    final label = workerCredentialTypeLabels[credential.credentialType]
+        ?? credential.credentialType;
+    for (final daysBefore in _alertDays) {
+      final fireAt =
+          credential.expiryDate!.subtract(Duration(days: daysBefore));
+      if (fireAt.isBefore(now)) continue;
+      await _plugin.zonedSchedule(
+        // 'wc_' prefix keeps the int32 hash space separate from licence IDs.
+        id: _idFor('wc_${credential.id}', daysBefore),
+        title: '$label expires in $daysBefore days',
+        body: '${credential.licenceNumber != null ? '${credential.licenceNumber} — ' : ''}'
+            '$label expires ${_formatDate(credential.expiryDate!)}',
+        scheduledDate: tz.TZDateTime.from(fireAt, tz.local),
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            _channelId,
+            _channelName,
+            channelDescription: _channelDesc,
+            importance: Importance.high,
+          ),
+          iOS: DarwinNotificationDetails(),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        payload: credential.id,
       );
     }
   }

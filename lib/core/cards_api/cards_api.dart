@@ -118,6 +118,17 @@ class CardsApi implements CardsDataSource {
     return licence;
   }
 
+  /// GET /cards-api?op=list_worker_credentials → { ok, credentials: [...] }
+  @override
+  Future<List<Map<String, dynamic>>> listWorkerCredentials() async {
+    final res = await _request(method: 'GET', op: 'list_worker_credentials');
+    final credentials = res['credentials'];
+    if (credentials is! List) {
+      throw const ServerFailure(500, 'missing credentials in response');
+    }
+    return credentials.cast<Map<String, dynamic>>();
+  }
+
   /// POST /cards-api?op=soft_delete_my_licence  body: { licence_id } → { ok }
   @override
   Future<void> softDeleteMyLicence(String licenceId) async {

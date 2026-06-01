@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 import '../../features/alerts/alerts.dart';
-import '../../features/licences/licences.dart';
 import '../theme/eq_colours.dart';
 import '../theme/eq_spacing.dart';
 import '../theme/eq_typography.dart';
@@ -18,13 +17,16 @@ class HomeShellScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Whenever the licence list resolves with new data, re-sync local
-    // expiry alerts. Cross-feature wiring lives at the shell layer; the
-    // licences feature itself stays unaware of the alerts feature.
-    ref.listen(licencesListNotifierProvider, (_, next) {
-      next.whenData((licences) {
-        unawaited(ref.read(alertsSchedulerProvider).syncAll(licences));
-      });
+    // Single listener on the combined provider — fires once whenever either
+    // licences or credentials settle, with both lists together. Prevents the
+    // two-listener pattern where each cancelAll wipes the other's scheduled
+    // notifications mid-loop.
+    ref.listen(expiryAlertListsProvider, (_, lists) {
+      if (lists == null) return;
+      unawaited(ref.read(alertsSchedulerProvider).syncAll(
+        lists.licences,
+        credentials: lists.credentials,
+      ));
     });
 
     return Scaffold(

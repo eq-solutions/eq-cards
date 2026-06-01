@@ -30,4 +30,8 @@ abstract interface class CardsDataSource {
 
   /// Inserts or updates the current user's profile; returns the saved row.
   Future<Map<String, dynamic>> upsertMyProfile(Map<String, dynamic> payload);
+
+  /// All worker-house credentials owned by the current user.
+  /// Returns an empty list on the direct transport (worker-house is gateway-only).
+  Future<List<Map<String, dynamic>>> listWorkerCredentials();
 }
