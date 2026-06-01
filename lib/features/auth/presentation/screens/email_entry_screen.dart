@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/routes.dart';
@@ -21,34 +22,53 @@ class EmailEntryScreen extends ConsumerStatefulWidget {
   ConsumerState<EmailEntryScreen> createState() => _EmailEntryScreenState();
 }
 
-class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
-  final _identifierController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
+class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _emailFormKey = GlobalKey<FormState>();
+  final _phoneFormKey = GlobalKey<FormState>();
   bool _googleLoading = false;
 
   @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    // Clear error when the user switches tabs.
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) {
+        ref.read(authFlowNotifierProvider.notifier).reset();
+      }
+    });
+  }
+
+  @override
   void dispose() {
-    _identifierController.dispose();
+    _tabController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-    final raw = _identifierController.text.trim();
-    final phone = normaliseAusMobile(raw);
-    final notifier = ref.read(authFlowNotifierProvider.notifier);
-    if (phone != null && isValidAusMobile(phone)) {
-      await notifier.sendPhoneOtp(phone);
-    } else {
-      await notifier.sendOtp(raw);
-    }
+  Future<void> _submitEmail() async {
+    if (!_emailFormKey.currentState!.validate()) return;
+    await ref
+        .read(authFlowNotifierProvider.notifier)
+        .sendOtp(_emailController.text.trim());
+  }
+
+  Future<void> _submitPhone() async {
+    if (!_phoneFormKey.currentState!.validate()) return;
+    final phone = normaliseAusMobile(_phoneController.text.trim())!;
+    await ref.read(authFlowNotifierProvider.notifier).sendPhoneOtp(phone);
   }
 
   Future<void> _signInWithGoogle() async {
     setState(() => _googleLoading = true);
     try {
       await ref.read(authRepositoryProvider).signInWithGoogle();
-      // On web this redirects the page — setState after is a no-op.
+      // On web this redirects — setState after is a no-op.
     } catch (_) {
       if (mounted) setState(() => _googleLoading = false);
     }
@@ -72,16 +92,21 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 480),
-            child: Padding(
-              padding: const EdgeInsets.all(EqSpacing.xl),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(
+                horizontal: EqSpacing.xl,
+                vertical: EqSpacing.xl,
+              ),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const SizedBox(height: EqSpacing.xl),
+
+                  // ── Brand ────────────────────────────────────────────────
                   Image.asset(
                     'assets/icon/launcher.png',
-                    width: 64,
-                    height: 64,
+                    width: 56,
+                    height: 56,
                     errorBuilder: (_, _, _) => const SizedBox.shrink(),
                   ),
                   const SizedBox(height: EqSpacing.lg),
@@ -91,24 +116,154 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
                       fontWeight: FontWeight.w700,
                       color: EqColours.deep,
                     ),
-                    textAlign: TextAlign.center,
                   ),
+                  const SizedBox(height: EqSpacing.xs),
+                  Text(
+                    'Use the email or mobile linked to your account.',
+                    style: EqTypography.bodyM.copyWith(color: EqColours.grey),
+                  ),
+
                   const SizedBox(height: EqSpacing.xl),
 
-                  // ── Google sign-in ──────────────────────────────────────
-                  _GoogleSignInButton(
-                    loading: _googleLoading,
-                    onTap: _googleLoading ? null : _signInWithGoogle,
+                  // ── Tab bar ──────────────────────────────────────────────
+                  Container(
+                    decoration: const BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(color: EqColours.border),
+                      ),
+                    ),
+                    child: TabBar(
+                      controller: _tabController,
+                      labelColor: EqColours.deep,
+                      unselectedLabelColor: EqColours.grey,
+                      labelStyle: EqTypography.bodyL.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                      unselectedLabelStyle: EqTypography.bodyL,
+                      indicatorColor: EqColours.sky,
+                      indicatorWeight: 2,
+                      dividerColor: Colors.transparent,
+                      tabs: const [
+                        Tab(text: 'Email'),
+                        Tab(text: 'Mobile'),
+                      ],
+                    ),
                   ),
 
-                  // ── Divider ─────────────────────────────────────────────
                   const SizedBox(height: EqSpacing.lg),
+
+                  // ── Tab content ──────────────────────────────────────────
+                  // Fixed height so the Google button doesn't jump when
+                  // validation errors appear — error is shown below the tabs.
+                  SizedBox(
+                    height: 120,
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        // Email tab
+                        Form(
+                          key: _emailFormKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              TextFormField(
+                                controller: _emailController,
+                                keyboardType: TextInputType.emailAddress,
+                                autocorrect: false,
+                                textInputAction: TextInputAction.done,
+                                onFieldSubmitted: (_) => _submitEmail(),
+                                decoration: const InputDecoration(
+                                  labelText: 'Email address',
+                                  hintText: 'you@example.com',
+                                ),
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty) {
+                                    return 'Enter your email address';
+                                  }
+                                  return validateEmail(v);
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Mobile tab
+                        Form(
+                          key: _phoneFormKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              TextFormField(
+                                controller: _phoneController,
+                                keyboardType: TextInputType.phone,
+                                autocorrect: false,
+                                textInputAction: TextInputAction.done,
+                                onFieldSubmitted: (_) => _submitPhone(),
+                                decoration: const InputDecoration(
+                                  labelText: 'Mobile number',
+                                  hintText: '0412 345 678',
+                                ),
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty) {
+                                    return 'Enter your mobile number';
+                                  }
+                                  final phone = normaliseAusMobile(v.trim());
+                                  if (phone == null ||
+                                      !isValidAusMobile(phone)) {
+                                    return 'Enter a valid Australian mobile number';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // ── Error ────────────────────────────────────────────────
+                  if (error != null) ...[
+                    const SizedBox(height: EqSpacing.sm),
+                    Text(
+                      error,
+                      style:
+                          EqTypography.label.copyWith(color: EqColours.error),
+                      textAlign: TextAlign.center,
+                    ),
+                  ] else
+                    const SizedBox(height: EqSpacing.sm),
+
+                  // ── Send code button ─────────────────────────────────────
+                  FilledButton(
+                    onPressed: isLoading
+                        ? null
+                        : () {
+                            if (_tabController.index == 0) {
+                              unawaited(_submitEmail());
+                            } else {
+                              unawaited(_submitPhone());
+                            }
+                          },
+                    style: FilledButton.styleFrom(
+                      backgroundColor: EqColours.sky,
+                      minimumSize: const Size.fromHeight(48),
+                    ),
+                    child: isLoading
+                        ? const _LoadingSpinner()
+                        : const Text('Send code'),
+                  ),
+
+                  const SizedBox(height: EqSpacing.xl),
+
+                  // ── Divider ──────────────────────────────────────────────
                   Row(
                     children: [
                       const Expanded(child: Divider()),
                       Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: EqSpacing.md,),
+                          horizontal: EqSpacing.md,
+                        ),
                         child: Text(
                           'or',
                           style: EqTypography.label
@@ -118,73 +273,46 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
                       const Expanded(child: Divider()),
                     ],
                   ),
+
                   const SizedBox(height: EqSpacing.lg),
 
-                  // ── Email or phone OTP ───────────────────────────────────
-                  Text(
-                    "Enter your email or mobile number and we'll send you a sign-in code.",
-                    style: EqTypography.bodyM.copyWith(color: EqColours.grey),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: EqSpacing.md),
-                  Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        TextFormField(
-                          controller: _identifierController,
-                          keyboardType: TextInputType.text,
-                          autocorrect: false,
-                          autofocus: false,
-                          textInputAction: TextInputAction.done,
-                          onFieldSubmitted: (_) => _submit(),
-                          decoration: const InputDecoration(
-                            labelText: 'Email or mobile number',
-                            hintText: 'you@example.com or 0412 345 678',
-                          ),
-                          validator: (v) {
-                            if (v == null || v.trim().isEmpty) {
-                              return 'Enter your email or mobile number';
-                            }
-                            final raw = v.trim();
-                            final phone = normaliseAusMobile(raw);
-                            if (phone != null && isValidAusMobile(phone)) {
-                              return null;
-                            }
-                            return validateEmail(raw);
-                          },
-                        ),
-                        if (error != null) ...[
-                          const SizedBox(height: EqSpacing.md),
-                          Text(
-                            error,
-                            style: EqTypography.label
-                                .copyWith(color: EqColours.error),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                        const SizedBox(height: EqSpacing.lg),
-                        FilledButton(
-                          onPressed: isLoading ? null : _submit,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: EqColours.sky,
-                            minimumSize: const Size.fromHeight(48),
-                          ),
-                          child: isLoading
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Text('Send code'),
-                        ),
-                      ],
+                  // ── Google sign-in ───────────────────────────────────────
+                  OutlinedButton(
+                    onPressed: (_googleLoading || isLoading)
+                        ? null
+                        : _signInWithGoogle,
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                      side: const BorderSide(color: EqColours.border),
+                      backgroundColor: EqColours.white,
+                      foregroundColor: EqColours.ink,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
+                    child: _googleLoading
+                        ? const _LoadingSpinner(color: EqColours.grey)
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SvgPicture.asset(
+                                'assets/icons/google_logo.svg',
+                                width: 20,
+                                height: 20,
+                              ),
+                              const SizedBox(width: EqSpacing.sm),
+                              Text(
+                                'Continue with Google',
+                                style: EqTypography.bodyL.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                  color: EqColours.ink,
+                                ),
+                              ),
+                            ],
+                          ),
                   ),
+
+                  const SizedBox(height: EqSpacing.xl),
                 ],
               ),
             ),
@@ -195,76 +323,14 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
   }
 }
 
-class _GoogleSignInButton extends StatelessWidget {
-  const _GoogleSignInButton({required this.loading, required this.onTap});
-
-  final bool loading;
-  final VoidCallback? onTap;
+class _LoadingSpinner extends StatelessWidget {
+  const _LoadingSpinner({this.color = Colors.white});
+  final Color color;
 
   @override
-  Widget build(BuildContext context) {
-    return OutlinedButton(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size.fromHeight(48),
-        side: const BorderSide(color: EqColours.border),
-        backgroundColor: EqColours.white,
-        foregroundColor: EqColours.ink,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
-      child: loading
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                color: EqColours.grey,
-                strokeWidth: 2,
-              ),
-            )
-          : Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _GoogleLogo(),
-                const SizedBox(width: EqSpacing.sm),
-                Text(
-                  'Continue with Google',
-                  style: EqTypography.bodyL.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: EqColours.ink,
-                  ),
-                ),
-              ],
-            ),
-    );
-  }
-}
-
-/// Google "G" logo — plain widget, no CustomPainter / WebGL surface.
-/// (The previous arc-based CustomPainter triggered "getParameter is not a
-/// function" on mobile browsers where CanvasKit's WebGL context initialises
-/// lazily and isn't ready by the time the first frame paints.)
-class _GoogleLogo extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 20,
-      height: 20,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-      ),
-      alignment: Alignment.center,
-      child: const Text(
-        'G',
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w700,
-          color: Color(0xFF4285F4),
-          height: 1,
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(color: color, strokeWidth: 2),
+      );
 }
