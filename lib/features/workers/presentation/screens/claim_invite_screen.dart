@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,16 +10,19 @@ import '../../../../core/theme/eq_typography.dart';
 import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_button.dart';
 import '../../data/admin_worker_repository.dart';
+import '../../data/worker_self_repository.dart';
 import '../providers/org_admin_provider.dart';
 
 /// Deep-link target for worker invite claims.
 ///
-/// URL: /claim?token=`uuid`
+/// URL: /claim?token=<uuid>
 ///
 /// Flow:
-///   - Signed in  → auto-calls eq_cards_claim_invite, shows result.
-///   - Signed out → shows a "create your account" prompt; after the worker
-///     signs in the claim resolves on the next visit to this URL.
+///   1. On load: fetch invite preview (org name, credential count).
+///   2. Not signed in → "You've been invited by [Org]" + sign-in button.
+///   3. Signed in + preview loaded → consent screen ("Activate my account").
+///   4. Signed in, tap activate → claim RPC → success → wallet.
+///   5. Token invalid/expired/claimed → error with clear message.
 class ClaimInviteScreen extends ConsumerStatefulWidget {
   const ClaimInviteScreen({super.key, required this.token});
 
@@ -32,33 +33,60 @@ class ClaimInviteScreen extends ConsumerStatefulWidget {
 }
 
 class _ClaimInviteScreenState extends ConsumerState<ClaimInviteScreen> {
-  _ClaimState _state = _ClaimState.idle;
+  _Phase _phase = _Phase.loading;
+  InvitePreview? _preview;
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    final isSignedIn =
-        Supabase.instance.client.auth.currentSession != null;
-    if (isSignedIn) unawaited(_claim());
+    _loadPreview();
   }
 
-  Future<void> _claim() async {
-    setState(() {
-      _state = _ClaimState.loading;
-      _errorMessage = null;
-    });
+  Future<void> _loadPreview() async {
+    setState(() => _phase = _Phase.loading);
+    try {
+      final preview = await ref
+          .read(workerSelfRepositoryProvider)
+          .previewInvite(widget.token);
+
+      if (!mounted) return;
+
+      if (preview == null) {
+        setState(() {
+          _phase = _Phase.error;
+          _errorMessage =
+              'This invite link is not valid, has already been used, or has expired.';
+        });
+        return;
+      }
+
+      _preview = preview;
+      final isSignedIn =
+          Supabase.instance.client.auth.currentSession != null;
+
+      setState(
+          () => _phase = isSignedIn ? _Phase.consent : _Phase.notSignedIn);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _phase = _Phase.error;
+        _errorMessage =
+            'Could not load invite. Check your connection and try again.';
+      });
+    }
+  }
+
+  Future<void> _activate() async {
+    setState(() => _phase = _Phase.activating);
     try {
       await ref
           .read(adminWorkerRepositoryProvider)
           .claimInvite(widget.token);
 
-      // Invalidate so the app picks up the newly linked worker record.
       ref.invalidate(orgAdminOrgIdProvider);
 
-      setState(() => _state = _ClaimState.success);
-
-      // Give the success screen a moment then send to home.
+      setState(() => _phase = _Phase.success);
       await Future<void>.delayed(const Duration(seconds: 2));
       if (mounted) context.go(Routes.licencesList);
     } catch (e) {
@@ -71,8 +99,9 @@ class _ClaimInviteScreenState extends ConsumerState<ClaimInviteScreen> {
           'This invite has expired. Ask your admin to send a new one.',
         _ => 'Something went wrong. Please try again or contact your admin.',
       };
+      if (!mounted) return;
       setState(() {
-        _state = _ClaimState.error;
+        _phase = _Phase.error;
         _errorMessage = msg;
       });
     }
@@ -80,24 +109,27 @@ class _ClaimInviteScreenState extends ConsumerState<ClaimInviteScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isSignedIn =
-        Supabase.instance.client.auth.currentSession != null;
-
     return Scaffold(
       appBar: const EqAppBar(title: 'Activate account'),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(EqSpacing.lg),
-          child: switch (_state) {
-            _ClaimState.idle when !isSignedIn => _NotSignedIn(
+          child: switch (_phase) {
+            _Phase.loading => const _Loading(message: 'Loading invite…'),
+            _Phase.notSignedIn => _NotSignedIn(
+                preview: _preview,
                 onSignIn: () => context.push(Routes.email),
               ),
-            _ClaimState.idle => const _Loading(),
-            _ClaimState.loading => const _Loading(),
-            _ClaimState.success => const _Success(),
-            _ClaimState.error => _Error(
+            _Phase.consent => _Consent(
+                preview: _preview!,
+                onActivate: _activate,
+              ),
+            _Phase.activating =>
+              const _Loading(message: 'Activating your account…'),
+            _Phase.success => const _Success(),
+            _Phase.error => _Error(
                 message: _errorMessage!,
-                onRetry: _claim,
+                onRetry: _loadPreview,
               ),
           },
         ),
@@ -106,27 +138,140 @@ class _ClaimInviteScreenState extends ConsumerState<ClaimInviteScreen> {
   }
 }
 
-enum _ClaimState { idle, loading, success, error }
+enum _Phase { loading, notSignedIn, consent, activating, success, error }
 
-// ── States ────────────────────────────────────────────────────────────────────
+// ── Loading ───────────────────────────────────────────────────────────────────
 
 class _Loading extends StatelessWidget {
-  const _Loading();
+  const _Loading({required this.message});
+
+  final String message;
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircularProgressIndicator(color: EqColours.sky),
-          SizedBox(height: EqSpacing.md),
-          Text('Activating your account…'),
+          const CircularProgressIndicator(color: EqColours.sky),
+          const SizedBox(height: EqSpacing.md),
+          Text(message),
         ],
       ),
     );
   }
 }
+
+// ── Not signed in ─────────────────────────────────────────────────────────────
+
+class _NotSignedIn extends StatelessWidget {
+  const _NotSignedIn({required this.preview, required this.onSignIn});
+
+  final InvitePreview? preview;
+  final VoidCallback onSignIn;
+
+  @override
+  Widget build(BuildContext context) {
+    final orgName = preview?.orgName ?? 'an organisation';
+    final count = preview?.credentialCount ?? 0;
+
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.badge_outlined, size: 72, color: EqColours.sky),
+          const SizedBox(height: EqSpacing.md),
+          Text("You've been invited", style: EqTypography.headingL),
+          const SizedBox(height: EqSpacing.sm),
+          Text(
+            '$orgName has pre-loaded your profile'
+            '${count > 0 ? ' and $count credential${count == 1 ? '' : 's'}' : ''}'
+            ' into your wallet.\nSign in to activate your account.',
+            style: EqTypography.bodyM.copyWith(color: EqColours.grey),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: EqSpacing.xl),
+          EqButton(
+            label: 'Sign in / Create account',
+            onPressed: onSignIn,
+            fullWidth: true,
+          ),
+          const SizedBox(height: EqSpacing.sm),
+          Text(
+            'After signing in, open this link again to activate.',
+            style: EqTypography.label,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Consent ───────────────────────────────────────────────────────────────────
+
+class _Consent extends StatelessWidget {
+  const _Consent({required this.preview, required this.onActivate});
+
+  final InvitePreview preview;
+  final VoidCallback onActivate;
+
+  @override
+  Widget build(BuildContext context) {
+    final count = preview.credentialCount;
+    final days = preview.daysUntilExpiry;
+
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.badge_outlined, size: 72, color: EqColours.sky),
+          const SizedBox(height: EqSpacing.md),
+          Text('Activate your account', style: EqTypography.headingL),
+          const SizedBox(height: EqSpacing.sm),
+          Text(
+            '${preview.orgName} has pre-loaded your profile'
+            '${count > 0 ? '\nand $count credential${count == 1 ? '' : 's'}' : ''}'
+            ' into your wallet.',
+            style: EqTypography.bodyM.copyWith(color: EqColours.grey),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: EqSpacing.xl),
+          Container(
+            padding: const EdgeInsets.all(EqSpacing.md),
+            decoration: BoxDecoration(
+              color: EqColours.ice,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: EqColours.border),
+            ),
+            child: Text(
+              'By activating, you agree to share your wallet with '
+              '${preview.orgName}. You can revoke access at any time '
+              'from Settings.',
+              style: EqTypography.label,
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: EqSpacing.xl),
+          EqButton(
+            label: 'Activate my account',
+            onPressed: onActivate,
+            fullWidth: true,
+          ),
+          if (days > 0) ...[
+            const SizedBox(height: EqSpacing.sm),
+            Text(
+              'Link expires in $days day${days == 1 ? '' : 's'}',
+              style: EqTypography.label.copyWith(color: EqColours.grey),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── Success ───────────────────────────────────────────────────────────────────
 
 class _Success extends StatelessWidget {
   const _Success();
@@ -153,44 +298,7 @@ class _Success extends StatelessWidget {
   }
 }
 
-class _NotSignedIn extends StatelessWidget {
-  const _NotSignedIn({required this.onSignIn});
-
-  final VoidCallback onSignIn;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.badge_outlined, size: 72, color: EqColours.sky),
-          const SizedBox(height: EqSpacing.md),
-          Text("You've been invited", style: EqTypography.headingL),
-          const SizedBox(height: EqSpacing.sm),
-          Text(
-            'Your profile and credentials are already loaded.\n'
-            'Sign in or create your account to access them.',
-            style: EqTypography.bodyM.copyWith(color: EqColours.grey),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: EqSpacing.xl),
-          EqButton(
-            label: 'Sign in / Create account',
-            onPressed: onSignIn,
-            fullWidth: true,
-          ),
-          const SizedBox(height: EqSpacing.sm),
-          Text(
-            'After signing in, open this link again to activate your account.',
-            style: EqTypography.label,
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-}
+// ── Error ─────────────────────────────────────────────────────────────────────
 
 class _Error extends StatelessWidget {
   const _Error({required this.message, required this.onRetry});
