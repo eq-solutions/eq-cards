@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/routes.dart';
@@ -11,7 +10,6 @@ import '../../../../core/theme/eq_spacing.dart';
 import '../../../../core/theme/eq_typography.dart';
 import '../../../../core/validators/input_validators.dart';
 import '../../data/aus_phone.dart';
-import '../../data/auth_repository.dart';
 import '../../domain/auth_flow_state.dart';
 import '../notifiers/auth_flow_notifier.dart';
 
@@ -29,7 +27,6 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
   final _phoneController = TextEditingController();
   final _emailFormKey = GlobalKey<FormState>();
   final _phoneFormKey = GlobalKey<FormState>();
-  bool _googleLoading = false;
 
   @override
   void initState() {
@@ -62,16 +59,6 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
     if (!_phoneFormKey.currentState!.validate()) return;
     final phone = normaliseAusMobile(_phoneController.text.trim())!;
     await ref.read(authFlowNotifierProvider.notifier).sendPhoneOtp(phone);
-  }
-
-  Future<void> _signInWithGoogle() async {
-    setState(() => _googleLoading = true);
-    try {
-      await ref.read(authRepositoryProvider).signInWithGoogle();
-      // On web this redirects — setState after is a no-op.
-    } catch (_) {
-      if (mounted) setState(() => _googleLoading = false);
-    }
   }
 
   @override
@@ -252,64 +239,6 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
                     child: isLoading
                         ? const _LoadingSpinner()
                         : const Text('Send code'),
-                  ),
-
-                  const SizedBox(height: EqSpacing.xl),
-
-                  // ── Divider ──────────────────────────────────────────────
-                  Row(
-                    children: [
-                      const Expanded(child: Divider()),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: EqSpacing.md,
-                        ),
-                        child: Text(
-                          'or',
-                          style: EqTypography.label
-                              .copyWith(color: EqColours.grey),
-                        ),
-                      ),
-                      const Expanded(child: Divider()),
-                    ],
-                  ),
-
-                  const SizedBox(height: EqSpacing.lg),
-
-                  // ── Google sign-in ───────────────────────────────────────
-                  OutlinedButton(
-                    onPressed: (_googleLoading || isLoading)
-                        ? null
-                        : _signInWithGoogle,
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(48),
-                      side: const BorderSide(color: EqColours.border),
-                      backgroundColor: EqColours.white,
-                      foregroundColor: EqColours.ink,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: _googleLoading
-                        ? const _LoadingSpinner(color: EqColours.grey)
-                        : Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              SvgPicture.asset(
-                                'assets/icons/google_logo.svg',
-                                width: 20,
-                                height: 20,
-                              ),
-                              const SizedBox(width: EqSpacing.sm),
-                              Text(
-                                'Continue with Google',
-                                style: EqTypography.bodyL.copyWith(
-                                  fontWeight: FontWeight.w500,
-                                  color: EqColours.ink,
-                                ),
-                              ),
-                            ],
-                          ),
                   ),
 
                   const SizedBox(height: EqSpacing.xl),
