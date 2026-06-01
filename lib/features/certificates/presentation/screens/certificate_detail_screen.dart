@@ -27,7 +27,7 @@ class CertificateDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncCerts = ref.watch(certificatesListNotifierProvider);
-    final allCerts = asyncCerts.valueOrNull ?? [];
+    final allCerts = asyncCerts.asData?.value ?? [];
     final idx = allCerts.indexWhere((c) => c.id == certificateId);
 
     return Scaffold(

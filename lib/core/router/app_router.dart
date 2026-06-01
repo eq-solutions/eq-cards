@@ -17,6 +17,11 @@ import '../../features/onboarding/presentation/screens/onboarding_done_screen.da
 import '../../features/onboarding/presentation/screens/onboarding_welcome_screen.dart';
 import '../../features/profile/profile.dart';
 import '../../features/settings/settings.dart';
+import '../../features/workers/data/models/worker.dart';
+import '../../features/workers/presentation/screens/admin_members_screen.dart';
+import '../../features/workers/presentation/screens/admin_worker_detail_screen.dart';
+import '../../features/workers/presentation/screens/admin_worker_form_screen.dart';
+import '../../features/workers/presentation/screens/claim_invite_screen.dart';
 import '../shell/home_shell_screen.dart';
 import '../theme/eq_colours.dart';
 import '../theme/eq_spacing.dart';
@@ -100,6 +105,46 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: Routes.termsOfUse,
         builder: (context, state) => LegalDocumentScreen.terms(),
+      ),
+      // Admin — org admin only; entered from Settings.
+      GoRoute(
+        path: Routes.adminMembers,
+        builder: (context, state) => const AdminMembersScreen(),
+        routes: [
+          GoRoute(
+            path: 'new',
+            builder: (context, state) {
+              final orgId = state.extra! as String;
+              return AdminWorkerFormScreen(orgId: orgId);
+            },
+          ),
+          GoRoute(
+            path: ':workerId',
+            builder: (context, state) {
+              final workerId = state.pathParameters['workerId']!;
+              final orgId = state.extra! as String;
+              return AdminWorkerDetailScreen(workerId: workerId, orgId: orgId);
+            },
+            routes: [
+              GoRoute(
+                path: 'edit',
+                builder: (context, state) {
+                  final (orgId, worker) = state.extra! as (String, Worker);
+                  return AdminWorkerFormScreen(orgId: orgId, worker: worker);
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+      // Invite claim — exempt from auth redirect; the screen handles
+      // unauthenticated workers itself and prompts them to sign in first.
+      GoRoute(
+        path: Routes.claim,
+        builder: (context, state) {
+          final token = state.uri.queryParameters['token'] ?? '';
+          return ClaimInviteScreen(token: token);
+        },
       ),
       // D2: public licence-verification page — no auth required.
       // Reached by scanning a QR code from a tradie's EQ Cards wallet.
@@ -240,6 +285,10 @@ String? _redirect(
   final isLegalRoute = loc.startsWith('/legal/');
   // /share is a public licence-verification page — no sign-in needed.
   final isShareRoute = loc.startsWith('/share');
+  // /claim handles its own auth state — unauthenticated workers see a
+  // "sign in first" prompt rather than being bounced to the auth flow and
+  // losing the token.
+  final isClaimRoute = loc.startsWith('/claim');
 
   // Provisioning gate: authenticated but tenant_id absent from JWT means the
   // user bypassed the invite flow. Redirect to the not-provisioned screen so
@@ -289,7 +338,7 @@ String? _redirect(
   if (isSignedIn && isAuthRoute && loc != Routes.handoff && !isPinRoute) {
     return Routes.licencesList;
   }
-  if (!isSignedIn && !isAuthRoute && !isLegalRoute && !isShareRoute) {
+  if (!isSignedIn && !isAuthRoute && !isLegalRoute && !isShareRoute && !isClaimRoute) {
     return signedOutDestination;
   }
 

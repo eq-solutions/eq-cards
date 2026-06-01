@@ -25,6 +25,10 @@ class _FakeCardsDataSource implements CardsDataSource {
   @override
   Future<Map<String, dynamic>> upsertMyProfile(Map<String, dynamic> payload) =>
       throw UnimplementedError();
+
+  @override
+  Future<List<Map<String, dynamic>>> listWorkerCredentials() =>
+      throw UnimplementedError();
 }
 
 void main() {

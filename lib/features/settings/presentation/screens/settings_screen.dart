@@ -16,6 +16,7 @@ import '../../../auth/auth.dart';
 import '../../../licences/data/models/licence.dart';
 import '../../../licences/presentation/notifiers/licences_list_notifier.dart';
 import '../../../profile/presentation/notifiers/profile_notifier.dart';
+import '../../../workers/presentation/providers/org_admin_provider.dart';
 import '../helpers/data_export.dart';
 import '../notifiers/biometric_settings_notifier.dart';
 import '../notifiers/privacy_settings_notifier.dart';
@@ -44,6 +45,33 @@ class SettingsScreen extends ConsumerWidget {
                     const SizedBox(height: EqSpacing.md),
                   ],
                 ),
+                orElse: () => const SizedBox.shrink(),
+              ),
+          // Org admin entry — only shown when the signed-in user is an admin.
+          ref.watch(orgAdminOrgIdProvider).maybeWhen(
+                data: (orgId) => orgId == null
+                    ? const SizedBox.shrink()
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: EqSpacing.sm),
+                            child: Text('Admin', style: EqTypography.label),
+                          ),
+                          const SizedBox(height: EqSpacing.sm),
+                          EqCard(
+                            padding: EdgeInsets.zero,
+                            child: _LegalRow(
+                              icon: Icons.group_outlined,
+                              label: 'Team',
+                              onTap: () =>
+                                  context.push(Routes.adminMembers),
+                            ),
+                          ),
+                          const SizedBox(height: EqSpacing.lg),
+                        ],
+                      ),
                 orElse: () => const SizedBox.shrink(),
               ),
           EqCard(

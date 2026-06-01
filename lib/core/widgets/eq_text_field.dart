@@ -15,6 +15,8 @@ class EqTextField extends StatelessWidget {
     this.onChanged,
     this.onSubmitted,
     this.textInputAction,
+    this.textCapitalization = TextCapitalization.none,
+    this.onEditingComplete,
     this.autofocus = false,
     this.validator,
   });
@@ -28,6 +30,8 @@ class EqTextField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
   final TextInputAction? textInputAction;
+  final TextCapitalization textCapitalization;
+  final VoidCallback? onEditingComplete;
   final bool autofocus;
 
   /// Field-level validator. When non-null, the widget renders as a
@@ -69,7 +73,9 @@ class EqTextField extends StatelessWidget {
         obscureText: obscureText,
         onChanged: onChanged,
         onFieldSubmitted: onSubmitted,
+        onEditingComplete: onEditingComplete,
         textInputAction: textInputAction,
+        textCapitalization: textCapitalization,
         autofocus: autofocus,
         style: EqTypography.bodyL,
         autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -83,7 +89,9 @@ class EqTextField extends StatelessWidget {
       obscureText: obscureText,
       onChanged: onChanged,
       onSubmitted: onSubmitted,
+      onEditingComplete: onEditingComplete,
       textInputAction: textInputAction,
+      textCapitalization: textCapitalization,
       autofocus: autofocus,
       style: EqTypography.bodyL,
       decoration: _decoration(),

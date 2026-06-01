@@ -35,7 +35,7 @@ class LicenceDetailScreen extends ConsumerWidget {
     final asyncLicence = ref.watch(licenceDetailProvider(licenceId));
     final asyncTypes = ref.watch(licenceTypesProvider);
     final allLicences =
-        ref.watch(licencesListNotifierProvider).valueOrNull ?? [];
+        ref.watch(licencesListNotifierProvider).asData?.value ?? [];
     final idx = allLicences.indexWhere((l) => l.id == licenceId);
 
     return Scaffold(
