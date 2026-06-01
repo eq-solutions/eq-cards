@@ -23,7 +23,7 @@ class EqAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool withBranding;
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => const Size.fromHeight(64);
 
   @override
   Widget build(BuildContext context) {
@@ -67,8 +67,8 @@ class _BrandedTitle extends StatelessWidget {
         // adaptive icons use as the foreground layer.
         Image.asset(
           'assets/icon/launcher_foreground.png',
-          width: 36,
-          height: 36,
+          width: 52,
+          height: 52,
           fit: BoxFit.contain,
           errorBuilder: (_, _, _) => const _BrandedFallback(),
         ),
