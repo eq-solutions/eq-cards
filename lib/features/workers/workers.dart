@@ -1,9 +1,9 @@
 export 'data/admin_worker_repository.dart'
     show
         AdminWorkerRepository,
-        adminWorkerRepositoryProvider,
-        adminWorkersListProvider,
         adminWorkerCredentialsProvider,
-        adminWorkerInvitesProvider;
+        adminWorkerInvitesProvider,
+        adminWorkerRepositoryProvider,
+        adminWorkersListProvider;
 export 'data/models/worker.dart';
 export 'data/models/worker_invite.dart';

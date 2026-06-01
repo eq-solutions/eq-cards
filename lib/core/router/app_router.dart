@@ -114,7 +114,7 @@ GoRouter appRouter(Ref ref) {
           GoRoute(
             path: 'new',
             builder: (context, state) {
-              final orgId = state.extra as String;
+              final orgId = state.extra! as String;
               return AdminWorkerFormScreen(orgId: orgId);
             },
           ),
@@ -122,14 +122,14 @@ GoRouter appRouter(Ref ref) {
             path: ':workerId',
             builder: (context, state) {
               final workerId = state.pathParameters['workerId']!;
-              final orgId = state.extra as String;
+              final orgId = state.extra! as String;
               return AdminWorkerDetailScreen(workerId: workerId, orgId: orgId);
             },
             routes: [
               GoRoute(
                 path: 'edit',
                 builder: (context, state) {
-                  final (orgId, worker) = state.extra as (String, Worker);
+                  final (orgId, worker) = state.extra! as (String, Worker);
                   return AdminWorkerFormScreen(orgId: orgId, worker: worker);
                 },
               ),

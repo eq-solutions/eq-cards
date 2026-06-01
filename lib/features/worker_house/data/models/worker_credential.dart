@@ -7,8 +7,8 @@ part 'worker_credential.g.dart';
 
 /// Mirrors public.worker_credentials on eq-canonical.
 ///
-/// Credentials are tied to a [Worker] record (not directly to auth.uid()).
-/// Admin-entered via [AdminWorkerRepository]; readable by the worker after
+/// Credentials are tied to a Worker record (not directly to auth.uid()).
+/// Admin-entered via AdminWorkerRepository; readable by the worker after
 /// they claim their invite.
 @freezed
 abstract class WorkerCredential with _$WorkerCredential {

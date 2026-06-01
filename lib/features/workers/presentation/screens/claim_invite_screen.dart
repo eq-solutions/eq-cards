@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,7 +16,7 @@ import '../providers/org_admin_provider.dart';
 
 /// Deep-link target for worker invite claims.
 ///
-/// URL: /claim?token=<uuid>
+/// URL: /claim?token=`uuid`
 ///
 /// Flow:
 ///   - Signed in  → auto-calls eq_cards_claim_invite, shows result.
@@ -38,7 +40,7 @@ class _ClaimInviteScreenState extends ConsumerState<ClaimInviteScreen> {
     super.initState();
     final isSignedIn =
         Supabase.instance.client.auth.currentSession != null;
-    if (isSignedIn) _claim();
+    if (isSignedIn) unawaited(_claim());
   }
 
   Future<void> _claim() async {

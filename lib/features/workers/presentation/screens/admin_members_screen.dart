@@ -9,7 +9,6 @@ import '../../../../core/theme/eq_typography.dart';
 import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_card.dart';
 import '../../data/admin_worker_repository.dart';
-import '../../data/models/worker.dart';
 import '../providers/org_admin_provider.dart';
 
 class AdminMembersScreen extends ConsumerWidget {
@@ -27,7 +26,7 @@ class AdminMembersScreen extends ConsumerWidget {
         ),
         body: Center(child: CircularProgressIndicator(color: EqColours.sky)),
       ),
-      error: (_, __) => const Scaffold(
+      error: (e, s) => const Scaffold(
         appBar: PreferredSize(
           preferredSize: Size.fromHeight(kToolbarHeight),
           child: EqAppBar(title: 'Team'),
@@ -128,7 +127,7 @@ class _MemberList extends ConsumerWidget {
             child: ListView.separated(
               padding: const EdgeInsets.all(EqSpacing.md),
               itemCount: workers.length,
-              separatorBuilder: (_, __) =>
+              separatorBuilder: (_, i) =>
                   const SizedBox(height: EqSpacing.sm),
               itemBuilder: (_, i) => _WorkerTile(
                 worker: workers[i],

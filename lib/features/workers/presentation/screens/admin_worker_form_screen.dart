@@ -10,13 +10,12 @@ import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_button.dart';
 import '../../../../core/widgets/eq_text_field.dart';
 import '../../data/admin_worker_repository.dart';
-import '../../data/models/worker.dart';
 import '../providers/org_admin_provider.dart';
 
 /// Create or edit a worker profile.
 ///
 /// Pass [worker] to edit an existing record; omit (or null) to create.
-/// [orgId] is always required and comes via GoRouter's [extra] field.
+/// [orgId] is always required and comes via GoRouter's extra field.
 class AdminWorkerFormScreen extends ConsumerStatefulWidget {
   const AdminWorkerFormScreen({super.key, this.worker, required this.orgId});
 

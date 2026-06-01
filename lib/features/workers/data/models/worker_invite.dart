@@ -5,7 +5,7 @@ part 'worker_invite.g.dart';
 
 /// Mirrors public.worker_invites on eq-canonical.
 ///
-/// [workerId] references a pre-created [Worker] record. When null the invite
+/// [workerId] references a pre-created Worker record. When null the invite
 /// carries a JSONB profile snapshot (legacy path — not used by the admin UI).
 /// [claimedAt] is null until the worker authenticates and calls claim_invite.
 @freezed

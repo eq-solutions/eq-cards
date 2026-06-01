@@ -12,10 +12,8 @@ import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_button.dart';
 import '../../../../core/widgets/eq_card.dart';
 import '../../../../core/widgets/eq_text_field.dart';
-import '../../data/admin_worker_repository.dart';
-import '../../data/models/worker.dart';
-import '../../data/models/worker_invite.dart';
 import '../../../worker_house/data/models/worker_credential.dart';
+import '../../data/admin_worker_repository.dart';
 
 class AdminWorkerDetailScreen extends ConsumerWidget {
   const AdminWorkerDetailScreen({
@@ -131,7 +129,7 @@ class AdminWorkerDetailScreen extends ConsumerWidget {
                   child: CircularProgressIndicator(color: EqColours.sky),
                 ),
               ),
-              error: (_, __) => Text(
+              error: (e, s) => Text(
                 'Could not load credentials.',
                 style: EqTypography.bodyM.copyWith(color: EqColours.grey),
               ),
@@ -302,7 +300,7 @@ class _ActiveInviteCardState extends ConsumerState<_ActiveInviteCard> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Revoke invite?'),
-        content: const Text('The worker won\'t be able to use this link. '
+        content: const Text("The worker won't be able to use this link. "
             'You can generate a new one.'),
         actions: [
           TextButton(
@@ -486,10 +484,11 @@ class _AddCredentialSheetState extends ConsumerState<_AddCredentialSheet> {
   DateTime? _expiryDate;
   bool _saving = false;
 
-  final _credentialTypes = workerCredentialTypeLabels.entries
-      .where((e) => e.key != 'other')
-      .toList()
-    ..sort((a, b) => a.value.compareTo(b.value));
+  final List<MapEntry<String, String>> _credentialTypes =
+      workerCredentialTypeLabels.entries
+          .where((e) => e.key != 'other')
+          .toList()
+        ..sort((a, b) => a.value.compareTo(b.value));
 
   @override
   void dispose() {
@@ -566,7 +565,7 @@ class _AddCredentialSheetState extends ConsumerState<_AddCredentialSheet> {
             Text('Add credential', style: EqTypography.headingM),
             const SizedBox(height: EqSpacing.md),
             DropdownButtonFormField<String>(
-              value: _selectedType,
+              initialValue: _selectedType,
               decoration: const InputDecoration(
                 labelText: 'Credential type',
                 border: OutlineInputBorder(),
