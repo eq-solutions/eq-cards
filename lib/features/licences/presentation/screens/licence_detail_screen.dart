@@ -18,6 +18,7 @@ import '../../../../core/utils/clipboard_utils.dart';
 import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_button.dart';
 import '../../../../core/widgets/eq_card.dart';
+import '../../../../core/widgets/item_nav_bar.dart';
 import '../../data/licence_repository.dart';
 import '../../data/models/licence.dart';
 import '../notifiers/licence_types_provider.dart';
@@ -33,6 +34,9 @@ class LicenceDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncLicence = ref.watch(licenceDetailProvider(licenceId));
     final asyncTypes = ref.watch(licenceTypesProvider);
+    final allLicences =
+        ref.watch(licencesListNotifierProvider).valueOrNull ?? [];
+    final idx = allLicences.indexWhere((l) => l.id == licenceId);
 
     return Scaffold(
       appBar: EqAppBar(
@@ -52,6 +56,22 @@ class LicenceDetailScreen extends ConsumerWidget {
           ),
         ],
       ),
+      bottomNavigationBar: allLicences.length > 1
+          ? ItemNavBar(
+              current: idx == -1 ? 1 : idx + 1,
+              total: allLicences.length,
+              onPrev: idx > 0
+                  ? () => context.go(
+                        Routes.licenceDetailFor(allLicences[idx - 1].id!),
+                      )
+                  : null,
+              onNext: idx != -1 && idx < allLicences.length - 1
+                  ? () => context.go(
+                        Routes.licenceDetailFor(allLicences[idx + 1].id!),
+                      )
+                  : null,
+            )
+          : null,
       body: asyncLicence.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text(userMessageForError(e))),
