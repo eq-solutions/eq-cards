@@ -11,8 +11,16 @@ class AuthFlowSendingOtp extends AuthFlowState {
 }
 
 class AuthFlowAwaitingOtp extends AuthFlowState {
-  const AuthFlowAwaitingOtp(this.email);
-  final String email;
+  const AuthFlowAwaitingOtp.email(this.email) : phone = null;
+  const AuthFlowAwaitingOtp.phone(this.phone) : email = null;
+
+  final String? email;
+  final String? phone;
+
+  bool get isPhone => phone != null;
+
+  /// The identifier shown to the user in the OTP confirmation copy.
+  String get displayTarget => email ?? phone!;
 }
 
 class AuthFlowVerifying extends AuthFlowState {

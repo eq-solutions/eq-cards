@@ -9,6 +9,7 @@ import '../../features/auth/auth.dart';
 // build pulls in the dart:html implementation, the VM (test) build the stub.
 import '../../features/auth/presentation/screens/handoff_platform_io.dart'
     if (dart.library.html) '../../features/auth/presentation/screens/handoff_platform_web.dart';
+import '../../features/auth/presentation/screens/not_provisioned_screen.dart';
 import '../../features/certificates/certificates.dart';
 import '../../features/legal/presentation/screens/legal_document_screen.dart';
 import '../../features/licences/licences.dart';
@@ -60,6 +61,11 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: Routes.otp,
         builder: (context, state) => const OtpScreen(),
+      ),
+      // Authenticated but unprovisioned — user signed in without an invite link.
+      GoRoute(
+        path: Routes.notProvisioned,
+        builder: (context, state) => const NotProvisionedScreen(),
       ),
       // PIN auth — gates the app on every cold start once a PIN is set.
       GoRoute(
@@ -234,6 +240,20 @@ String? _redirect(
   final isLegalRoute = loc.startsWith('/legal/');
   // /share is a public licence-verification page — no sign-in needed.
   final isShareRoute = loc.startsWith('/share');
+
+  // Provisioning gate: authenticated but tenant_id absent from JWT means the
+  // user bypassed the invite flow. Redirect to the not-provisioned screen so
+  // they get a clear message rather than silent 401s on every RPC call.
+  // The notProvisioned route itself is exempt to avoid an infinite redirect.
+  if (isSignedIn && loc != Routes.notProvisioned) {
+    final tenantId = session.user.appMetadata['tenant_id'];
+    if (tenantId == null) return Routes.notProvisioned;
+  }
+  // Signed-out users on the notProvisioned route go back to sign-in.
+  if (!isSignedIn && loc == Routes.notProvisioned) {
+    final inShellIframeEarly = kIsWeb && HandoffPlatform.isInIframe();
+    return inShellIframeEarly ? Routes.handoff : Routes.email;
+  }
 
   // Inside the Shell iframe, a missing/expired session must re-run the silent
   // handoff (postMessage re-auth) — NOT bounce to email OTP. Shell-minted JWTs

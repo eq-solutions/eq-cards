@@ -129,7 +129,7 @@ class _Populated extends StatelessWidget {
                 const Divider(height: 1),
                 ProfileFieldRow(label: 'Date of birth', value: dob),
                 const Divider(height: 1),
-                ProfileFieldRow(label: 'Mobile', value: profile.mobile),
+                ProfileFieldRow(label: 'Mobile', value: profile.mobile, isPhone: true),
                 const Divider(height: 1),
                 ProfileFieldRow(label: 'Email', value: profile.email),
                 const Divider(height: 1),
