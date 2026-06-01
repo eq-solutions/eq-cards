@@ -53,6 +53,18 @@
        was being blocked by ad/privacy tools causing "Cropper is not a constructor". -->
   <link rel="stylesheet" href="cropper.min.css">
   <script src="cropper.min.js"></script>
+  <script>
+    // Ensure Cropper is globally accessible. The UMD bundle should set
+    // window.Cropper via the global-assignment branch, but in rare environments
+    // (some browser extensions, strict CSP test harnesses) the binding can be
+    // lost. This guard surfaces a clear diagnostic instead of the cryptic
+    // "v.G.Cropper is not a constructor" minified error.
+    if (typeof window.Cropper !== 'function') {
+      console.error('[EQ Cards] Cropper.js did not expose window.Cropper ' +
+        '(got ' + typeof window.Cropper + '). ' +
+        'Licence photo cropping will be unavailable.');
+    }
+  </script>
 
   <!--
     Service-worker kill-switch.

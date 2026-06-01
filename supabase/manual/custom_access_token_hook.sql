@@ -57,7 +57,7 @@ begin
   select u.tenant_id
     into v_tenant_id
   from shell_control.users u
-  where u.user_id = (event->>'user_id')::uuid;
+  where u.id = (event->>'user_id')::uuid;
 
   v_claims := coalesce(event->'claims', '{}'::jsonb);
 

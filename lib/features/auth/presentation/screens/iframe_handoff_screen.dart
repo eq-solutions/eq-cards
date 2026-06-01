@@ -69,7 +69,13 @@ class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
 
   /// Calls setSession with [token], navigates to licences on success.
   /// Returns true on success, false on failure (error state already set).
-  Future<bool> _applyToken(String token) async {
+  ///
+  /// If the token is expired, gotrue 2.x falls back to calling
+  /// refreshSession(token) — but a shell JWT is not a Supabase refresh token,
+  /// so that call fails with validation_failed / refresh_token_not_found.
+  /// When we're in an iframe we can recover by requesting a fresh JWT via
+  /// postMessage before giving up.
+  Future<bool> _applyToken(String token, {bool retried = false}) async {
     try {
       await Supabase.instance.client.auth.signOut(scope: SignOutScope.local);
       await Supabase.instance.client.auth.setSession(
@@ -79,6 +85,27 @@ class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
       HandoffPlatform.replaceHashWithCleanPath();
       if (mounted) context.go(Routes.licencesList);
       return true;
+    } on AuthException catch (e) {
+      // If the token was stale (validation_failed / refresh_token_not_found)
+      // and we haven't retried yet, ask the shell for a fresh JWT and retry
+      // once. This covers the case where the #sh= hash token expired before
+      // the app initialised (e.g. slow load, app backgrounded).
+      final isTokenStale = e.code == 'validation_failed' ||
+          e.code == 'refresh_token_not_found';
+      if (isTokenStale && !retried && kIsWeb && HandoffPlatform.isInIframe()) {
+        final fresh = await HandoffPlatform.requestShellToken();
+        if (fresh != null && fresh.isNotEmpty) {
+          return _applyToken(fresh, retried: true);
+        }
+      }
+      debugPrint('IframeHandoffScreen: setSession failed: $e');
+      unawaited(Sentry.captureException(e, stackTrace: StackTrace.current));
+      setState(
+        () => _error = HandoffPlatform.isInIframe()
+            ? 'Sign-in failed. Reload EQ Cards from your portal at core.eq.solutions.'
+            : 'Sign-in failed. Sign out and back in at your tenant shell, then retry.',
+      );
+      return false;
     } catch (e, stack) {
       debugPrint('IframeHandoffScreen: setSession failed: $e');
       unawaited(Sentry.captureException(e, stackTrace: stack));

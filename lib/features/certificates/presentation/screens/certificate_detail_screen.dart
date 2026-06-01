@@ -14,6 +14,7 @@ import '../../../../core/theme/eq_typography.dart';
 import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_button.dart';
 import '../../../../core/widgets/eq_card.dart';
+import '../../../../core/widgets/item_nav_bar.dart';
 import '../../../licences/presentation/widgets/expiry_badge.dart';
 import '../../data/models/certificate.dart';
 import '../notifiers/certificates_list_notifier.dart';
@@ -26,6 +27,8 @@ class CertificateDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncCerts = ref.watch(certificatesListNotifierProvider);
+    final allCerts = asyncCerts.valueOrNull ?? [];
+    final idx = allCerts.indexWhere((c) => c.id == certificateId);
 
     return Scaffold(
       appBar: EqAppBar(
@@ -39,6 +42,22 @@ class CertificateDetailScreen extends ConsumerWidget {
           ),
         ],
       ),
+      bottomNavigationBar: allCerts.length > 1
+          ? ItemNavBar(
+              current: idx == -1 ? 1 : idx + 1,
+              total: allCerts.length,
+              onPrev: idx > 0
+                  ? () => context.go(
+                        Routes.certificateDetailFor(allCerts[idx - 1].id!),
+                      )
+                  : null,
+              onNext: idx != -1 && idx < allCerts.length - 1
+                  ? () => context.go(
+                        Routes.certificateDetailFor(allCerts[idx + 1].id!),
+                      )
+                  : null,
+            )
+          : null,
       body: asyncCerts.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text(userMessageForError(e))),
