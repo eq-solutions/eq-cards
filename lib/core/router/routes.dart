@@ -50,4 +50,16 @@ abstract class Routes {
 
   static String certificateDetailFor(String id) => '/certificates/$id';
   static String certificateEditFor(String id) => '/certificates/$id/edit';
+
+  // Admin — org admin only; entered from Settings, outside the shell.
+  static const adminMembers = '/admin/members';
+  static const adminMemberNew = '/admin/members/new';
+  static const adminMemberDetail = '/admin/members/:workerId';
+  static const adminMemberEdit = '/admin/members/:workerId/edit';
+
+  static String adminMemberDetailFor(String id) => '/admin/members/$id';
+  static String adminMemberEditFor(String id) => '/admin/members/$id/edit';
+
+  // Claim — deep-link target for workers claiming an invite.
+  static const claim = '/claim';
 }
