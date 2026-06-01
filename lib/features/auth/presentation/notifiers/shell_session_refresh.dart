@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'
-    show AuthChangeEvent, AuthState;
+    show AuthChangeEvent;
 
 import '../../../../core/supabase/supabase_client_provider.dart';
 import '../screens/handoff_platform_io.dart'

@@ -1,4 +1,3 @@
-import 'package:meta/meta.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -163,7 +162,6 @@ class AdminWorkerRepository {
 
   // ── Payload builders ─────────────────────────────────────────────────────
 
-  @visibleForTesting
   static Map<String, dynamic> workerToPayload(Worker w) => {
     if (w.id.isNotEmpty) 'id': w.id,
     'first_name': w.firstName,
@@ -184,7 +182,6 @@ class AdminWorkerRepository {
       'right_to_work_expiry': EqDates.iso(w.rightToWorkExpiry!),
   };
 
-  @visibleForTesting
   static Map<String, dynamic> credentialToPayload(WorkerCredential c) => {
     if (c.id != null) 'id': c.id,
     'credential_type': c.credentialType,
