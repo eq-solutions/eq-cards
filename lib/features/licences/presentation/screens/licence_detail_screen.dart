@@ -15,6 +15,7 @@ import '../../../../core/theme/eq_colours.dart';
 import '../../../../core/theme/eq_spacing.dart';
 import '../../../../core/theme/eq_typography.dart';
 import '../../../../core/utils/clipboard_utils.dart';
+import '../../../../core/utils/image_download.dart';
 import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_button.dart';
 import '../../../../core/widgets/eq_card.dart';
@@ -48,6 +49,13 @@ class LicenceDetailScreen extends ConsumerWidget {
               asyncLicence.whenData((l) => _showShareSheet(context, l));
             },
             tooltip: 'Share via QR',
+          ),
+          IconButton(
+            icon: const Icon(Icons.download_outlined),
+            onPressed: () {
+              asyncLicence.whenData((l) => _handleDownloadPhotos(context, l));
+            },
+            tooltip: 'Download photos',
           ),
           IconButton(
             icon: const Icon(Icons.edit_outlined),
@@ -143,6 +151,113 @@ class LicenceDetailScreen extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// Downloads one of the licence's photos to the device. With both a front
+  /// and back photo present, asks the user which to save; with one, saves it
+  /// straight away; with none, says so.
+  Future<void> _handleDownloadPhotos(
+    BuildContext context,
+    Licence licence,
+  ) async {
+    final urls = <String, String>{
+      if (licence.photoFrontSignedUrl != null)
+        'front': licence.photoFrontSignedUrl!,
+      if (licence.photoBackSignedUrl != null)
+        'back': licence.photoBackSignedUrl!,
+    };
+
+    if (urls.isEmpty) {
+      _showDownloadSnack(context, 'This licence has no photos to download.');
+      return;
+    }
+
+    String slot;
+    if (urls.length == 1) {
+      slot = urls.keys.first;
+    } else {
+      final picked = await _pickPhotoToDownload(context);
+      if (picked == null || !context.mounted) return;
+      slot = picked;
+    }
+
+    final filename = photoDownloadFilename(
+      licenceType: licence.licenceType,
+      licenceNumber: licence.licenceNumber,
+      slot: slot,
+    );
+    _showDownloadSnack(context, 'Downloading $filename…');
+    try {
+      await downloadImageFromUrl(url: urls[slot]!, filename: filename);
+      unawaited(
+        AnalyticsService.track('licence_photo_downloaded', {
+          'licence_id': licence.id ?? '',
+          'slot': slot,
+        }),
+      );
+      if (context.mounted) _showDownloadSnack(context, 'Saved $filename');
+    } catch (_) {
+      if (context.mounted) {
+        _showDownloadSnack(
+          context,
+          "Couldn't download the photo. The share link may have expired — "
+          'reopen the licence and try again.',
+        );
+      }
+    }
+  }
+
+  /// Bottom sheet asking which photo to save when both sides are present.
+  /// Returns `'front'`, `'back'`, or `null` if dismissed.
+  Future<String?> _pickPhotoToDownload(BuildContext context) {
+    return showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: EqColours.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                EqSpacing.lg,
+                EqSpacing.lg,
+                EqSpacing.lg,
+                EqSpacing.sm,
+              ),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Download photo', style: EqTypography.headingM),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.image_outlined),
+              title: const Text('Front'),
+              onTap: () => Navigator.of(sheetContext).pop('front'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.flip_to_back_outlined),
+              title: const Text('Back'),
+              onTap: () => Navigator.of(sheetContext).pop('back'),
+            ),
+            const SizedBox(height: EqSpacing.sm),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDownloadSnack(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(milliseconds: 1800),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: EqColours.ink,
       ),
     );
   }
