@@ -6,6 +6,24 @@ All notable changes to EQ Cards are documented here. Format follows
 
 ## [Unreleased]
 
+### 2026-06-04 — Download licence photos as image files
+
+- **New download action on the licence detail screen.** A download icon in the
+  app bar (beside QR share) saves a licence's photo to the device. One photo
+  saves immediately; with both front and back present a bottom sheet asks which
+  to save; with none it says so. Files are named descriptively, e.g.
+  `white-card-12345-front.jpg`.
+- **Why a fetch-then-blob, not a plain link.** Licence photos live behind
+  cross-origin, short-lived Supabase signed URLs, so an `<a download>` pointing
+  at the URL is ignored by the browser. New `core/utils/image_download.dart`
+  fetches the bytes with the cross-platform `http` client, then hands them to a
+  web-only save step (`image_download_web.dart`, `dart:html` blob + anchor)
+  behind the same conditional-import pattern as the rest of the app — the IO
+  stub keeps `flutter test` (VM target) compiling. On a failed fetch (e.g. the
+  signed URL expired) the user is told to reopen the licence and retry.
+- Fires a `licence_photo_downloaded` analytics event. Pure filename builder is
+  unit-tested.
+
 ### 2026-05-30 — Repo dead-weight audit + cleanup
 
 Audited the repo for unused code, dependencies, and stale artifacts. Removed 8 files;
