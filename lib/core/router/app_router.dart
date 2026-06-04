@@ -27,6 +27,7 @@ import '../shell/home_shell_screen.dart';
 import '../theme/eq_colours.dart';
 import '../theme/eq_spacing.dart';
 import '../theme/eq_typography.dart';
+import 'pending_claim.dart';
 import 'routes.dart';
 
 part 'app_router.g.dart';
@@ -309,6 +310,14 @@ String? _redirect(
     // claim screen. Without this the flow dead-ends — sign in by phone (no
     // tenant yet) → bounced to not-provisioned → can never activate.
     if (tenantId == null && loc != Routes.notProvisioned && !isClaimRoute) {
+      // A worker who signed in FROM an invite link has a session but no tenant
+      // yet — the tenant arrives only when they activate. Send them back to the
+      // claim screen (where they'll see "Activate my account") rather than
+      // dead-ending on not-provisioned. The activate step clears the token.
+      final pending = PendingClaim.token;
+      if (pending != null && pending.isNotEmpty) {
+        return '${Routes.claim}?token=$pending';
+      }
       return Routes.notProvisioned;
     }
     // A provisioned user must never sit on the not-provisioned screen. Without
