@@ -300,9 +300,21 @@ String? _redirect(
   // user bypassed the invite flow. Redirect to the not-provisioned screen so
   // they get a clear message rather than silent 401s on every RPC call.
   // The notProvisioned route itself is exempt to avoid an infinite redirect.
-  if (isSignedIn && loc != Routes.notProvisioned) {
+  if (isSignedIn) {
     final tenantId = session.user.appMetadata['tenant_id'];
-    if (tenantId == null) return Routes.notProvisioned;
+    // No tenant claim → the user bypassed provisioning. Park them on the
+    // not-provisioned screen (which is itself exempt to avoid a self-redirect).
+    if (tenantId == null && loc != Routes.notProvisioned) {
+      return Routes.notProvisioned;
+    }
+    // A provisioned user must never sit on the not-provisioned screen. Without
+    // this, the auth-route bounce below is the only thing that moves them off
+    // it — and for a tenant-less user that bounce vs. the gate above forms a
+    // redirect loop (/auth/not-provisioned <=> /licences). Handle it here so
+    // the auth-route rule can safely exempt not-provisioned.
+    if (tenantId != null && loc == Routes.notProvisioned) {
+      return Routes.licencesList;
+    }
   }
   // Signed-out users on the notProvisioned route go back to sign-in.
   if (!isSignedIn && loc == Routes.notProvisioned) {
@@ -341,7 +353,13 @@ String? _redirect(
   // Handoff is always processed even when a session exists — it needs to
   // clear any stale session and apply the fresh Shell JWT.
   // PIN routes remain accessible when signed in (they ARE the gate).
-  if (isSignedIn && isAuthRoute && loc != Routes.handoff && !isPinRoute) {
+  // not-provisioned is exempt: a tenant-less user belongs there, and the gate
+  // above already moves a provisioned user off it. Bouncing it here would loop.
+  if (isSignedIn &&
+      isAuthRoute &&
+      loc != Routes.handoff &&
+      loc != Routes.notProvisioned &&
+      !isPinRoute) {
     return Routes.licencesList;
   }
   if (!isSignedIn && !isAuthRoute && !isLegalRoute && !isShareRoute && !isClaimRoute) {
