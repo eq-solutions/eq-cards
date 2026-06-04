@@ -9,6 +9,7 @@ import '../../../../core/theme/eq_spacing.dart';
 import '../../../../core/theme/eq_typography.dart';
 import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_button.dart';
+import '../../../auth/data/auth_repository.dart';
 import '../../data/admin_worker_repository.dart';
 import '../../data/worker_self_repository.dart';
 import '../providers/org_admin_provider.dart';
@@ -83,6 +84,22 @@ class _ClaimInviteScreenState extends ConsumerState<ClaimInviteScreen> {
       await ref
           .read(adminWorkerRepositoryProvider)
           .claimInvite(widget.token);
+
+      // The session was minted at sign-in — BEFORE this claim granted a tenant
+      // — so its JWT carries no tenant_id and the provisioning gate would bounce
+      // the worker to not-provisioned. Re-run the shell exchange now that the
+      // claim has written their shell_control identity, so the refreshed JWT
+      // carries the tenant and routing lands them in the wallet. Phone-OTP path
+      // only (the exchange matches by phone); a no-op for other sign-in methods.
+      final session = Supabase.instance.client.auth.currentSession;
+      final rawPhone = session?.user.phone;
+      final accessToken = session?.accessToken;
+      if (rawPhone != null && rawPhone.isNotEmpty && accessToken != null) {
+        final e164 = rawPhone.startsWith('+') ? rawPhone : '+$rawPhone';
+        await ref
+            .read(authRepositoryProvider)
+            .phoneOtpShellExchange(e164, accessToken);
+      }
 
       ref.invalidate(orgAdminOrgIdProvider);
 
