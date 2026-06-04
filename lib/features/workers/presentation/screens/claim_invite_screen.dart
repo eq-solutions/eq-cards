@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../../core/router/pending_claim.dart';
 import '../../../../core/router/routes.dart';
 import '../../../../core/theme/eq_colours.dart';
 import '../../../../core/theme/eq_spacing.dart';
@@ -103,6 +104,10 @@ class _ClaimInviteScreenState extends ConsumerState<ClaimInviteScreen> {
 
       ref.invalidate(orgAdminOrgIdProvider);
 
+      // Claim done — the worker now has a tenant. Drop the pending token so the
+      // router stops treating them as mid-claim.
+      PendingClaim.clear();
+
       setState(() => _phase = _Phase.success);
       await Future<void>.delayed(const Duration(seconds: 2));
       if (mounted) context.go(Routes.licencesList);
@@ -135,7 +140,13 @@ class _ClaimInviteScreenState extends ConsumerState<ClaimInviteScreen> {
             _Phase.loading => const _Loading(message: 'Loading invite…'),
             _Phase.notSignedIn => _NotSignedIn(
                 preview: _preview,
-                onSignIn: () => context.push(Routes.email),
+                onSignIn: () {
+                  // Remember the token so that after sign-in (when the worker
+                  // has a session but no tenant yet) the router returns them
+                  // here to activate, instead of bouncing to not-provisioned.
+                  PendingClaim.token = widget.token;
+                  context.push(Routes.email);
+                },
               ),
             _Phase.consent => _Consent(
                 preview: _preview!,
