@@ -153,6 +153,29 @@ BEGIN
   IF v_tenant_id IS NOT NULL THEN
     SELECT phone, email INTO v_auth_phone, v_auth_email FROM auth.users WHERE id = auth.uid();
 
+    -- Normalise to E.164 WITH a leading '+'. GoTrue stores auth.users.phone as
+    -- digits only (e.g. '61432944014'), but Cards sends — and the Shell
+    -- shell-login-phone-otp exchange matches shell_control.users.phone on — the
+    -- '+'-prefixed form ('+61432944014'). Storing the bare digits here would
+    -- silently fail the login match. Idempotent if a '+' is already present.
+    IF v_auth_phone IS NULL OR v_auth_phone = '' THEN
+      v_auth_phone := NULL;
+    ELSIF left(v_auth_phone, 1) <> '+' THEN
+      v_auth_phone := '+' || v_auth_phone;
+    END IF;
+
+    -- shell_control.users.phone is UNIQUE. If this normalised phone already
+    -- belongs to a DIFFERENT user, drop it to NULL rather than failing the
+    -- claim (the worker still gets their tenant + membership; the phone-key
+    -- conflict is a genuine identity-resolution case to handle separately —
+    -- e.g. a recycled number, or one human with two auth uids). Net-new
+    -- workers never hit this; their verified phone is unique to them.
+    IF v_auth_phone IS NOT NULL AND EXISTS (
+      SELECT 1 FROM shell_control.users WHERE phone = v_auth_phone AND id <> auth.uid()
+    ) THEN
+      v_auth_phone := NULL;
+    END IF;
+
     v_name := COALESCE(
       NULLIF(TRIM(COALESCE(v_worker.first_name, '') || ' ' || COALESCE(v_worker.last_name, '')), ''),
       v_invite.profile_data->>'full_name'
