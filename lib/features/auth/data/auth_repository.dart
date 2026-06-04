@@ -28,7 +28,6 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
-import 'package:meta/meta.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -162,7 +161,9 @@ class AuthRepository {
   /// enabled on eq-canonical. Once it is, the GoTrue JWT will carry tenant_id
   /// natively and this exchange call becomes redundant. See
   /// docs/cards-canonical-api-rewire.md §5 and supabase/manual/.
-  @visibleForTesting
+  ///
+  /// Also called by the claim flow after a worker activates an invite, to
+  /// refresh the (pre-claim, tenant-less) session into a tenant-bearing one.
   Future<void> phoneOtpShellExchange(
     String e164Phone,
     String accessToken,

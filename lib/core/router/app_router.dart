@@ -304,7 +304,11 @@ String? _redirect(
     final tenantId = session.user.appMetadata['tenant_id'];
     // No tenant claim → the user bypassed provisioning. Park them on the
     // not-provisioned screen (which is itself exempt to avoid a self-redirect).
-    if (tenantId == null && loc != Routes.notProvisioned) {
+    // /claim is ALSO exempt: claiming an invite is precisely how a signed-in
+    // worker GETS their tenant, so a tenant-less user must be able to reach the
+    // claim screen. Without this the flow dead-ends — sign in by phone (no
+    // tenant yet) → bounced to not-provisioned → can never activate.
+    if (tenantId == null && loc != Routes.notProvisioned && !isClaimRoute) {
       return Routes.notProvisioned;
     }
     // A provisioned user must never sit on the not-provisioned screen. Without
