@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -17,11 +19,11 @@ import '../providers/org_admin_provider.dart';
 
 /// Deep-link target for worker invite claims.
 ///
-/// URL: /claim?token=<uuid>
+/// URL: `/claim?token=<uuid>`
 ///
 /// Flow:
 ///   1. On load: fetch invite preview (org name, credential count).
-///   2. Not signed in → "You've been invited by [Org]" + sign-in button.
+///   2. Not signed in → "You've been invited by {org}" + sign-in button.
 ///   3. Signed in + preview loaded → consent screen ("Activate my account").
 ///   4. Signed in, tap activate → claim RPC → success → wallet.
 ///   5. Token invalid/expired/claimed → error with clear message.
@@ -37,12 +39,12 @@ class ClaimInviteScreen extends ConsumerStatefulWidget {
 class _ClaimInviteScreenState extends ConsumerState<ClaimInviteScreen> {
   _Phase _phase = _Phase.loading;
   InvitePreview? _preview;
-  String? _errorMessage;
+  late String _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _loadPreview();
+    unawaited(_loadPreview());
   }
 
   Future<void> _loadPreview() async {
@@ -145,7 +147,7 @@ class _ClaimInviteScreenState extends ConsumerState<ClaimInviteScreen> {
                   // has a session but no tenant yet) the router returns them
                   // here to activate, instead of bouncing to not-provisioned.
                   PendingClaim.token = widget.token;
-                  context.push(Routes.email);
+                  unawaited(context.push(Routes.email));
                 },
               ),
             _Phase.consent => _Consent(
@@ -156,7 +158,7 @@ class _ClaimInviteScreenState extends ConsumerState<ClaimInviteScreen> {
               const _Loading(message: 'Activating your account…'),
             _Phase.success => const _Success(),
             _Phase.error => _Error(
-                message: _errorMessage!,
+                message: _errorMessage,
                 onRetry: _loadPreview,
               ),
           },
