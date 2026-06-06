@@ -36,6 +36,7 @@ class _AdminWorkerFormScreenState
   final _email = TextEditingController();
   final _preferredName = TextEditingController();
 
+  String? _role;
   bool _saving = false;
 
   @override
@@ -48,6 +49,7 @@ class _AdminWorkerFormScreenState
       _phone.text = w.phone ?? '';
       _email.text = w.email ?? '';
       _preferredName.text = w.preferredName ?? '';
+      _role = w.role;
     }
   }
 
@@ -84,6 +86,7 @@ class _AdminWorkerFormScreenState
               phone: _orNull(_phone.text),
               email: _orNull(_email.text),
               preferredName: _orNull(_preferredName.text),
+              role: _role,
             )
           : Worker(
               id: '',
@@ -92,6 +95,7 @@ class _AdminWorkerFormScreenState
               phone: _orNull(_phone.text),
               email: _orNull(_email.text),
               preferredName: _orNull(_preferredName.text),
+              role: _role,
               createdAt: DateTime.now(),
               updatedAt: DateTime.now(),
             );
@@ -153,6 +157,51 @@ class _AdminWorkerFormScreenState
               label: 'Preferred name (optional)',
               textInputAction: TextInputAction.next,
               textCapitalization: TextCapitalization.words,
+            ),
+            const SizedBox(height: EqSpacing.lg),
+            _SectionHeader('Role'),
+            const SizedBox(height: EqSpacing.xs),
+            Text(
+              'Applied when the worker activates their account. '
+              'Leave unset to default to Employee.',
+              style: EqTypography.label.copyWith(color: EqColours.grey),
+            ),
+            const SizedBox(height: EqSpacing.sm),
+            // Plain DropdownButton (not DropdownButtonFormField) to match the
+            // codebase convention — the FormField variant carries a late-init
+            // hazard (#EQ-CARDS-B). _role is tracked in screen state.
+            DropdownButtonHideUnderline(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: EqSpacing.md,
+                  vertical: EqSpacing.sm,
+                ),
+                decoration: BoxDecoration(
+                  color: EqColours.ice,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: DropdownButton<String?>(
+                  value: _role,
+                  isExpanded: true,
+                  isDense: true,
+                  underline: const SizedBox.shrink(),
+                  style: EqTypography.bodyM.copyWith(color: EqColours.ink),
+                  dropdownColor: EqColours.white,
+                  items: [
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('Not set'),
+                    ),
+                    for (final entry in kEqRoleLabels.entries)
+                      DropdownMenuItem<String?>(
+                        value: entry.key,
+                        child: Text(entry.value),
+                      ),
+                  ],
+                  onChanged:
+                      _saving ? null : (v) => setState(() => _role = v),
+                ),
+              ),
             ),
             const SizedBox(height: EqSpacing.lg),
             _SectionHeader('Contact'),
