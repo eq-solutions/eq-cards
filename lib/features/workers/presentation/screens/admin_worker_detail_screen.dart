@@ -80,6 +80,12 @@ class AdminWorkerDetailScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _InfoRow('Status', worker.isClaimed ? 'Active' : 'Pending invite'),
+                  _InfoRow(
+                    'Role',
+                    worker.role != null
+                        ? (kEqRoleLabels[worker.role] ?? worker.role!)
+                        : 'Not set',
+                  ),
                   if (worker.phone != null)
                     _InfoRow('Mobile', worker.phone!),
                   if (worker.email != null)
