@@ -177,6 +177,16 @@ class _WorkerTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(worker.displayName, style: EqTypography.bodyL),
+                    if (worker.role != null) ...[
+                      const SizedBox(height: EqSpacing.xs),
+                      Text(
+                        kEqRoleLabels[worker.role] ?? worker.role!,
+                        style: EqTypography.label.copyWith(
+                          color: EqColours.deep,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                     if (worker.phone != null) ...[
                       const SizedBox(height: EqSpacing.xs),
                       Text(worker.phone!, style: EqTypography.label),
