@@ -17,17 +17,17 @@ class InvitePreview {
     required this.expiresAt,
   });
 
-  final String orgName;
-  final String workerName;
-  final int credentialCount;
-  final DateTime expiresAt;
-
   factory InvitePreview.fromJson(Map<String, dynamic> json) => InvitePreview(
         orgName: (json['org_name'] as String?) ?? 'Your organisation',
         workerName: (json['worker_name'] as String?) ?? '',
         credentialCount: (json['credential_count'] as int?) ?? 0,
         expiresAt: DateTime.parse(json['expires_at'] as String),
       );
+
+  final String orgName;
+  final String workerName;
+  final int credentialCount;
+  final DateTime expiresAt;
 
   int get daysUntilExpiry =>
       expiresAt.difference(DateTime.now()).inDays.clamp(0, 99);

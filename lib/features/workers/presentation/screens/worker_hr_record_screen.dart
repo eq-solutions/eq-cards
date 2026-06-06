@@ -6,7 +6,6 @@ import '../../../../core/theme/eq_spacing.dart';
 import '../../../../core/theme/eq_typography.dart';
 import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_card.dart';
-import '../../data/models/worker.dart';
 import '../../data/worker_self_repository.dart';
 
 /// Read-only view of the workers record held by the organisation.

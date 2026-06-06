@@ -253,13 +253,12 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
 }
 
 class _LoadingSpinner extends StatelessWidget {
-  const _LoadingSpinner({this.color = Colors.white});
-  final Color color;
+  const _LoadingSpinner();
 
   @override
-  Widget build(BuildContext context) => SizedBox(
+  Widget build(BuildContext context) => const SizedBox(
         width: 20,
         height: 20,
-        child: CircularProgressIndicator(color: color, strokeWidth: 2),
+        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
       );
 }
