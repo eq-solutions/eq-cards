@@ -5,6 +5,16 @@ import '../../../../core/utils/date_utils.dart';
 part 'worker.freezed.dart';
 part 'worker.g.dart';
 
+/// The `eq_role` enum values (eq-canonical), in seniority order, with the
+/// display labels shown in admin UI. The DB stores the snake_case key.
+const Map<String, String> kEqRoleLabels = {
+  'manager': 'Manager',
+  'supervisor': 'Supervisor',
+  'employee': 'Employee',
+  'apprentice': 'Apprentice',
+  'labour_hire': 'Labour hire',
+};
+
 /// Mirrors public.workers on eq-canonical.
 ///
 /// [userId] is null for pre-created workers (admin has entered details but
@@ -20,6 +30,9 @@ abstract class Worker with _$Worker {
     String? preferredName,
     String? email,
     String? phone,
+    /// eq_role on public.workers. Null until an admin assigns one; copied into
+    /// the invite and applied on claim (null → claim defaults to 'employee').
+    String? role,
     DateTime? dateOfBirth,
     String? addressStreet,
     String? addressSuburb,

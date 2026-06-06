@@ -169,6 +169,7 @@ class AdminWorkerRepository {
     if (w.preferredName != null) 'preferred_name': w.preferredName,
     if (w.email != null) 'email': w.email,
     if (w.phone != null) 'phone': w.phone,
+    if (w.role != null) 'role': w.role,
     if (w.dateOfBirth != null) 'date_of_birth': EqDates.iso(w.dateOfBirth!),
     if (w.addressStreet != null) 'address_street': w.addressStreet,
     if (w.addressSuburb != null) 'address_suburb': w.addressSuburb,
