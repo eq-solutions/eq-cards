@@ -27,7 +27,7 @@ class CompleteProfileBanner extends ConsumerWidget {
       margin: const EdgeInsets.all(EqSpacing.md),
       padding: const EdgeInsets.all(EqSpacing.md),
       decoration: BoxDecoration(
-        color: EqColours.ice,
+        color: EqColours.surface,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: EqColours.sky, width: 1),
       ),

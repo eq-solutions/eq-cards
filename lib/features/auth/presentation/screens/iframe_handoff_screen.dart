@@ -156,7 +156,7 @@ class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: EqColours.white,
+      backgroundColor: EqColours.bg,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(

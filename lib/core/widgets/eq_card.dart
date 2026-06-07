@@ -20,12 +20,15 @@ class EqCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: EqColours.ice,
-      borderRadius: BorderRadius.circular(8),
+      color: EqColours.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: EqColours.outlineSoft),
+      ),
       child: InkWell(
         onTap: onTap,
         onLongPress: onLongPress,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         child: Padding(padding: padding, child: child),
       ),
     );

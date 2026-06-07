@@ -320,7 +320,7 @@ class _CertificateAddScreenState extends ConsumerState<CertificateAddScreen> {
                 decoration: InputDecoration(
                   labelText: 'Notes (optional)',
                   filled: true,
-                  fillColor: EqColours.ice,
+                  fillColor: EqColours.surface,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide.none,
@@ -371,7 +371,7 @@ class _FilePicker extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(EqSpacing.md),
         decoration: BoxDecoration(
-          color: EqColours.ice,
+          color: EqColours.surface,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: EqColours.border,
@@ -444,7 +444,7 @@ class _TypeDropdown extends StatelessWidget {
               vertical: EqSpacing.sm,
             ),
             decoration: BoxDecoration(
-              color: EqColours.ice,
+              color: EqColours.surface,
               borderRadius: BorderRadius.circular(8),
             ),
             child: DropdownButton<String>(
@@ -486,7 +486,7 @@ class _DateTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(EqSpacing.md),
         decoration: BoxDecoration(
-          color: EqColours.ice,
+          color: EqColours.surface,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: EqColours.border),
         ),

@@ -45,7 +45,7 @@ class EqTextField extends StatelessWidget {
         errorText: errorText,
         labelStyle: EqTypography.label,
         filled: true,
-        fillColor: EqColours.ice,
+        fillColor: EqColours.surface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
           borderSide: BorderSide.none,

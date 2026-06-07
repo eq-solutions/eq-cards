@@ -275,7 +275,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                   decoration: InputDecoration(
                     labelText: 'Date of birth',
                     filled: true,
-                    fillColor: EqColours.ice,
+                    fillColor: EqColours.surface,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(6),
                       borderSide: BorderSide.none,
@@ -312,7 +312,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                       decoration: InputDecoration(
                         labelText: 'State',
                         filled: true,
-                        fillColor: EqColours.ice,
+                        fillColor: EqColours.surface,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(6),
                           borderSide: BorderSide.none,

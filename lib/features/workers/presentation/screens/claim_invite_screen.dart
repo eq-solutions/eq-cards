@@ -270,7 +270,7 @@ class _Consent extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(EqSpacing.md),
             decoration: BoxDecoration(
-              color: EqColours.ice,
+              color: EqColours.surface,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: EqColours.border),
             ),

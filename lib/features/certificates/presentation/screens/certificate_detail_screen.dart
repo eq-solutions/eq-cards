@@ -142,7 +142,7 @@ class _CertificateDetailBody extends StatelessWidget {
                       width: 56,
                       height: 56,
                       decoration: BoxDecoration(
-                        color: EqColours.ice,
+                        color: EqColours.surface,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(

@@ -42,7 +42,7 @@ class HomeShellScreen extends ConsumerWidget {
           initialLocation: i == navigationShell.currentIndex,
         ),
         backgroundColor: EqColours.white,
-        indicatorColor: EqColours.ice,
+        indicatorColor: EqColours.surface,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.badge_outlined),

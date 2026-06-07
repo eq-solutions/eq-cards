@@ -384,7 +384,7 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
                 Container(
                   padding: const EdgeInsets.all(EqSpacing.md),
                   decoration: BoxDecoration(
-                    color: EqColours.ice,
+                    color: EqColours.surface,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: EqColours.sky, width: 1),
                   ),
@@ -443,7 +443,7 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
                 decoration: InputDecoration(
                   labelText: 'State',
                   filled: true,
-                  fillColor: EqColours.ice,
+                  fillColor: EqColours.surface,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(6),
                     borderSide: BorderSide.none,
@@ -538,7 +538,7 @@ class _TypeDropdown extends StatelessWidget {
       decoration: InputDecoration(
         labelText: 'Licence type',
         filled: true,
-        fillColor: EqColours.ice,
+        fillColor: EqColours.surface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
           borderSide: BorderSide.none,
@@ -575,7 +575,7 @@ class _DateField extends StatelessWidget {
         decoration: InputDecoration(
           labelText: label,
           filled: true,
-          fillColor: EqColours.ice,
+          fillColor: EqColours.surface,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(6),
             borderSide: BorderSide.none,
@@ -607,7 +607,7 @@ class _PhotoSlot extends StatelessWidget {
       child: Container(
         height: 120,
         decoration: BoxDecoration(
-          color: EqColours.ice,
+          color: EqColours.surface,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Stack(

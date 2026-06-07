@@ -284,7 +284,7 @@ class SettingsScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(EqSpacing.sm),
                   decoration: BoxDecoration(
-                    color: EqColours.ice,
+                    color: EqColours.surface,
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: SelectableText(
@@ -602,7 +602,7 @@ class _WalletStats extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(EqSpacing.md),
       decoration: BoxDecoration(
-        color: EqColours.ice,
+        color: EqColours.surface,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: EqColours.border),
       ),

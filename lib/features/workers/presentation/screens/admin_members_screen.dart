@@ -162,7 +162,7 @@ class _WorkerTile extends StatelessWidget {
           child: Row(
             children: [
               CircleAvatar(
-                backgroundColor: EqColours.ice,
+                backgroundColor: EqColours.surface,
                 child: Text(
                   worker.firstName.isNotEmpty
                       ? worker.firstName[0].toUpperCase()
