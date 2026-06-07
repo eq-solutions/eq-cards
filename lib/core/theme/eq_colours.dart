@@ -18,8 +18,19 @@ abstract class EqColours {
   // Border
   static const Color border = EqColors.gray200;
 
+  // Neutral
+  static const Color gray200 = EqColors.gray200;
+
   // Status — text-weight canonical colours
   static const Color error   = EqColors.errorText;
   static const Color warning = EqColors.warningText;
   static const Color success = EqColors.successText;
+
+  // Status backgrounds
+  static const Color errorBg   = EqColors.errorBg;
+  static const Color successBg = EqColors.successBg;
+  static const Color warningBg = EqColors.warningBg;
+
+  // Overlay
+  static const Color overlayDark = EqColors.overlayDark;
 }
