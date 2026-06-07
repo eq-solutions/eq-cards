@@ -288,11 +288,10 @@ BEGIN
 END;
 $$;
 
--- Anon can call claim — the worker may not be signed in yet when the link
--- opens; auth happens inside the app before this RPC is called, but
--- granting to anon allows unauthenticated token preview (the RPC still
--- requires auth.uid() internally and will fail with a clear error if
--- called without a session).
+-- Claim requires an authenticated session: EXECUTE is REVOKEd from PUBLIC/anon
+-- and granted only to `authenticated`. The worker signs in before the app calls
+-- this RPC, and the function additionally enforces auth.uid() internally.
+-- (An earlier version of this comment wrongly stated anon could call it.)
 REVOKE ALL ON FUNCTION public.eq_cards_claim_invite(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.eq_cards_claim_invite(uuid) TO authenticated;
 
