@@ -70,8 +70,9 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
                   ),
                   const SizedBox(height: EqSpacing.sm),
                   Text(
-                    "Your account isn't linked to an EQ workspace yet. "
-                    'Ask your manager to send you an invite link.',
+                    "We couldn't link you to an EQ workspace. "
+                    'Sign out and try again — if the problem continues, '
+                    'ask your manager to check your account access.',
                     style: EqTypography.bodyM.copyWith(color: EqColours.grey),
                     textAlign: TextAlign.center,
                   ),
@@ -91,18 +92,7 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
                               strokeWidth: 2,
                             ),
                           )
-                        : const Text('Sign out'),
-                  ),
-                  const SizedBox(height: EqSpacing.sm),
-                  TextButton(
-                    onPressed: _signingOut ? null : _signOut,
-                    child: Text(
-                      'Already have an account? Sign in with email instead',
-                      style: EqTypography.bodyM.copyWith(
-                        color: EqColours.sky,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
+                        : const Text('Sign out and try again'),
                   ),
                 ],
               ),
