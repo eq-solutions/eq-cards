@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/eq_colours.dart';
 import '../theme/eq_typography.dart';
 
-enum EqButtonVariant { primary, secondary, destructive }
+enum EqButtonVariant { primary, secondary, destructive, hero }
 
 class EqButton extends StatelessWidget {
   const EqButton({
@@ -24,13 +24,18 @@ class EqButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (background, foreground) = switch (variant) {
-      EqButtonVariant.primary => (EqColours.sky, EqColours.white),
-      EqButtonVariant.secondary => (EqColours.ice, EqColours.deep),
+      EqButtonVariant.primary     => (EqColours.sky, EqColours.white),
+      EqButtonVariant.secondary   => (EqColours.ice, EqColours.deep),
       EqButtonVariant.destructive => (EqColours.error, EqColours.white),
+      EqButtonVariant.hero        => (EqColours.sky, EqColours.white),
     };
 
+    final double height     = variant == EqButtonVariant.hero ? 50 : 48;
+    final double radius     = variant == EqButtonVariant.hero ? 13 : 6;
+    final FontWeight weight = variant == EqButtonVariant.hero ? FontWeight.w800 : FontWeight.w600;
+
     final button = SizedBox(
-      height: 48,
+      height: height,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
@@ -40,7 +45,7 @@ class EqButton extends StatelessWidget {
           disabledForegroundColor: foreground,
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(radius),
           ),
         ),
         child: isLoading
@@ -56,7 +61,7 @@ class EqButton extends StatelessWidget {
                 label,
                 style: EqTypography.bodyL.copyWith(
                   color: foreground,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: weight,
                 ),
               ),
       ),

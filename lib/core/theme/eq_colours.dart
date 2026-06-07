@@ -15,7 +15,17 @@ abstract class EqColours {
   static const Color grey  = EqColors.grey;
   static const Color white = EqColors.white;
 
-  // Border
+  // Warm-sand surfaces (Direction D)
+  static const Color bg          = EqColors.gray50;   // #F6F3EE — page bg
+  static const Color surface     = EqColors.gray100;  // #EFEAE1 — elevated surface
+  static const Color outlineSoft = EqColors.gray200;  // #E4DDD2 — card tile border
+  static const Color outline     = EqColors.gray300;  // #D4CCBE — input border
+
+  // Text greys
+  static const Color g500 = EqColors.gray500;  // #6B7280 — secondary text
+  static const Color g600 = EqColors.gray600;  // #4B5563 — primary text
+
+  // Border (legacy alias — prefer outlineSoft for new code)
   static const Color border = EqColors.gray200;
 
   // Neutral

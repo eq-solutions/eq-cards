@@ -5,7 +5,6 @@ import '../../../../core/design/design_version.dart';
 import '../../../../core/theme/eq_colours.dart';
 import '../../../../core/theme/eq_spacing.dart';
 import '../../../../core/theme/eq_typography.dart';
-import '../../../../core/widgets/eq_card.dart';
 import '../../data/models/licence.dart';
 import 'expiry_badge.dart';
 
@@ -82,46 +81,60 @@ class _LinearVariant extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final expiryText = DateFormat('d MMM yyyy').format(licence.expiryDate);
-    return EqCard(
-      onTap: onTap,
-      onLongPress: onLongPress,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          _Thumbnail(url: licence.photoFrontSignedUrl, size: 56),
-          const SizedBox(width: EqSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: EqSpacing.xs),
+      child: Material(
+        color: EqColours.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: EqColours.outlineSoft),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          onLongPress: onLongPress,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(13),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(
-                  typeLabel,
-                  style: EqTypography.bodyL.copyWith(
-                    fontWeight: FontWeight.w600,
+                _Thumbnail(url: licence.photoFrontSignedUrl, size: 56),
+                const SizedBox(width: EqSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        typeLabel,
+                        style: EqTypography.bodyL.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: EqSpacing.xs),
+                      Text(
+                        licence.licenceNumber,
+                        style: EqTypography.bodyM.copyWith(color: EqColours.grey),
+                      ),
+                      const SizedBox(height: EqSpacing.xs),
+                      Row(
+                        children: [
+                          Text(
+                            'Expires $expiryText',
+                            style: EqTypography.label,
+                          ),
+                          const SizedBox(width: EqSpacing.sm),
+                          ExpiryBadge(expiry: licence.expiryDate),
+                        ],
+                      ),
+                    ],
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: EqSpacing.xs),
-                Text(
-                  licence.licenceNumber,
-                  style: EqTypography.bodyM.copyWith(color: EqColours.grey),
-                ),
-                const SizedBox(height: EqSpacing.xs),
-                Row(
-                  children: [
-                    Text(
-                      'Expires $expiryText',
-                      style: EqTypography.label,
-                    ),
-                    const SizedBox(width: EqSpacing.sm),
-                    ExpiryBadge(expiry: licence.expiryDate),
-                  ],
                 ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -381,7 +394,7 @@ class _Placeholder extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: EqColours.ice,
+        color: EqColours.bg,
         borderRadius: BorderRadius.circular(6),
       ),
       child: const Icon(Icons.badge_outlined, color: EqColours.grey),
