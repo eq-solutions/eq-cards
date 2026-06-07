@@ -177,7 +177,7 @@ class _AdminWorkerFormScreenState
                   vertical: EqSpacing.sm,
                 ),
                 decoration: BoxDecoration(
-                  color: EqColours.ice,
+                  color: EqColours.surface,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: DropdownButton<String?>(

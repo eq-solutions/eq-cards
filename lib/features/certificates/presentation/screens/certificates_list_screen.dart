@@ -113,7 +113,7 @@ class _CertificatesListScreenState
                           selected: _filter == f,
                           onSelected: (_) => setState(() => _filter = f),
                           selectedColor: EqColours.deep,
-                          backgroundColor: EqColours.ice,
+                          backgroundColor: EqColours.surface,
                           labelStyle: TextStyle(
                             color: _filter == f
                                 ? EqColours.white

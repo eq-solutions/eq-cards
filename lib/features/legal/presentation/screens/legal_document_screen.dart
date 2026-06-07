@@ -87,14 +87,14 @@ class LegalDocumentScreen extends StatelessWidget {
       ),
       blockquote: EqTypography.bodyM.copyWith(color: EqColours.grey),
       blockquoteDecoration: BoxDecoration(
-        color: EqColours.ice,
+        color: EqColours.surface,
         border: const Border(
           left: BorderSide(color: EqColours.sky, width: 4),
         ),
       ),
       code: EqTypography.bodyM.copyWith(
         fontFamily: 'monospace',
-        backgroundColor: EqColours.ice,
+        backgroundColor: EqColours.surface,
       ),
       tableHead: EqTypography.bodyM.copyWith(fontWeight: FontWeight.w700),
       tableBody: EqTypography.bodyM,

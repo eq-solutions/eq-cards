@@ -368,7 +368,7 @@ class _ActiveInviteCardState extends ConsumerState<_ActiveInviteCard> {
             padding: const EdgeInsets.symmetric(
                 horizontal: EqSpacing.sm, vertical: EqSpacing.xs),
             decoration: BoxDecoration(
-              color: EqColours.ice,
+              color: EqColours.surface,
               borderRadius: BorderRadius.circular(6),
             ),
             child: SelectableText(

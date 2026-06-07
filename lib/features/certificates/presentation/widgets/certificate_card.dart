@@ -101,7 +101,7 @@ class _FileIcon extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: EqColours.ice,
+        color: EqColours.surface,
         borderRadius: BorderRadius.circular(6),
       ),
       child: Icon(

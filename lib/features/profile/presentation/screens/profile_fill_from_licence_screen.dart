@@ -213,7 +213,7 @@ class _ProfileFillFromLicenceScreenState
                 Container(
                   padding: const EdgeInsets.all(EqSpacing.md),
                   decoration: BoxDecoration(
-                    color: EqColours.ice,
+                    color: EqColours.surface,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -253,7 +253,7 @@ class _ProfileFillFromLicenceScreenState
                     decoration: InputDecoration(
                       labelText: 'Date of birth',
                       filled: true,
-                      fillColor: EqColours.ice,
+                      fillColor: EqColours.surface,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(6),
                         borderSide: BorderSide.none,

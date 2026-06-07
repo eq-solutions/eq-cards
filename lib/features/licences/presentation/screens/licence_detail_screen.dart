@@ -565,7 +565,7 @@ class _WalletHeaderDelegate extends SliverPersistentHeaderDelegate {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: ColoredBox(
-          color: EqColours.ice,
+          color: EqColours.surface,
           child: Stack(
             children: [
               const ColoredBox(
