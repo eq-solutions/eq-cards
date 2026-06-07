@@ -186,7 +186,7 @@ class _VerificationBody extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: expired ? const Color(0xFFFEF2F2) : const Color(0xFFF0FDF4),
+                    color: expired ? EqColours.errorBg : EqColours.successBg,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Row(
@@ -225,7 +225,7 @@ class _VerificationBody extends StatelessWidget {
                 ],
 
                 const SizedBox(height: EqSpacing.lg),
-                const Divider(color: Color(0xFFE5E7EB), height: 1),
+                const Divider(color: EqColours.gray200, height: 1),
                 const SizedBox(height: EqSpacing.lg),
 
                 // Detail rows

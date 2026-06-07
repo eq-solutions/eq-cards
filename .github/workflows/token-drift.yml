@@ -1,0 +1,43 @@
+name: Token & analysis gate
+
+# Verifies that eq_design_tokens resolves cleanly as a Flutter git dep and
+# that the codebase has no analysis warnings. Replaces the manual vendor step
+# as the drift guard now that pubspec.yaml exists in eq-design-tokens.
+
+on:
+  pull_request:
+    paths:
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - 'lib/core/theme/**'
+      - '.github/workflows/token-drift.yml'
+  push:
+    branches: [main]
+
+jobs:
+  flutter-token-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout eq-cards
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.9'
+          channel: stable
+          cache: true
+
+      - name: flutter pub get
+        run: flutter pub get
+        # Fails if eq_design_tokens git ref can't be resolved — catches stale ref
+        # or a push to eq-design-tokens that breaks the Dart API.
+
+      - name: Generate code
+        run: dart run build_runner build --delete-conflicting-outputs
+        # Must run before analyze — generated files (copyWith, providers, etc.)
+        # are not committed; skipping this step causes ~1000 phantom errors.
+
+      - name: flutter analyze
+        run: flutter analyze
+        # Catches any theme-layer type errors introduced by token changes.

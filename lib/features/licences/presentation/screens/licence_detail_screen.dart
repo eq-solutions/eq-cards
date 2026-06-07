@@ -675,7 +675,7 @@ class _PhotoFirstDetail extends StatelessWidget {
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, Color(0xCC000000)],
+                        colors: [Colors.transparent, EqColours.overlayDark],
                         stops: [0.55, 1.0],
                       ),
                     ),

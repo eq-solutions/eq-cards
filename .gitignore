@@ -78,3 +78,6 @@ supabase/.branches/
 /test_write_check
 .netlify/
 .wrangler/
+
+# Local HTML exports / scratch files — not part of the Flutter app
+*-marketing.html
