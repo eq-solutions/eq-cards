@@ -162,7 +162,6 @@ class AuthRepository {
   /// enabled on eq-canonical. Once it is, the GoTrue JWT will carry tenant_id
   /// natively and this exchange call becomes redundant. See
   /// docs/cards-canonical-api-rewire.md §5 and supabase/manual/.
-  @visibleForTesting
   Future<void> phoneOtpShellExchange(
     String e164Phone,
     String accessToken,

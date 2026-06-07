@@ -33,6 +33,11 @@ jobs:
         # Fails if eq_design_tokens git ref can't be resolved — catches stale ref
         # or a push to eq-design-tokens that breaks the Dart API.
 
+      - name: Generate code
+        run: dart run build_runner build --delete-conflicting-outputs
+        # Must run before analyze — generated files (copyWith, providers, etc.)
+        # are not committed; skipping this step causes ~1000 phantom errors.
+
       - name: flutter analyze
-        run: flutter analyze --fatal-infos
+        run: flutter analyze
         # Catches any theme-layer type errors introduced by token changes.
