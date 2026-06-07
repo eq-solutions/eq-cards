@@ -740,7 +740,7 @@ class _ActionTile extends StatelessWidget {
       button: true,
       excludeSemantics: true,
       child: Material(
-        color: EqColours.ice,
+        color: EqColours.surface,
         borderRadius: BorderRadius.circular(8),
         child: InkWell(
           borderRadius: BorderRadius.circular(8),
@@ -803,7 +803,8 @@ class _DashboardEmpty extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(EqSpacing.lg),
             decoration: BoxDecoration(
-              color: EqColours.ice,
+              color: EqColours.white,
+              border: Border.all(color: EqColours.outlineSoft),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
@@ -908,11 +909,10 @@ class _LicencesSkeletonState extends State<_LicencesSkeleton>
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {
-        // Pulse between 0.55 and 1.0 opacity on the ice fill colour.
         final t = (_controller.value - 0.5).abs() * 2; // 0..1..0
         final fill = Color.lerp(
-          EqColours.ice,
-          EqColours.border,
+          EqColours.surface,
+          EqColours.outlineSoft,
           t,
         )!;
         return ListView(
@@ -941,8 +941,8 @@ class _SkeletonCard extends StatelessWidget {
       padding: const EdgeInsets.all(EqSpacing.md),
       decoration: BoxDecoration(
         color: EqColours.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: EqColours.border),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: EqColours.outlineSoft),
       ),
       child: Row(
         children: [
@@ -1034,7 +1034,7 @@ class _SearchAndFilterBar extends StatelessWidget {
                     },
                   ),
             filled: true,
-            fillColor: EqColours.ice,
+            fillColor: EqColours.surface,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide.none,
@@ -1055,7 +1055,7 @@ class _SearchAndFilterBar extends StatelessWidget {
                 onSelected: (_) => onFilterChanged(f),
                 // Deep for contrast against white text (sky failed WCAG).
                 selectedColor: EqColours.deep,
-                backgroundColor: EqColours.ice,
+                backgroundColor: EqColours.surface,
                 labelStyle: TextStyle(
                   color: filter == f ? EqColours.white : EqColours.ink,
                   fontWeight:
