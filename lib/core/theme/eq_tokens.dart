@@ -2,11 +2,11 @@
 // Do not edit manually — regenerate by running `npm run build` in the
 // eq-design-tokens repo and copying the output here.
 //
-// TODO: eq-design-tokens now has a pubspec.yaml — migrate to proper Flutter git dep:
+// TODO(royce): eq-design-tokens now has a pubspec.yaml — migrate to proper Flutter git dep:
 //   eq_design_tokens:
 //     git:
 //       url: https://github.com/eq-solutions/eq-design-tokens
-//       ref: v1.3.1
+//       ref: v1.3.2
 //
 // Path A consolidation (2026-05-30):
 // EqSpacingTokens and EqTypographyTokens were dead code (zero callsites outside
@@ -74,4 +74,29 @@ class EqRadius {
   static const double card  = 8;
   static const double shell = 12;
   static const double pill  = 9999;
+}
+
+// Font constants — size scale and weight aliases.
+// Named EqFontTokens to avoid collision with abstract class EqTypography
+// in eq_typography.dart (which provides named TextStyles for app callsites).
+// Size steps don't align to the app's heading scale (32/24/20/17/15/13px)
+// by design — alignment requires a design sign-off (deferred, 2026-05-30).
+class EqFontTokens {
+  EqFontTokens._();
+  static const String fontFamily = 'PlusJakartaSans';
+  static const double xs   = 11;
+  static const double sm   = 12;
+  static const double base = 14;
+  static const double md   = 15;
+  static const double lg   = 18;
+  static const double xl   = 22;
+  static const double xl2  = 28;
+  static const double xl3  = 36;
+  static const double xl4  = 48;
+
+  static const FontWeight regular = FontWeight.w400;
+  static const FontWeight medium  = FontWeight.w500;
+  static const FontWeight semi    = FontWeight.w600;
+  static const FontWeight bold    = FontWeight.w700;
+  static const FontWeight black   = FontWeight.w800;
 }
