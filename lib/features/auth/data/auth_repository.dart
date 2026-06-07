@@ -28,6 +28,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
+import 'package:meta/meta.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -161,9 +162,7 @@ class AuthRepository {
   /// enabled on eq-canonical. Once it is, the GoTrue JWT will carry tenant_id
   /// natively and this exchange call becomes redundant. See
   /// docs/cards-canonical-api-rewire.md §5 and supabase/manual/.
-  ///
-  /// Also called by the claim flow after a worker activates an invite, to
-  /// refresh the (pre-claim, tenant-less) session into a tenant-bearing one.
+  @visibleForTesting
   Future<void> phoneOtpShellExchange(
     String e164Phone,
     String accessToken,
@@ -208,8 +207,14 @@ class AuthRepository {
       }
 
       if (body['valid'] != true) {
-        // User not in shell_control.users — notProvisioned route handles this.
+        // Shell returned valid:false — user not in shell_control.users, phone
+        // mismatch, or a transient error (GoTrue token reject, inactive tenant).
+        // Sign out so GoRouter clears back to the phone sign-in screen. The
+        // user can retry immediately; if the problem persists they contact their
+        // manager. Signing out is preferable to leaving the user on the
+        // notProvisioned screen with no actionable path.
         unawaited(_breadcrumb('phone_otp_shell_exchange_not_provisioned'));
+        await _client.auth.signOut();
         return;
       }
 
