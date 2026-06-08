@@ -61,6 +61,10 @@ abstract class Routes {
   // Claim — deep-link target for workers claiming an invite.
   static const claim = '/claim';
 
+  // Join — worker scans QR or enters a join code to onboard into a tenant.
+  // Public route — no auth required.
+  static const join = '/join';
+
   // Worker self-service — APP 12 access to own employment record.
   static const workerHrRecord = '/settings/hr-record';
 }

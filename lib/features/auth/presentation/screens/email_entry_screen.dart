@@ -12,6 +12,7 @@ import '../../../../core/validators/input_validators.dart';
 import '../../data/aus_phone.dart';
 import '../../domain/auth_flow_state.dart';
 import '../notifiers/auth_flow_notifier.dart';
+import '../notifiers/join_context_notifier.dart';
 
 class EmailEntryScreen extends ConsumerStatefulWidget {
   const EmailEntryScreen({super.key});
@@ -46,6 +47,82 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
     _emailController.dispose();
     _phoneController.dispose();
     super.dispose();
+  }
+
+  void _showJoinCodeSheet(BuildContext context) {
+    final codeController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    unawaited(showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: EqColours.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: EqSpacing.xl,
+          right: EqSpacing.xl,
+          top: EqSpacing.lg,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + EqSpacing.xl,
+        ),
+        child: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Enter your join code',
+                style: EqTypography.headingM.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: EqColours.deep,
+                ),
+              ),
+              const SizedBox(height: EqSpacing.sm),
+              Text(
+                'Your manager will give you a short code for your team.',
+                style: EqTypography.bodyM.copyWith(color: EqColours.grey),
+              ),
+              const SizedBox(height: EqSpacing.lg),
+              TextFormField(
+                controller: codeController,
+                autocorrect: false,
+                autofocus: true,
+                textInputAction: TextInputAction.done,
+                decoration: const InputDecoration(
+                  labelText: 'Join code',
+                  hintText: 'e.g. sks',
+                ),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) {
+                    return 'Enter your join code';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: EqSpacing.lg),
+              FilledButton(
+                onPressed: () {
+                  if (!formKey.currentState!.validate()) return;
+                  final slug = codeController.text.toLowerCase().trim();
+                  Navigator.of(ctx).pop();
+                  // Clear any stale join context before setting the new one.
+                  ref.read(joinContextNotifierProvider.notifier).clear();
+                  unawaited(context.push('${Routes.join}?tenant=$slug'));
+                },
+                style: FilledButton.styleFrom(
+                  backgroundColor: EqColours.sky,
+                  minimumSize: const Size.fromHeight(48),
+                ),
+                child: const Text('Continue'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ));
   }
 
   Future<void> _submitEmail() async {
@@ -241,7 +318,20 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
                         : const Text('Send code'),
                   ),
 
-                  const SizedBox(height: EqSpacing.xl),
+                  const SizedBox(height: EqSpacing.md),
+
+                  // ── Join with a join code ────────────────────────────────
+                  TextButton(
+                    onPressed: () => _showJoinCodeSheet(context),
+                    child: Text(
+                      'Join with a join code',
+                      style: EqTypography.bodyM.copyWith(
+                        color: EqColours.sky,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: EqSpacing.lg),
                 ],
               ),
             ),

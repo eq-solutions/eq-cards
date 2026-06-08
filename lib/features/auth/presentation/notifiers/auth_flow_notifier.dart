@@ -65,6 +65,29 @@ class AuthFlowNotifier extends _$AuthFlowNotifier {
     }
   }
 
+  /// Verifies the OTP then calls the shell-join-tenant function to provision
+  /// the worker into [tenantSlug]. Used by the QR / join-code sign-up flow.
+  Future<void> joinTenant(
+    String e164Phone,
+    String token,
+    String tenantSlug,
+  ) async {
+    state = const AuthFlowVerifying();
+    try {
+      final authRepo = ref.read(authRepositoryProvider);
+      final accessToken = await authRepo.verifyPhoneOtpOnly(e164Phone, token.trim());
+      if (accessToken != null) {
+        await authRepo.joinTenantExchange(e164Phone, accessToken, tenantSlug);
+      }
+      // GoRouter's auth listener handles redirect on successful session update.
+    } on Failure catch (f) {
+      _setError(f, isPhone: true);
+    } catch (e, st) {
+      unawaited(Sentry.captureException(e, stackTrace: st));
+      state = const AuthFlowError('Something went wrong. Please try again.');
+    }
+  }
+
   void reset() => state = const AuthFlowIdle();
 
   /// Maps [f] to user-facing copy and pushes it to `state`. Failures whose

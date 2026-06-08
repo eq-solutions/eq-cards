@@ -262,6 +262,122 @@ class AuthRepository {
     }
   }
 
+  /// Verify the 6-digit SMS [token] for [e164Phone] without performing the
+  /// shell exchange. Returns the raw GoTrue access token on success, or null
+  /// if the session was not established.
+  ///
+  /// Used in the join-tenant flow where a separate [joinTenantExchange] call
+  /// follows with a specific tenantSlug, rather than the generic
+  /// shell-login-phone-otp exchange used by [verifyPhoneOtp].
+  Future<String?> verifyPhoneOtpOnly(
+    String e164Phone,
+    String token,
+  ) async {
+    unawaited(_breadcrumb('phone_otp_verify_only_started'));
+    try {
+      final res = await _client.auth.verifyOTP(
+        phone: e164Phone,
+        token: token,
+        type: OtpType.sms,
+      );
+      unawaited(_breadcrumb('phone_otp_verify_only_succeeded'));
+      return res.session?.accessToken;
+    } catch (e) {
+      unawaited(_breadcrumb('phone_otp_verify_only_failed', {'error': e.toString()}));
+      if (e is Failure) rethrow;
+      throw mapSupabaseError(e);
+    }
+  }
+
+  /// Calls the Shell's shell-join-tenant function to provision the worker into
+  /// [tenantSlug] using their GoTrue [accessToken].
+  ///
+  /// On success (valid: true) the Shell returns a tenant-scoped Supabase JWT
+  /// and Cards calls setSession() with it. On valid: false the worker has no
+  /// account under that tenant — signOut() is called and a [ValidationFailure]
+  /// is thrown with a human-readable message.
+  Future<void> joinTenantExchange(
+    String e164Phone,
+    String accessToken,
+    String tenantSlug,
+  ) async {
+    unawaited(_breadcrumb('join_tenant_exchange_started', {'tenant': tenantSlug}));
+    try {
+      final uri = Uri.parse(
+        '$_kShellBaseUrl/.netlify/functions/shell-join-tenant',
+      );
+      final response = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'phone': e164Phone,
+              'access_token': accessToken,
+              'tenant_slug': tenantSlug,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
+
+      if (response.statusCode != 200) {
+        unawaited(
+          _breadcrumb('join_tenant_exchange_http_error', {
+            'status': response.statusCode,
+          }),
+        );
+        unawaited(
+          Sentry.captureMessage(
+            'joinTenantExchange: unexpected HTTP ${response.statusCode}',
+            level: SentryLevel.warning,
+          ),
+        );
+        await _client.auth.signOut();
+        throw const ValidationFailure(
+          'Something went wrong joining the team. Please try again.',
+        );
+      }
+
+      final Map<String, dynamic> body;
+      try {
+        body = jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (_) {
+        unawaited(_breadcrumb('join_tenant_exchange_parse_error'));
+        await _client.auth.signOut();
+        throw const ValidationFailure(
+          'Something went wrong joining the team. Please try again.',
+        );
+      }
+
+      if (body['valid'] != true) {
+        unawaited(_breadcrumb('join_tenant_not_provisioned', {'tenant': tenantSlug}));
+        await _client.auth.signOut();
+        throw const ValidationFailure(
+          'No account found for this number. Check your join code or contact your manager.',
+        );
+      }
+
+      final supabaseJwt = body['supabase_jwt'] as String?;
+      if (supabaseJwt == null || supabaseJwt.isEmpty) {
+        unawaited(_breadcrumb('join_tenant_exchange_missing_jwt'));
+        await _client.auth.signOut();
+        throw const ValidationFailure(
+          'Something went wrong joining the team. Please try again.',
+        );
+      }
+
+      await _client.auth.setSession(supabaseJwt, accessToken: supabaseJwt);
+      unawaited(_breadcrumb('join_tenant_exchange_succeeded', {'tenant': tenantSlug}));
+    } on Failure {
+      rethrow;
+    } catch (e, st) {
+      unawaited(_breadcrumb('join_tenant_exchange_exception', {'error': e.toString()}));
+      unawaited(Sentry.captureException(e, stackTrace: st));
+      await _client.auth.signOut();
+      throw const ValidationFailure(
+        'Something went wrong joining the team. Please try again.',
+      );
+    }
+  }
+
   Future<void> signOut() async {
     unawaited(_breadcrumb('sign_out_started'));
     try {

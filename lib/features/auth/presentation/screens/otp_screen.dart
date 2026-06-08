@@ -11,6 +11,7 @@ import '../../../../core/theme/eq_spacing.dart';
 import '../../../../core/theme/eq_typography.dart';
 import '../../domain/auth_flow_state.dart';
 import '../notifiers/auth_flow_notifier.dart';
+import '../notifiers/join_context_notifier.dart';
 
 // How long the resend button is disabled after sending a code.
 const _kResendCooldown = Duration(seconds: 30);
@@ -67,7 +68,14 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     final notifier = ref.read(authFlowNotifierProvider.notifier);
-    if (_isPhone) {
+    final joinCtx = ref.read(joinContextNotifierProvider);
+    if (_isPhone && joinCtx != null) {
+      await notifier.joinTenant(
+        _identifier,
+        _codeController.text,
+        joinCtx.tenantSlug,
+      );
+    } else if (_isPhone) {
       await notifier.verifyPhoneOtp(_identifier, _codeController.text);
     } else {
       await notifier.verifyOtp(_identifier, _codeController.text);
@@ -130,6 +138,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
           color: EqColours.ink,
           onPressed: () {
             ref.read(authFlowNotifierProvider.notifier).reset();
+            ref.read(joinContextNotifierProvider.notifier).clear();
             context.pop();
           },
         ),
