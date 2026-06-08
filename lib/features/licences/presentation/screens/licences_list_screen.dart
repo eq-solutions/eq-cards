@@ -200,45 +200,50 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
                     );
                   }
 
-            // Search matches title / number / issuer / type; filter narrows
-            // by expiry-bucket. Both apply across licences and certificates.
-            final filtered = _applyWalletFilters(items);
-            return ListView(
-              padding: const EdgeInsets.all(EqSpacing.md),
-              children: [
-                const CompleteProfileBanner(),
-                const PendingConnectionsBanner(),
-                _SearchAndFilterBar(
-                  query: _query,
-                  controller: _searchCtrl,
-                  filter: _filter,
-                  onQueryChanged: (q) => setState(() => _query = q),
-                  onFilterChanged: (f) => setState(() => _filter = f),
-                  totalCount: items.length,
-                  shownCount: filtered.length,
-                ),
-                const SizedBox(height: EqSpacing.sm),
-                if (filtered.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: EqSpacing.xl,
-                      horizontal: EqSpacing.lg,
-                    ),
-                    child: Text(
-                      'No matches for these filters.',
-                      style: EqTypography.bodyM.copyWith(color: EqColours.grey),
-                      textAlign: TextAlign.center,
-                    ),
-                  )
-                else
-                  for (final item in filtered) ...[
-                    _WalletTile(item: item),
-                    const SizedBox(height: EqSpacing.sm),
-                  ],
-              ],
-            );
-          },
-        ),
+                  // Search matches title / number / issuer / type; filter
+                  // narrows by expiry-bucket. Both apply across licences and
+                  // certificates.
+                  final filtered = _applyWalletFilters(items);
+                  return ListView(
+                    padding: const EdgeInsets.all(EqSpacing.md),
+                    children: [
+                      const CompleteProfileBanner(),
+                      const PendingConnectionsBanner(),
+                      _SearchAndFilterBar(
+                        query: _query,
+                        controller: _searchCtrl,
+                        filter: _filter,
+                        onQueryChanged: (q) => setState(() => _query = q),
+                        onFilterChanged: (f) => setState(() => _filter = f),
+                        totalCount: items.length,
+                        shownCount: filtered.length,
+                      ),
+                      const SizedBox(height: EqSpacing.sm),
+                      if (filtered.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: EqSpacing.xl,
+                            horizontal: EqSpacing.lg,
+                          ),
+                          child: Text(
+                            'No matches for these filters.',
+                            style: EqTypography.bodyM
+                                .copyWith(color: EqColours.grey),
+                            textAlign: TextAlign.center,
+                          ),
+                        )
+                      else
+                        for (final item in filtered) ...[
+                          _WalletTile(item: item),
+                          const SizedBox(height: EqSpacing.sm),
+                        ],
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -735,7 +740,7 @@ class _WalletTileState extends State<_WalletTile> {
 
     setState(() => _downloading = true);
     try {
-      final supabaseUrl = supabase.supabaseUrl;
+      const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
       final uri = Uri.parse(
         '$supabaseUrl/functions/v1/generate-wallet-pass?credentialId=$credId',
       );
