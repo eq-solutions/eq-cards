@@ -1,10 +1,11 @@
 [build]
   # Builds are handled by GitHub Actions (deploy.yml) via zip-upload API.
-  # Netlify's ignore convention: exit 0 = build, non-zero = skip.
-  # "exit 1" here means: always skip git-triggered Netlify builds.
+  # Netlify ignore convention: exit 0 = SKIP build, non-zero = proceed.
+  # "exit 0" here means: always skip git-triggered Netlify builds.
+  # Primary guard: stop_builds=true in Netlify site settings.
   command   = "echo 'Deployed via GitHub Actions — not built by Netlify directly.'"
   publish   = "build/web"
-  ignore    = "exit 1"
+  ignore    = "exit 0"
 
 [functions]
   directory = "netlify/functions"
