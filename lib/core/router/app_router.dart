@@ -39,7 +39,6 @@ GoRouter appRouter(Ref ref) {
   // Bridge: Riverpod state changes -> ChangeNotifier -> GoRouter refresh.
   final notifier = _AuthRouterNotifier();
   ref.listen(authStateChangesProvider, (_, _) => notifier.bump());
-  ref.listen(appLockNotifierProvider, (_, _) => notifier.bump());
   ref.listen(profileNotifierProvider, (_, _) => notifier.bump());
   ref.onDispose(notifier.dispose);
 
@@ -47,9 +46,8 @@ GoRouter appRouter(Ref ref) {
     initialLocation: Routes.splash,
     refreshListenable: notifier,
     redirect: (context, state) {
-      final lockPhase = ref.read(appLockNotifierProvider);
       final profile = ref.read(profileNotifierProvider);
-      return _redirect(context, state, lockPhase, profile);
+      return _redirect(context, state, profile);
     },
     routes: [
       GoRoute(
@@ -75,15 +73,6 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: Routes.notProvisioned,
         builder: (context, state) => const NotProvisionedScreen(),
-      ),
-      // PIN auth — gates the app on every cold start once a PIN is set.
-      GoRoute(
-        path: Routes.pinSetup,
-        builder: (context, state) => const PinSetupScreen(),
-      ),
-      GoRoute(
-        path: Routes.pinEntry,
-        builder: (context, state) => const PinEntryScreen(),
       ),
       // Onboarding wizard — shown on first sign-in when profile is incomplete.
       // Full-screen flows outside the shell (no bottom nav).
@@ -284,7 +273,6 @@ GoRouter appRouter(Ref ref) {
 String? _redirect(
   BuildContext context,
   GoRouterState state,
-  AppLockPhase lockPhase,
   AsyncValue<Profile?> profile,
 ) {
   // Treat an expired session the same as no session. Without this, an
@@ -295,7 +283,6 @@ String? _redirect(
   final isSignedIn = session != null && !session.isExpired;
   final loc = state.matchedLocation;
   final isAuthRoute = loc.startsWith('/auth/');
-  final isPinRoute = loc == Routes.pinSetup || loc == Routes.pinEntry;
   final isOnboardingRoute = loc.startsWith('/onboarding');
   // Legal documents are reachable without sign-in so users can review the
   // Privacy Policy and Terms before sign-in.
@@ -372,38 +359,18 @@ String? _redirect(
     return isComplete ? Routes.licencesList : Routes.onboarding;
   }
 
-  // Unauthenticated: PIN routes are off-limits.
-  if (!isSignedIn && isPinRoute) return signedOutDestination;
-
   // Handoff is always processed even when a session exists — it needs to
   // clear any stale session and apply the fresh Shell JWT.
-  // PIN routes remain accessible when signed in (they ARE the gate).
   // not-provisioned is exempt: a tenant-less user belongs there, and the gate
   // above already moves a provisioned user off it. Bouncing it here would loop.
   if (isSignedIn &&
       isAuthRoute &&
       loc != Routes.handoff &&
-      loc != Routes.notProvisioned &&
-      !isPinRoute) {
+      loc != Routes.notProvisioned) {
     return Routes.licencesList;
   }
   if (!isSignedIn && !isAuthRoute && !isLegalRoute && !isShareRoute && !isClaimRoute) {
     return signedOutDestination;
-  }
-
-  // PIN gate — only applies to signed-in users on non-auth/legal/share routes,
-  // or when the lock notifier has determined a PIN action is required.
-  if (isSignedIn) {
-    if (lockPhase == AppLockPhase.pinSetupRequired && !isPinRoute) {
-      return Routes.pinSetup;
-    }
-    if (lockPhase == AppLockPhase.pinEntryRequired && !isPinRoute) {
-      return Routes.pinEntry;
-    }
-    // Once unlocked, bounce away from PIN routes if user somehow navigates back.
-    if (lockPhase == AppLockPhase.unlocked && isPinRoute) {
-      return Routes.licencesList;
-    }
   }
 
   return null;
