@@ -158,7 +158,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       _emitFieldEvents(_initial, draft);
       if (mounted) {
         if (widget.isOnboarding) {
-          context.go(Routes.onboardingDone);
+          context.go(Routes.onboardingWallet);
         } else {
           context.pop();
         }
@@ -275,10 +275,21 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                   decoration: InputDecoration(
                     labelText: 'Date of birth',
                     filled: true,
-                    fillColor: EqColours.surface,
+                    fillColor: EqColours.white,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(6),
-                      borderSide: BorderSide.none,
+                      borderSide: const BorderSide(
+                          color: EqColours.outline, width: 1),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: const BorderSide(
+                          color: EqColours.outline, width: 1),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: const BorderSide(
+                          color: EqColours.deep, width: 2),
                     ),
                   ),
                   child: Text(dobLabel, style: EqTypography.bodyL),
@@ -312,10 +323,21 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                       decoration: InputDecoration(
                         labelText: 'State',
                         filled: true,
-                        fillColor: EqColours.surface,
+                        fillColor: EqColours.white,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(6),
-                          borderSide: BorderSide.none,
+                          borderSide: const BorderSide(
+                              color: EqColours.outline, width: 1),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(6),
+                          borderSide: const BorderSide(
+                              color: EqColours.outline, width: 1),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(6),
+                          borderSide: const BorderSide(
+                              color: EqColours.deep, width: 2),
                         ),
                       ),
                       hint: const Text('Select'),

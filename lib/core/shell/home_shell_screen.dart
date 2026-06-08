@@ -47,7 +47,7 @@ class HomeShellScreen extends ConsumerWidget {
           NavigationDestination(
             icon: Icon(Icons.badge_outlined),
             selectedIcon: Icon(Icons.badge, color: EqColours.deep),
-            label: 'Licences',
+            label: 'Wallet',
           ),
           NavigationDestination(
             icon: Icon(Icons.workspace_premium_outlined),

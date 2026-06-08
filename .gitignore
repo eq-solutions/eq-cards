@@ -74,6 +74,11 @@ supabase/.branches/
 # mismatch is detected. Useful for debugging locally; never committed.
 **/failures/
 
+# Local design-handoff reference (V9 Claude Design export) + preview launch
+# config — working scratch, not part of the build.
+.v9-design/
+.claude/launch.json
+
 # Stray write-check scratch from earlier test runs.
 /test_write_check
 .netlify/

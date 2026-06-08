@@ -44,19 +44,21 @@ class EqTextField extends StatelessWidget {
         hintText: hint,
         errorText: errorText,
         labelStyle: EqTypography.label,
+        // V9 spec: white (card) fill with a 1px warm outline; control radius
+        // 6px. Focus deepens the border to sky-deep at 2px.
         filled: true,
-        fillColor: EqColours.surface,
+        fillColor: EqColours.white,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
-          borderSide: BorderSide.none,
+          borderSide: const BorderSide(color: EqColours.outline, width: 1),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
-          borderSide: BorderSide.none,
+          borderSide: const BorderSide(color: EqColours.outline, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
-          borderSide: const BorderSide(color: EqColours.sky, width: 2),
+          borderSide: const BorderSide(color: EqColours.deep, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),

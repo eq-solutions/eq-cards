@@ -12,7 +12,8 @@ name: Update Goldens
 # push that touches this file does. It never pushes commits itself, so there is
 # no risk of a CI loop.
 #
-# Re-baseline trigger: Direction D warm-sand tokens v1.1.0 (gray-200 border shift).
+# Re-baseline trigger: V9 component specs — CTA radius 13px + primary 50px/800;
+# EqTextField white-fill + 1px outline (affects eq_button_* and eq_text_field_*).
 on:
   push:
     branches: ['claude/**']

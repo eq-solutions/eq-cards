@@ -6,9 +6,11 @@ import '../../../../core/error/user_messages.dart';
 import '../../../../core/theme/eq_colours.dart';
 import '../../../../core/theme/eq_spacing.dart';
 import '../../../../core/theme/eq_typography.dart';
+import '../../../../core/validators/input_validators.dart';
 import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_button.dart';
 import '../../../../core/widgets/eq_text_field.dart';
+import '../../../auth/data/aus_phone.dart';
 import '../../data/admin_worker_repository.dart';
 import '../providers/org_admin_provider.dart';
 
@@ -79,11 +81,17 @@ class _AdminWorkerFormScreenState
       final repo = ref.read(adminWorkerRepositoryProvider);
       final existing = widget.worker;
 
+      // Store the mobile in E.164 so it matches the claim-by-phone lookup
+      // exactly. The required validator guarantees a normalisable value here;
+      // fall back to the trimmed text only as a belt-and-braces measure.
+      final normalisedPhone =
+          normaliseAusMobile(_phone.text.trim()) ?? _phone.text.trim();
+
       final draft = existing != null
           ? existing.copyWith(
               firstName: _firstName.text.trim(),
               lastName: _lastName.text.trim(),
-              phone: _orNull(_phone.text),
+              phone: normalisedPhone,
               email: _orNull(_email.text),
               preferredName: _orNull(_preferredName.text),
               role: _role,
@@ -92,7 +100,7 @@ class _AdminWorkerFormScreenState
               id: '',
               firstName: _firstName.text.trim(),
               lastName: _lastName.text.trim(),
-              phone: _orNull(_phone.text),
+              phone: normalisedPhone,
               email: _orNull(_email.text),
               preferredName: _orNull(_preferredName.text),
               role: _role,
@@ -205,12 +213,19 @@ class _AdminWorkerFormScreenState
             ),
             const SizedBox(height: EqSpacing.lg),
             _SectionHeader('Contact'),
+            const SizedBox(height: EqSpacing.xs),
+            Text(
+              'The mobile number is how the worker activates their account, '
+              'so it must be correct.',
+              style: EqTypography.label.copyWith(color: EqColours.grey),
+            ),
             const SizedBox(height: EqSpacing.sm),
             EqTextField(
               controller: _phone,
               label: 'Mobile number',
               keyboardType: TextInputType.phone,
               textInputAction: TextInputAction.next,
+              validator: validateMobileRequired,
             ),
             const SizedBox(height: EqSpacing.sm),
             EqTextField(
