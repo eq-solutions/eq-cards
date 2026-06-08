@@ -15,3 +15,23 @@
   from   = "/*"
   to     = "/index.html"
   status = 200
+
+# Flutter web cache headers.
+# flutter_service_worker.js and index.html must never be cached (they carry
+# the version hash that triggers app updates). main.dart.js CAN be cached but
+# must not be immutable — the file name doesn't change between deploys so the
+# browser needs to re-validate it.
+[[headers]]
+  for = "/flutter_service_worker.js"
+  [headers.values]
+    Cache-Control = "no-store"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/main.dart.js"
+  [headers.values]
+    Cache-Control = "public, max-age=604800, must-revalidate"

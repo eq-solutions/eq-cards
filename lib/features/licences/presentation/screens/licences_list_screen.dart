@@ -243,6 +243,7 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
           searchText:
               '${typeMap[l.licenceType] ?? l.licenceType} ${l.licenceNumber}'
                   .toLowerCase(),
+          photoUrl: l.photoFrontSignedUrl,
         ),
       for (final c in certs)
         _WalletItem(
@@ -636,6 +637,7 @@ class _WalletItem {
     required this.expiry,
     required this.onTap,
     required this.searchText,
+    this.photoUrl,
   });
 
   final IconData icon;
@@ -644,6 +646,9 @@ class _WalletItem {
   final DateTime? expiry;
   final VoidCallback onTap;
   final String searchText;
+  /// Signed URL for the front-of-licence photo. Shown as a thumbnail when
+  /// present; falls back to the icon chip when null.
+  final String? photoUrl;
 
   bool get isExpired => expiry != null && DateTime.now().isAfter(expiry!);
 
@@ -654,11 +659,16 @@ class _WalletItem {
   }
 }
 
-/// V9 wallet tile — icon chip + title + meta + expiry badge, in an EqCard.
+/// V9 wallet tile — photo thumbnail (or icon chip) + title + meta + expiry badge.
 class _WalletTile extends StatelessWidget {
   const _WalletTile({required this.item});
 
   final _WalletItem item;
+
+  Widget _iconChip(IconData icon) => Container(
+        color: EqColours.ice,
+        child: Center(child: Icon(icon, size: 18, color: EqColours.deep)),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -671,15 +681,20 @@ class _WalletTile extends StatelessWidget {
         onTap: item.onTap,
         child: Row(
           children: [
-            // V9 icon chip: 40×40, radius 10, ice background, deep glyph.
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: EqColours.ice,
-                borderRadius: BorderRadius.circular(10),
+            // Thumbnail: show licence photo if available, otherwise icon chip.
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: SizedBox(
+                width: 40,
+                height: 40,
+                child: item.photoUrl != null
+                    ? Image.network(
+                        item.photoUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => _iconChip(item.icon),
+                      )
+                    : _iconChip(item.icon),
               ),
-              child: Icon(item.icon, size: 18, color: EqColours.deep),
             ),
             const SizedBox(width: EqSpacing.md),
             Expanded(
