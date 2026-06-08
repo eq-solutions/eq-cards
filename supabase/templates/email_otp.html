@@ -21,33 +21,36 @@
       overflow: hidden;
       border: 1px solid #C5C0B8;
     }
+    /* App-bar style header */
     .header {
       background: #2986B4;
-      padding: 18px 24px 16px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
+      padding: 14px 24px;
+      display: table;
+      width: 100%;
     }
+    .header-mark-cell { display: table-cell; vertical-align: middle; width: 36px; }
     .header-mark {
-      width: 30px; height: 30px;
+      width: 28px; height: 28px;
       background: rgba(255,255,255,0.18);
-      border-radius: 8px;
-      display: inline-flex;
-      align-items: center; justify-content: center;
-      font-size: 14px; font-weight: 800;
+      border-radius: 7px;
+      text-align: center; line-height: 28px;
+      font-size: 13px; font-weight: 800;
       color: #fff; letter-spacing: -0.5px;
-      line-height: 1;
     }
-    .header-name {
-      font-size: 15px; font-weight: 700; color: #fff; letter-spacing: -0.2px;
+    .header-name-cell { display: table-cell; vertical-align: middle; }
+    .header-name { font-size: 14px; font-weight: 700; color: #fff; letter-spacing: -0.2px; }
+    /* Logo section */
+    .logo-section {
+      padding: 24px 24px 0;
+      text-align: left;
     }
-    .body {
-      padding: 28px 24px 20px;
-    }
+    .logo-section img { height: 28px; width: auto; display: block; }
+    /* Body */
+    .body { padding: 18px 24px 20px; }
     .eyebrow {
       font-size: 10px; font-weight: 700;
       letter-spacing: 0.14em; text-transform: uppercase;
-      color: #2986B4; margin: 0 0 6px;
+      color: #2986B4; margin: 0 0 5px;
     }
     .heading {
       font-size: 22px; font-weight: 700;
@@ -55,39 +58,33 @@
       margin: 0 0 8px;
     }
     .lede {
-      font-size: 14px; color: #4B5563; line-height: 1.55; margin: 0 0 22px;
+      font-size: 14px; color: #4B5563; line-height: 1.55; margin: 0 0 20px;
     }
     /* Wallet-tile style code block */
     .code-tile {
       background: #FFFFFF;
       border: 1px solid #D4CCBE;
       border-radius: 12px;
-      padding: 16px 18px;
-      margin-bottom: 20px;
+      padding: 15px 16px;
+      margin-bottom: 18px;
       display: table;
       width: 100%;
     }
     .code-ic-cell {
-      display: table-cell;
-      vertical-align: middle;
-      width: 44px;
-      padding-right: 14px;
+      display: table-cell; vertical-align: middle;
+      width: 54px; padding-right: 0;
     }
     .code-ic {
       width: 40px; height: 40px;
       background: #EAF5FB;
       border-radius: 10px;
-      text-align: center;
-      line-height: 40px;
+      text-align: center; line-height: 44px;
     }
-    .code-main-cell {
-      display: table-cell;
-      vertical-align: middle;
-    }
+    .code-main-cell { display: table-cell; vertical-align: middle; }
     .code-label {
       font-size: 10px; font-weight: 700;
       text-transform: uppercase; letter-spacing: 0.08em;
-      color: #6B7280; margin: 0 0 5px;
+      color: #6B7280; margin: 0 0 4px;
     }
     .code-value {
       font-size: 30px; font-weight: 800;
@@ -95,27 +92,18 @@
       line-height: 1; margin: 0 0 4px;
       font-variant-numeric: tabular-nums;
     }
-    .code-sub {
-      font-size: 11px; color: #9CA3AF; margin: 0;
-    }
+    .code-sub { font-size: 11px; color: #9CA3AF; margin: 0; }
     /* Divider */
-    .divider {
-      text-align: center;
-      margin-bottom: 16px;
-      position: relative;
-    }
-    .divider-line {
-      border: none; border-top: 1px solid #E4DDD2; margin: 0;
-    }
-    .divider-label {
+    .div-wrap { margin-bottom: 14px; position: relative; }
+    .div-line { border: none; border-top: 1px solid #E4DDD2; margin: 0; }
+    .div-label {
       display: inline-block;
       background: #F6F3EE;
       padding: 0 10px;
       font-size: 11px; color: #9CA3AF; font-weight: 600;
-      position: relative; top: -9px;
+      position: relative; top: -9px; left: 50%; transform: translateX(-50%);
     }
     /* CTA button */
-    .btn-wrap { margin-bottom: 18px; }
     .btn {
       display: block;
       background: #3DA8D8;
@@ -125,16 +113,17 @@
       padding: 14px 24px;
       border-radius: 13px;
       text-align: center;
+      margin-bottom: 16px;
     }
     .notice {
       font-size: 12px; color: #6B7280; line-height: 1.55; margin: 0;
-      padding-top: 16px;
+      padding-top: 14px;
       border-top: 1px solid #E4DDD2;
     }
     .footer {
       background: #EFEAE1;
       border-top: 1px solid #D4CCBE;
-      padding: 14px 24px;
+      padding: 13px 24px;
       font-size: 11px; color: #9CA3AF; line-height: 1.6;
     }
     .footer a { color: #3DA8D8; text-decoration: none; }
@@ -143,9 +132,20 @@
 <body>
   <div class="wrap">
 
+    <!-- Compact app-bar header -->
     <div class="header">
-      <div class="header-mark">EQ</div>
-      <div class="header-name">EQ Cards</div>
+      <div class="header-mark-cell">
+        <div class="header-mark">EQ</div>
+      </div>
+      <div class="header-name-cell">
+        <div class="header-name">EQ Cards</div>
+      </div>
+    </div>
+
+    <!-- EQ logo on warm sand -->
+    <div class="logo-section">
+      <img src="https://pub-409bd651f2e549f4907f5a856a9264ae.r2.dev/EQ_logo_blue_transparent.svg"
+           alt="EQ" height="28" />
     </div>
 
     <div class="body">
@@ -156,26 +156,24 @@
       <div class="code-tile">
         <div class="code-ic-cell">
           <div class="code-ic">
-            <!--[if mso]><v:roundrect><![endif]-->
-            <img src="https://pub-409bd651f2e549f4907f5a856a9264ae.r2.dev/email-lock-icon.png" width="18" height="18" alt="" style="vertical-align:middle;margin-top:11px" onerror="this.style.display='none'" />
-            <!--[if mso]></v:roundrect><![endif]-->
+            <img src="https://pub-409bd651f2e549f4907f5a856a9264ae.r2.dev/email-lock-icon.png"
+                 width="18" height="18" alt="" style="margin-top:11px;vertical-align:middle"
+                 onerror="this.style.display='none'" />
           </div>
         </div>
         <div class="code-main-cell">
           <p class="code-label">One-time code</p>
           <p class="code-value">{{ .Token }}</p>
-          <p class="code-sub">Expires in 10 minutes &nbsp;·&nbsp; do not share</p>
+          <p class="code-sub">Expires in 10 min &nbsp;·&nbsp; do not share</p>
         </div>
       </div>
 
-      <div class="divider">
-        <hr class="divider-line" />
-        <span class="divider-label">or use a sign-in link</span>
+      <div class="div-wrap">
+        <hr class="div-line" />
+        <span class="div-label">or use a sign-in link</span>
       </div>
 
-      <div class="btn-wrap">
-        <a href="{{ .ConfirmationURL }}" class="btn">Sign in to EQ Cards</a>
-      </div>
+      <a href="{{ .ConfirmationURL }}" class="btn">Sign in to EQ Cards</a>
 
       <p class="notice">
         If you didn't request this, ignore this email — your account is not affected.
