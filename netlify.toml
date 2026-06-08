@@ -1,6 +1,12 @@
 [build]
-  publish = "build/web"
-  ignore = "exit 0"
+  # Builds are handled by GitHub Actions (deploy.yml) via zip-upload API.
+  # Git-triggered builds are disabled in Netlify site settings (stop_builds=true).
+  # The command + ignore below are a belt-and-suspenders guard in case that
+  # setting is ever toggled back on — they prevent Netlify from trying to run
+  # flutter build web without the Flutter toolchain installed.
+  command   = "echo 'Deployed via GitHub Actions — not built by Netlify directly.'"
+  publish   = "build/web"
+  ignore    = "true"
 
 [functions]
   directory = "netlify/functions"
