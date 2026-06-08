@@ -5,130 +5,145 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sign in to EQ Cards</title>
   <style>
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      margin: 0; padding: 0;
-      background-color: #DCD9D4;
+      background: #1A1A2E;
       font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
       color: #1A1A2E;
       -webkit-font-smoothing: antialiased;
     }
-    .wrap {
-      max-width: 420px;
-      margin: 32px auto;
-      background: #F6F3EE;
-      border-radius: 24px;
+    .outer { padding: 32px 16px 48px; }
+    .card {
+      max-width: 440px;
+      margin: 0 auto;
+      border-radius: 20px;
       overflow: hidden;
-      border: 1px solid #C5C0B8;
+      border: 1px solid #2E2E46;
     }
-    .header {
-      background: #2986B4;
-      padding: 14px 24px;
-      display: table;
-      width: 100%;
+    .hero {
+      background: #1A1A2E;
+      padding: 40px 36px 36px;
+      border-bottom: 1px solid #2E2E46;
     }
-    .header-mark-cell { display: table-cell; vertical-align: middle; width: 36px; }
-    .header-mark {
-      width: 28px; height: 28px;
-      background: rgba(255,255,255,0.18);
-      border-radius: 7px;
-      text-align: center; line-height: 28px;
-      font-size: 13px; font-weight: 800;
-      color: #fff; letter-spacing: -0.5px;
+    .hero-logo {
+      display: block;
+      height: 44px;
+      width: auto;
+      margin-bottom: 20px;
+      filter: brightness(0) invert(1);
     }
-    .header-name-cell { display: table-cell; vertical-align: middle; }
-    .header-name { font-size: 14px; font-weight: 700; color: #fff; letter-spacing: -0.2px; }
-    .logo-section { padding: 24px 24px 0; }
-    .logo-section img { height: 28px; width: auto; display: block; }
-    .body { padding: 18px 24px 20px; }
-    .eyebrow {
-      font-size: 10px; font-weight: 700;
-      letter-spacing: 0.14em; text-transform: uppercase;
-      color: #2986B4; margin: 0 0 5px;
+    .hero-app {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #3DA8D8;
+      margin-bottom: 8px;
     }
-    .heading {
-      font-size: 22px; font-weight: 700;
-      letter-spacing: -0.02em; color: #1A1A2E;
-      margin: 0 0 8px;
+    .hero-heading {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: #FFFFFF;
+      line-height: 1.15;
+      margin-bottom: 8px;
+    }
+    .hero-sub {
+      font-size: 14px;
+      color: rgba(255,255,255,0.5);
+      line-height: 1.5;
+    }
+    .body {
+      background: #F6F3EE;
+      padding: 28px 32px 24px;
     }
     .lede {
-      font-size: 14px; color: #4B5563; line-height: 1.55; margin: 0 0 20px;
+      font-size: 14px;
+      color: #4B5563;
+      line-height: 1.6;
+      margin-bottom: 22px;
     }
     .btn {
       display: block;
-      background: #3DA8D8;
-      color: #ffffff !important;
-      font-size: 15px; font-weight: 800;
+      background: #2986B4;
+      color: #FFFFFF !important;
+      font-size: 15px;
+      font-weight: 800;
       text-decoration: none;
-      padding: 14px 24px;
+      padding: 15px 24px;
       border-radius: 13px;
       text-align: center;
-      margin-bottom: 16px;
+      letter-spacing: -0.1px;
+      margin-bottom: 18px;
     }
     .link-tile {
       background: #FFFFFF;
       border: 1px solid #D4CCBE;
       border-radius: 10px;
-      padding: 12px 14px;
-      margin-bottom: 16px;
+      padding: 13px 15px;
+      margin-bottom: 20px;
       word-break: break-all;
-      font-size: 11px; color: #9CA3AF; line-height: 1.55;
+      font-size: 11px;
+      color: #9CA3AF;
+      line-height: 1.6;
     }
     .link-tile a { color: #3DA8D8; text-decoration: none; }
     .notice {
-      font-size: 12px; color: #6B7280; line-height: 1.55; margin: 0;
-      padding-top: 14px;
-      border-top: 1px solid #E4DDD2;
+      font-size: 12px;
+      color: #9CA3AF;
+      line-height: 1.6;
+      text-align: center;
     }
     .footer {
       background: #EFEAE1;
       border-top: 1px solid #D4CCBE;
-      padding: 13px 24px;
-      font-size: 11px; color: #9CA3AF; line-height: 1.6;
+      padding: 16px 32px;
+      text-align: center;
+      font-size: 11px;
+      color: #9CA3AF;
+      line-height: 1.7;
     }
     .footer a { color: #3DA8D8; text-decoration: none; }
+    .footer strong { color: #6B7280; }
   </style>
 </head>
 <body>
-  <div class="wrap">
+  <div class="outer">
+    <div class="card">
 
-    <div class="header">
-      <div class="header-mark-cell">
-        <div class="header-mark">EQ</div>
-      </div>
-      <div class="header-name-cell">
-        <div class="header-name">EQ Cards</div>
-      </div>
-    </div>
-
-    <div class="logo-section">
-      <img src="https://pub-409bd651f2e549f4907f5a856a9264ae.r2.dev/EQ_logo_blue_transparent.svg"
-           alt="EQ" height="28" />
-    </div>
-
-    <div class="body">
-      <p class="eyebrow">Sign in</p>
-      <p class="heading">Sign in to EQ Cards</p>
-      <p class="lede">Click the button below to sign in. This link expires in 1 hour and can only be used once.</p>
-
-      <a href="{{ .ConfirmationURL }}" class="btn">Sign in to EQ Cards</a>
-
-      <div class="link-tile">
-        If the button doesn't work, copy and paste this link:<br />
-        <a href="{{ .ConfirmationURL }}">{{ .ConfirmationURL }}</a>
+      <div class="hero">
+        <img class="hero-logo"
+             src="https://pub-409bd651f2e549f4907f5a856a9264ae.r2.dev/EQ_logo_blue_transparent.svg"
+             alt="EQ" />
+        <div class="hero-app">EQ Cards</div>
+        <div class="hero-heading">Tap to sign in<br />to EQ Cards.</div>
+        <div class="hero-sub">This link expires in 1 hour and works once.</div>
       </div>
 
-      <p class="notice">
-        If you didn't request this, ignore this email — your account is not affected.
-      </p>
-    </div>
+      <div class="body">
 
-    <div class="footer">
-      <strong style="color:#6B7280">EQ Solutions</strong> &mdash;
-      <a href="https://cards.eq.solutions">cards.eq.solutions</a><br />
-      Automated message. Do not reply.
-    </div>
+        <p class="lede">One tap and you're in. No password needed.</p>
 
+        <a href="{{ .ConfirmationURL }}" class="btn">Sign in to EQ Cards →</a>
+
+        <div class="link-tile">
+          Button not working? Copy and paste this link into your browser:<br />
+          <a href="{{ .ConfirmationURL }}">{{ .ConfirmationURL }}</a>
+        </div>
+
+        <p class="notice">
+          Didn't request this? Ignore it — your account is safe.
+        </p>
+
+      </div>
+
+      <div class="footer">
+        <strong>EQ Solutions</strong> &mdash;
+        <a href="https://cards.eq.solutions">cards.eq.solutions</a><br />
+        Automated message. Do not reply.
+      </div>
+
+    </div>
   </div>
 </body>
 </html>
