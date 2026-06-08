@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/design/app_icon_preview.dart';
@@ -75,6 +76,8 @@ class SettingsScreen extends ConsumerWidget {
                       ),
                 orElse: () => const SizedBox.shrink(),
               ),
+          // Worker join QR — only visible to managers/supervisors.
+          _WorkerJoinQrCard(),
           EqCard(
             padding: EdgeInsets.zero,
             child: Column(
@@ -771,6 +774,121 @@ class _SignOutRow extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// QR code card shown in Settings for managers and supervisors.
+/// Displays a scannable QR pointing to /join?tenant=<slug> so workers
+/// can onboard by scanning at induction.
+class _WorkerJoinQrCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session == null) return const SizedBox.shrink();
+
+    final appMeta = session.user.appMetadata;
+    final role = appMeta['eq_role'] as String?;
+    final isEligible = role == 'manager' || role == 'supervisor';
+    if (!isEligible) return const SizedBox.shrink();
+
+    final tenantSlug = appMeta['tenant_slug'] as String?;
+    if (tenantSlug == null || tenantSlug.isEmpty) return const SizedBox.shrink();
+
+    final joinUrl = 'https://cards.eq.solutions/join?tenant=$tenantSlug';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: EqSpacing.sm),
+          child: Text('Team', style: EqTypography.label),
+        ),
+        const SizedBox(height: EqSpacing.sm),
+        Container(
+          decoration: BoxDecoration(
+            color: EqColours.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: EqColours.border),
+          ),
+          padding: const EdgeInsets.all(EqSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.qr_code_outlined, color: EqColours.ink),
+                  const SizedBox(width: EqSpacing.md),
+                  Text('Worker join QR', style: EqTypography.bodyL),
+                ],
+              ),
+              const SizedBox(height: EqSpacing.xs),
+              Text(
+                'Share this QR at induction. Workers scan to join your team.',
+                style: EqTypography.label,
+              ),
+              const SizedBox(height: EqSpacing.md),
+              Center(
+                child: QrImageView(
+                  data: joinUrl,
+                  version: QrVersions.auto,
+                  size: 200,
+                  eyeStyle: const QrEyeStyle(
+                    eyeShape: QrEyeShape.square,
+                    color: EqColours.ink,
+                  ),
+                  dataModuleStyle: const QrDataModuleStyle(
+                    dataModuleShape: QrDataModuleShape.square,
+                    color: EqColours.ink,
+                  ),
+                  backgroundColor: EqColours.white,
+                ),
+              ),
+              const SizedBox(height: EqSpacing.sm),
+              InkWell(
+                onTap: () async {
+                  await Clipboard.setData(ClipboardData(text: joinUrl));
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Join link copied to clipboard.'),
+                      duration: Duration(seconds: 2),
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: EqColours.ink,
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(4),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: EqSpacing.xs),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          joinUrl,
+                          style: EqTypography.label.copyWith(
+                            color: EqColours.sky,
+                          ),
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: EqSpacing.xs),
+                      const Icon(
+                        Icons.copy_outlined,
+                        size: 14,
+                        color: EqColours.sky,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: EqSpacing.lg),
+      ],
     );
   }
 }

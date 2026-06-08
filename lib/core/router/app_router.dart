@@ -149,6 +149,15 @@ GoRouter appRouter(Ref ref) {
           return ClaimInviteScreen(token: token);
         },
       ),
+      // Join — public QR / join-code onboarding entry point.
+      // Exempt from auth redirect so unauthenticated workers can land here.
+      GoRoute(
+        path: Routes.join,
+        builder: (context, state) {
+          final tenant = state.uri.queryParameters['tenant'] ?? '';
+          return JoinTenantScreen(tenantSlug: tenant);
+        },
+      ),
       // Worker self-service: APP 12 access to own employment record.
       GoRoute(
         path: Routes.workerHrRecord,
@@ -296,6 +305,9 @@ String? _redirect(
   // "sign in first" prompt rather than being bounced to the auth flow and
   // losing the token.
   final isClaimRoute = loc.startsWith('/claim');
+  // /join is a public onboarding entry — unauthenticated workers land here
+  // from QR codes or after entering a join code. No auth redirect.
+  final isJoinRoute = loc.startsWith('/join');
 
   // Provisioning gate: authenticated but tenant_id absent from JWT means the
   // user bypassed the invite flow. Redirect to the not-provisioned screen so
@@ -316,7 +328,7 @@ String? _redirect(
     // tenant_id) then routes to licencesList normally.
     final isPhoneExchangeInProgress =
         flowState is AuthFlowVerifying && flowState.isPhone && loc == Routes.otp;
-    if (tenantId == null && loc != Routes.notProvisioned && !isClaimRoute && !isPhoneExchangeInProgress) {
+    if (tenantId == null && loc != Routes.notProvisioned && !isClaimRoute && !isJoinRoute && !isPhoneExchangeInProgress) {
       // A worker who signed in FROM an invite link has a session but no tenant
       // yet — the tenant arrives only when they activate. Send them back to the
       // claim screen (where they'll see "Activate my account") rather than
@@ -379,7 +391,7 @@ String? _redirect(
       loc != Routes.notProvisioned) {
     return Routes.licencesList;
   }
-  if (!isSignedIn && !isAuthRoute && !isLegalRoute && !isShareRoute && !isClaimRoute) {
+  if (!isSignedIn && !isAuthRoute && !isLegalRoute && !isShareRoute && !isClaimRoute && !isJoinRoute) {
     return signedOutDestination;
   }
 
