@@ -5,187 +5,206 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Your EQ Cards sign-in code</title>
   <style>
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      margin: 0; padding: 0;
-      background-color: #DCD9D4;
+      background: #1A1A2E;
       font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
       color: #1A1A2E;
       -webkit-font-smoothing: antialiased;
     }
-    .wrap {
-      max-width: 420px;
-      margin: 32px auto;
-      background: #F6F3EE;
-      border-radius: 24px;
+
+    /* ── Outer wrapper ── */
+    .outer { padding: 32px 16px 48px; }
+    .card {
+      max-width: 440px;
+      margin: 0 auto;
+      border-radius: 20px;
       overflow: hidden;
-      border: 1px solid #C5C0B8;
+      border: 1px solid #2E2E46;
     }
-    /* App-bar style header */
-    .header {
-      background: #2986B4;
-      padding: 14px 24px;
-      display: table;
-      width: 100%;
+
+    /* ── Hero — dark ink, mirrors shell left panel ── */
+    .hero {
+      background: #1A1A2E;
+      padding: 40px 36px 36px;
+      border-bottom: 1px solid #2E2E46;
     }
-    .header-mark-cell { display: table-cell; vertical-align: middle; width: 36px; }
-    .header-mark {
-      width: 28px; height: 28px;
-      background: rgba(255,255,255,0.18);
-      border-radius: 7px;
-      text-align: center; line-height: 28px;
-      font-size: 13px; font-weight: 800;
-      color: #fff; letter-spacing: -0.5px;
+    .hero-logo {
+      display: block;
+      height: 44px;
+      width: auto;
+      margin-bottom: 20px;
+      /* Makes the blue SVG white on dark bg.
+         Gmail ✓  Apple Mail ✓  iOS ✓  Outlook.com ✓
+         Outlook 2019 desktop: shows blue on dark (still legible) */
+      filter: brightness(0) invert(1);
     }
-    .header-name-cell { display: table-cell; vertical-align: middle; }
-    .header-name { font-size: 14px; font-weight: 700; color: #fff; letter-spacing: -0.2px; }
-    /* Logo section */
-    .logo-section {
-      padding: 24px 24px 0;
-      text-align: left;
+    .hero-app {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #3DA8D8;
+      margin-bottom: 8px;
     }
-    .logo-section img { height: 28px; width: auto; display: block; }
-    /* Body */
-    .body { padding: 18px 24px 20px; }
-    .eyebrow {
-      font-size: 10px; font-weight: 700;
-      letter-spacing: 0.14em; text-transform: uppercase;
-      color: #2986B4; margin: 0 0 5px;
+    .hero-heading {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: #FFFFFF;
+      line-height: 1.15;
+      margin-bottom: 8px;
     }
-    .heading {
-      font-size: 22px; font-weight: 700;
-      letter-spacing: -0.02em; color: #1A1A2E;
-      margin: 0 0 8px;
+    .hero-sub {
+      font-size: 14px;
+      color: rgba(255,255,255,0.5);
+      line-height: 1.5;
     }
-    .lede {
-      font-size: 14px; color: #4B5563; line-height: 1.55; margin: 0 0 20px;
+
+    /* ── Body — warm sand ── */
+    .body {
+      background: #F6F3EE;
+      padding: 28px 32px 24px;
     }
-    /* Wallet-tile style code block */
+
+    /* Code tile */
     .code-tile {
       background: #FFFFFF;
       border: 1px solid #D4CCBE;
       border-radius: 12px;
-      padding: 15px 16px;
-      margin-bottom: 18px;
-      display: table;
-      width: 100%;
+      padding: 20px 22px;
+      margin-bottom: 22px;
+      text-align: center;
     }
-    .code-ic-cell {
-      display: table-cell; vertical-align: middle;
-      width: 54px; padding-right: 0;
-    }
-    .code-ic {
-      width: 40px; height: 40px;
-      background: #EAF5FB;
-      border-radius: 10px;
-      text-align: center; line-height: 44px;
-    }
-    .code-main-cell { display: table-cell; vertical-align: middle; }
     .code-label {
-      font-size: 10px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.08em;
-      color: #6B7280; margin: 0 0 4px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #9CA3AF;
+      margin-bottom: 10px;
     }
     .code-value {
-      font-size: 30px; font-weight: 800;
-      letter-spacing: 0.16em; color: #1A1A2E;
-      line-height: 1; margin: 0 0 4px;
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      color: #1A1A2E;
+      line-height: 1;
+      margin-bottom: 10px;
       font-variant-numeric: tabular-nums;
     }
-    .code-sub { font-size: 11px; color: #9CA3AF; margin: 0; }
-    /* Divider */
-    .div-wrap { margin-bottom: 14px; position: relative; }
-    .div-line { border: none; border-top: 1px solid #E4DDD2; margin: 0; }
-    .div-label {
+    .code-pill {
       display: inline-block;
-      background: #F6F3EE;
-      padding: 0 10px;
-      font-size: 11px; color: #9CA3AF; font-weight: 600;
-      position: relative; top: -9px; left: 50%; transform: translateX(-50%);
+      background: #EAF5FB;
+      color: #2986B4;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 99px;
+      letter-spacing: 0.02em;
     }
-    /* CTA button */
+
+    /* Divider */
+    .divider {
+      text-align: center;
+      margin: 0 0 18px;
+      position: relative;
+    }
+    .divider::before {
+      content: '';
+      display: block;
+      border-top: 1px solid #E4DDD2;
+      position: absolute;
+      top: 50%;
+      left: 0; right: 0;
+    }
+    .divider span {
+      display: inline-block;
+      position: relative;
+      background: #F6F3EE;
+      padding: 0 12px;
+      font-size: 11px;
+      color: #9CA3AF;
+      font-weight: 600;
+    }
+
+    /* CTA */
     .btn {
       display: block;
-      background: #3DA8D8;
-      color: #ffffff !important;
-      font-size: 15px; font-weight: 800;
+      background: #2986B4;
+      color: #FFFFFF !important;
+      font-size: 15px;
+      font-weight: 800;
       text-decoration: none;
-      padding: 14px 24px;
+      padding: 15px 24px;
       border-radius: 13px;
       text-align: center;
-      margin-bottom: 16px;
+      letter-spacing: -0.1px;
+      margin-bottom: 22px;
     }
+
+    /* Notice */
     .notice {
-      font-size: 12px; color: #6B7280; line-height: 1.55; margin: 0;
-      padding-top: 14px;
-      border-top: 1px solid #E4DDD2;
+      font-size: 12px;
+      color: #9CA3AF;
+      line-height: 1.6;
+      text-align: center;
     }
+
+    /* ── Footer ── */
     .footer {
       background: #EFEAE1;
       border-top: 1px solid #D4CCBE;
-      padding: 13px 24px;
-      font-size: 11px; color: #9CA3AF; line-height: 1.6;
+      padding: 16px 32px;
+      text-align: center;
+      font-size: 11px;
+      color: #9CA3AF;
+      line-height: 1.7;
     }
     .footer a { color: #3DA8D8; text-decoration: none; }
+    .footer strong { color: #6B7280; }
   </style>
 </head>
 <body>
-  <div class="wrap">
+  <div class="outer">
+    <div class="card">
 
-    <!-- Compact app-bar header -->
-    <div class="header">
-      <div class="header-mark-cell">
-        <div class="header-mark">EQ</div>
+      <!-- Dark ink hero — mirrors EQ Shell left panel -->
+      <div class="hero">
+        <img class="hero-logo"
+             src="https://pub-409bd651f2e549f4907f5a856a9264ae.r2.dev/EQ_logo_blue_transparent.svg"
+             alt="EQ" />
+        <div class="hero-app">EQ Cards</div>
+        <div class="hero-heading">Your sign-in<br />code is ready.</div>
+        <div class="hero-sub">Expires in 10 minutes — do not share.</div>
       </div>
-      <div class="header-name-cell">
-        <div class="header-name">EQ Cards</div>
-      </div>
-    </div>
 
-    <!-- EQ logo on warm sand -->
-    <div class="logo-section">
-      <img src="https://pub-409bd651f2e549f4907f5a856a9264ae.r2.dev/EQ_logo_blue_transparent.svg"
-           alt="EQ" height="28" />
-    </div>
+      <!-- Warm sand body -->
+      <div class="body">
 
-    <div class="body">
-      <p class="eyebrow">Sign in</p>
-      <p class="heading">Your sign-in code</p>
-      <p class="lede">Use this code to sign in to EQ Cards. It expires in 10 minutes.</p>
-
-      <div class="code-tile">
-        <div class="code-ic-cell">
-          <div class="code-ic">
-            <img src="https://pub-409bd651f2e549f4907f5a856a9264ae.r2.dev/email-lock-icon.png"
-                 width="18" height="18" alt="" style="margin-top:11px;vertical-align:middle"
-                 onerror="this.style.display='none'" />
-          </div>
+        <div class="code-tile">
+          <div class="code-label">One-time code</div>
+          <div class="code-value">{{ .Token }}</div>
+          <span class="code-pill">Expires in 10 min</span>
         </div>
-        <div class="code-main-cell">
-          <p class="code-label">One-time code</p>
-          <p class="code-value">{{ .Token }}</p>
-          <p class="code-sub">Expires in 10 min &nbsp;·&nbsp; do not share</p>
-        </div>
+
+        <div class="divider"><span>or open a sign-in link</span></div>
+
+        <a href="{{ .ConfirmationURL }}" class="btn">Sign in to EQ Cards →</a>
+
+        <p class="notice">
+          Didn't request this? Ignore it — your account is safe.
+        </p>
+
       </div>
 
-      <div class="div-wrap">
-        <hr class="div-line" />
-        <span class="div-label">or use a sign-in link</span>
+      <div class="footer">
+        <strong>EQ Solutions</strong> &mdash;
+        <a href="https://cards.eq.solutions">cards.eq.solutions</a><br />
+        Automated message. Do not reply.
       </div>
 
-      <a href="{{ .ConfirmationURL }}" class="btn">Sign in to EQ Cards</a>
-
-      <p class="notice">
-        If you didn't request this, ignore this email — your account is not affected.
-      </p>
     </div>
-
-    <div class="footer">
-      <strong style="color:#6B7280">EQ Solutions</strong> &mdash;
-      <a href="https://cards.eq.solutions">cards.eq.solutions</a><br />
-      Automated message. Do not reply.
-    </div>
-
   </div>
 </body>
 </html>
