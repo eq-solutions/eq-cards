@@ -1,6 +1,6 @@
 export 'data/auth_repository.dart'
     show AuthRepository, authRepositoryProvider;
-export 'domain/auth_flow_state.dart' show AuthFlowAwaitingOtp, AuthFlowState;
+export 'domain/auth_flow_state.dart' show AuthFlowAwaitingOtp, AuthFlowState, AuthFlowVerifying;
 export 'domain/auth_state.dart' show AuthState;
 export 'presentation/notifiers/auth_flow_notifier.dart'
     show AuthFlowNotifier, authFlowNotifierProvider;

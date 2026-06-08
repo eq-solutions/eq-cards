@@ -40,14 +40,16 @@ GoRouter appRouter(Ref ref) {
   final notifier = _AuthRouterNotifier();
   ref.listen(authStateChangesProvider, (_, _) => notifier.bump());
   ref.listen(profileNotifierProvider, (_, _) => notifier.bump());
+  ref.listen(authFlowNotifierProvider, (_, _) => notifier.bump());
   ref.onDispose(notifier.dispose);
 
   return GoRouter(
     initialLocation: Routes.splash,
     refreshListenable: notifier,
     redirect: (context, state) {
-      final profile = ref.read(profileNotifierProvider);
-      return _redirect(context, state, profile);
+      final AsyncValue<Profile?> profile = ref.read(profileNotifierProvider);
+      final AuthFlowState flowState = ref.read(authFlowNotifierProvider);
+      return _redirect(context, state, profile, flowState);
     },
     routes: [
       GoRoute(
@@ -274,6 +276,7 @@ String? _redirect(
   BuildContext context,
   GoRouterState state,
   AsyncValue<Profile?> profile,
+  AuthFlowState flowState,
 ) {
   // Treat an expired session the same as no session. Without this, an
   // offline user whose token expired (and `tokenRefreshed` never fired)
@@ -306,7 +309,14 @@ String? _redirect(
     // worker GETS their tenant, so a tenant-less user must be able to reach the
     // claim screen. Without this the flow dead-ends — sign in by phone (no
     // tenant yet) → bounced to not-provisioned → can never activate.
-    if (tenantId == null && loc != Routes.notProvisioned && !isClaimRoute) {
+    // During phone OTP verification the shell exchange runs AFTER GoTrue emits
+    // the first onAuthStateChange (raw JWT, no tenant_id). Exempting the OTP
+    // screen here keeps the user on the loading spinner instead of flashing
+    // through notProvisioned. The second onAuthStateChange (shell JWT, has
+    // tenant_id) then routes to licencesList normally.
+    final isPhoneExchangeInProgress =
+        flowState is AuthFlowVerifying && flowState.isPhone && loc == Routes.otp;
+    if (tenantId == null && loc != Routes.notProvisioned && !isClaimRoute && !isPhoneExchangeInProgress) {
       // A worker who signed in FROM an invite link has a session but no tenant
       // yet — the tenant arrives only when they activate. Send them back to the
       // claim screen (where they'll see "Activate my account") rather than
