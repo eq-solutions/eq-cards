@@ -20,7 +20,10 @@ import '../../../../core/theme/eq_typography.dart';
 import '../../../../core/utils/photo_upload.dart';
 import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_button.dart';
+import '../../../../core/widgets/eq_card.dart';
 import '../../../auth/auth.dart';
+import '../../../certificates/data/models/certificate.dart';
+import '../../../certificates/presentation/notifiers/certificates_list_notifier.dart';
 import '../../../profile/presentation/screens/profile_fill_from_licence_screen.dart'
     show DlProfileFill;
 import '../../data/models/licence.dart';
@@ -29,7 +32,7 @@ import '../helpers/licence_crop.dart';
 import '../helpers/licences_list_helpers.dart';
 import '../notifiers/licence_types_provider.dart';
 import '../notifiers/licences_list_notifier.dart';
-import '../widgets/licence_card.dart';
+import '../widgets/expiry_badge.dart';
 import 'licence_crop_screen.dart';
 import 'licence_edit_screen.dart';
 
@@ -91,53 +94,83 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
   @override
   Widget build(BuildContext context) {
     final asyncLicences = ref.watch(licencesListNotifierProvider);
+    final asyncCerts = ref.watch(certificatesListNotifierProvider);
     final asyncTypes = ref.watch(licenceTypesProvider);
     final designVersion = ref.watch(designVersionNotifierProvider);
 
+    final licences = asyncLicences.value;
+    final certs = asyncCerts.value;
+
+    // Combined wallet: licences are the primary source. A hard error there
+    // shows the error state; certificates failing degrades silently to
+    // "licences only" rather than blanking the whole wallet.
+    final bothLoading = licences == null &&
+        certs == null &&
+        (asyncLicences.isLoading || asyncCerts.isLoading);
+    final licencesFailed = asyncLicences.hasError && licences == null;
+
     return Scaffold(
       appBar: EqAppBar(
-        title: 'Licences',
+        title: 'Wallet',
         withBranding: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            tooltip: 'Add licence',
+            tooltip: 'Add to wallet',
             onPressed: () => _showAddSheet(context, ref),
           ),
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () async =>
-            ref.read(licencesListNotifierProvider.notifier).refresh(),
-        child: asyncLicences.when(
-          loading: () => const _LicencesSkeleton(),
-          error: (e, _) => ListView(
-            children: [
-              const CompleteProfileBanner(),
-              Padding(
-                padding: const EdgeInsets.all(EqSpacing.lg),
-                child: _ListErrorState(
-                  error: e,
-                  onRetry: () => ref
-                      .read(licencesListNotifierProvider.notifier)
-                      .refresh(),
-                  onSignInAgain: () => ref
-                      .read(authRepositoryProvider)
-                      .signOut(),
-                ),
-              ),
-            ],
-          ),
-          data: (licences) {
-            // Show the once-ever tap-to-copy hint on the next frame if we
-            // have at least one licence. Wrapped in a post-frame callback
-            // so we don't trigger UI changes during build.
-            if (licences.isNotEmpty && !_hintCheckedThisSession) {
+        onRefresh: () async {
+          unawaited(ref.read(licencesListNotifierProvider.notifier).refresh());
+          await ref.read(certificatesListNotifierProvider.notifier).refresh();
+        },
+        child: Builder(
+          builder: (context) {
+            if (bothLoading) return const _LicencesSkeleton();
+            if (licencesFailed) {
+              return ListView(
+                children: [
+                  const CompleteProfileBanner(),
+                  Padding(
+                    padding: const EdgeInsets.all(EqSpacing.lg),
+                    child: _ListErrorState(
+                      error: asyncLicences.error!,
+                      onRetry: () => ref
+                          .read(licencesListNotifierProvider.notifier)
+                          .refresh(),
+                      onSignInAgain: () =>
+                          ref.read(authRepositoryProvider).signOut(),
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            final typeMap = <String, String>{};
+            asyncTypes.whenData((types) {
+              for (final t in types) {
+                typeMap[t.code] = t.label;
+              }
+            });
+
+            final items = _buildWalletItems(
+              licences ?? const [],
+              certs ?? const [],
+              typeMap,
+            );
+
+            // Show the once-ever tap-to-copy hint on the next frame if the
+            // wallet has anything in it. Post-frame so we don't trigger UI
+            // changes during build.
+            if (items.isNotEmpty && !_hintCheckedThisSession) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (mounted) unawaited(_maybeShowTapToCopyHint(context));
               });
             }
-            if (licences.isEmpty) {
+
+            if (items.isEmpty) {
               return ListView(
                 children: [
                   const CompleteProfileBanner(),
@@ -148,16 +181,10 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
                 ],
               );
             }
-            final typeMap = <String, String>{};
-            asyncTypes.whenData((types) {
-              for (final t in types) {
-                typeMap[t.code] = t.label;
-              }
-            });
-            // Filter + search the licence list. Search matches type label
-            // and licence number (case-insensitive). Filter narrows by
-            // expiry-bucket. Both apply, search first then filter.
-            final filtered = _applyFilters(licences, typeMap);
+
+            // Search matches title / number / issuer / type; filter narrows
+            // by expiry-bucket. Both apply across licences and certificates.
+            final filtered = _applyWalletFilters(items);
             return ListView(
               padding: const EdgeInsets.all(EqSpacing.md),
               children: [
@@ -168,7 +195,7 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
                   filter: _filter,
                   onQueryChanged: (q) => setState(() => _query = q),
                   onFilterChanged: (f) => setState(() => _filter = f),
-                  totalCount: licences.length,
+                  totalCount: items.length,
                   shownCount: filtered.length,
                 ),
                 const SizedBox(height: EqSpacing.sm),
@@ -185,17 +212,8 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
                     ),
                   )
                 else
-                  for (final licence in filtered) ...[
-                    LicenceCard(
-                      licence: licence,
-                      typeLabel: typeMap[licence.licenceType] ??
-                          licence.licenceType,
-                      onTap: () =>
-                          context.go(Routes.licenceDetailFor(licence.id!)),
-                      onLongPress: () =>
-                          _showQuickActions(context, ref, licence),
-                      version: designVersion,
-                    ),
+                  for (final item in filtered) ...[
+                    _WalletTile(item: item),
                     const SizedBox(height: EqSpacing.sm),
                   ],
               ],
@@ -206,56 +224,67 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
     );
   }
 
-  /// Apply search + filter — delegates to the pure helper. Kept as a
-  /// thin instance method so the call site reads cleanly.
-  List<Licence> _applyFilters(
-    List<Licence> input,
+  /// Builds the unified wallet list — licences + certificates mapped to a
+  /// common tile shape — sorted by expiry urgency (soonest first, no-expiry
+  /// last). Pure given its inputs.
+  List<_WalletItem> _buildWalletItems(
+    List<Licence> licences,
+    List<Certificate> certs,
     Map<String, String> typeMap,
-  ) =>
-      applyLicenceFilters(
-        input,
-        typeLabels: typeMap,
-        filter: _filter,
-        query: _query,
-      );
-
-  /// Long-press quick-actions sheet on a licence card. Shortcuts the
-  /// detail-screen → menu → action chain to one tap.
-  Future<void> _showQuickActions(
-    BuildContext context,
-    WidgetRef ref,
-    Licence licence,
-  ) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: EqColours.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.open_in_new_outlined),
-              title: const Text('Open'),
-              onTap: () {
-                Navigator.of(sheetContext).pop();
-                context.go(Routes.licenceDetailFor(licence.id!));
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.edit_outlined),
-              title: const Text('Edit'),
-              onTap: () {
-                Navigator.of(sheetContext).pop();
-                context.go(Routes.licenceEditFor(licence.id!));
-              },
-            ),
-          ],
+  ) {
+    final items = <_WalletItem>[
+      for (final l in licences)
+        _WalletItem(
+          icon: Icons.badge_outlined,
+          title: typeMap[l.licenceType] ?? l.licenceType,
+          meta: l.licenceNumber,
+          expiry: l.expiryDate,
+          onTap: () => context.go(Routes.licenceDetailFor(l.id!)),
+          searchText:
+              '${typeMap[l.licenceType] ?? l.licenceType} ${l.licenceNumber}'
+                  .toLowerCase(),
         ),
-      ),
-    );
+      for (final c in certs)
+        _WalletItem(
+          icon: c.isPdf
+              ? Icons.picture_as_pdf_outlined
+              : Icons.workspace_premium_outlined,
+          title: c.title,
+          meta: c.issuer ??
+              (certTypeLabels[c.certificateType] ?? c.certificateType),
+          expiry: c.expiryDate,
+          onTap: () => context.go(Routes.certificateDetailFor(c.id!)),
+          searchText: '${c.title} ${c.issuer ?? ''} '
+                  '${certTypeLabels[c.certificateType] ?? c.certificateType}'
+              .toLowerCase(),
+        ),
+    ];
+    items.sort((a, b) {
+      final ax = a.expiry;
+      final bx = b.expiry;
+      if (ax == null && bx == null) return a.title.compareTo(b.title);
+      if (ax == null) return 1;
+      if (bx == null) return -1;
+      return ax.compareTo(bx);
+    });
+    return items;
+  }
+
+  /// Apply the active search query + expiry filter to the combined list.
+  List<_WalletItem> _applyWalletFilters(List<_WalletItem> input) {
+    final q = _query.trim().toLowerCase();
+    return input.where((item) {
+      switch (_filter) {
+        case LicenceFilter.all:
+          break;
+        case LicenceFilter.expiringSoon:
+          if (!item.isExpiringSoon) return false;
+        case LicenceFilter.expired:
+          if (!item.isExpired) return false;
+      }
+      if (q.isEmpty) return true;
+      return item.searchText.contains(q);
+    }).toList();
   }
 
   Future<void> _showAddSheet(BuildContext context, WidgetRef ref) async {
@@ -271,12 +300,12 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Add a licence', style: EqTypography.headingM),
+              Text('Add to wallet', style: EqTypography.headingM),
               const SizedBox(height: EqSpacing.md),
               ListTile(
                 leading: const Icon(Icons.camera_alt_outlined),
                 title: Text(
-                  kIsWeb ? 'Upload a photo' : 'Capture with camera',
+                  kIsWeb ? 'Upload a licence photo' : 'Scan a licence',
                 ),
                 subtitle: const Text(
                   'OCR pre-fills number, type, and dates from the photo',
@@ -288,10 +317,21 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.edit_outlined),
-                title: const Text('Enter manually'),
+                title: const Text('Enter a licence manually'),
                 onTap: () {
                   Navigator.of(sheetContext).pop();
                   context.go(Routes.licenceCreate);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.workspace_premium_outlined),
+                title: const Text('Add a certificate'),
+                subtitle: const Text(
+                  'First aid, working at heights, white card…',
+                ),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  context.go(Routes.certificateCreate);
                 },
               ),
             ],
@@ -584,6 +624,100 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
     }
   }
 
+}
+
+/// A single entry in the unified wallet — either a licence or a certificate,
+/// normalised to a common shape so they render in one list.
+class _WalletItem {
+  const _WalletItem({
+    required this.icon,
+    required this.title,
+    required this.meta,
+    required this.expiry,
+    required this.onTap,
+    required this.searchText,
+  });
+
+  final IconData icon;
+  final String title;
+  final String meta;
+  final DateTime? expiry;
+  final VoidCallback onTap;
+  final String searchText;
+
+  bool get isExpired => expiry != null && DateTime.now().isAfter(expiry!);
+
+  bool get isExpiringSoon {
+    final e = expiry;
+    if (e == null || isExpired) return false;
+    return e.difference(DateTime.now()).inDays <= 30;
+  }
+}
+
+/// V9 wallet tile — icon chip + title + meta + expiry badge, in an EqCard.
+class _WalletTile extends StatelessWidget {
+  const _WalletTile({required this.item});
+
+  final _WalletItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: [item.title, if (item.meta.isNotEmpty) item.meta].join(', '),
+      excludeSemantics: true,
+      child: EqCard(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        onTap: item.onTap,
+        child: Row(
+          children: [
+            // V9 icon chip: 40×40, radius 10, ice background, deep glyph.
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: EqColours.ice,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(item.icon, size: 18, color: EqColours.deep),
+            ),
+            const SizedBox(width: EqSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.title,
+                    style: EqTypography.bodyL
+                        .copyWith(fontWeight: FontWeight.w700),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (item.meta.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      item.meta,
+                      style: EqTypography.label.copyWith(color: EqColours.g500),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: EqSpacing.sm),
+            if (item.expiry != null)
+              ExpiryBadge(expiry: item.expiry!)
+            else
+              Text(
+                'No expiry',
+                style: EqTypography.label.copyWith(color: EqColours.grey),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _EmptyState extends StatelessWidget {

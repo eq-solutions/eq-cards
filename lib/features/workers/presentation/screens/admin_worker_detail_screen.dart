@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/error/user_messages.dart';
 import '../../../../core/router/routes.dart';
@@ -102,7 +104,11 @@ class AdminWorkerDetailScreen extends ConsumerWidget {
                 child: Text('Invite', style: EqTypography.label),
               ),
               if (activeInvite != null)
-                _ActiveInviteCard(invite: activeInvite, orgId: orgId)
+                _ActiveInviteCard(
+                  invite: activeInvite,
+                  orgId: orgId,
+                  worker: worker,
+                )
               else
                 _SendInviteCard(worker: worker, orgId: orgId),
               const SizedBox(height: EqSpacing.lg),
@@ -274,10 +280,15 @@ class _SendInviteCardState extends ConsumerState<_SendInviteCard> {
 }
 
 class _ActiveInviteCard extends ConsumerStatefulWidget {
-  const _ActiveInviteCard({required this.invite, required this.orgId});
+  const _ActiveInviteCard({
+    required this.invite,
+    required this.orgId,
+    required this.worker,
+  });
 
   final WorkerInvite invite;
   final String orgId;
+  final Worker worker;
 
   @override
   ConsumerState<_ActiveInviteCard> createState() => _ActiveInviteCardState();
@@ -295,6 +306,37 @@ class _ActiveInviteCardState extends ConsumerState<_ActiveInviteCard> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Invite link copied — paste it into a text message.'),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: EqColours.ink,
+      ),
+    );
+  }
+
+  /// One-tap SMS: opens the phone's messaging app pre-addressed to the
+  /// worker's mobile with a ready-to-send activation message. Removes the
+  /// copy-paste-into-a-text step that was the biggest onboarding drop-off.
+  /// Falls back to copying the link if no SMS handler is available (e.g. a
+  /// desktop browser).
+  Future<void> _sendInvite() async {
+    final phone = widget.worker.phone ?? '';
+    final body =
+        'Hi ${widget.worker.firstName}, activate your EQ Cards wallet: '
+        '$_claimUrl';
+    final uri = Uri.parse('sms:$phone?body=${Uri.encodeComponent(body)}');
+    try {
+      final launched = await launchUrl(uri);
+      if (!launched) await _copyFallback();
+    } catch (_) {
+      await _copyFallback();
+    }
+  }
+
+  Future<void> _copyFallback() async {
+    await Clipboard.setData(ClipboardData(text: _claimUrl));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('No messaging app found — link copied instead.'),
         behavior: SnackBarBehavior.floating,
         backgroundColor: EqColours.ink,
       ),
@@ -377,11 +419,38 @@ class _ActiveInviteCardState extends ConsumerState<_ActiveInviteCard> {
             ),
           ),
           const SizedBox(height: EqSpacing.md),
+          // QR code for in-person onboarding — the worker scans it with their
+          // phone camera to open the claim link, no typing or SMS needed.
+          Center(
+            child: Column(
+              children: [
+                QrImageView(
+                  data: _claimUrl,
+                  size: 160,
+                  backgroundColor: EqColours.white,
+                ),
+                const SizedBox(height: EqSpacing.xs),
+                Text(
+                  'On site? Have them scan this with their camera.',
+                  style: EqTypography.label.copyWith(color: EqColours.grey),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: EqSpacing.md),
+          EqButton(
+            label: 'Send invite by text',
+            onPressed: _sendInvite,
+            fullWidth: true,
+          ),
+          const SizedBox(height: EqSpacing.sm),
           Row(
             children: [
               Expanded(
                 child: EqButton(
                   label: 'Copy link',
+                  variant: EqButtonVariant.secondary,
                   onPressed: _copy,
                 ),
               ),

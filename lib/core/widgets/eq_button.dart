@@ -30,9 +30,14 @@ class EqButton extends StatelessWidget {
       EqButtonVariant.hero        => (EqColours.sky, EqColours.white),
     };
 
-    final double height     = variant == EqButtonVariant.hero ? 50 : 48;
-    final double radius     = variant == EqButtonVariant.hero ? 13 : 6;
-    final FontWeight weight = variant == EqButtonVariant.hero ? FontWeight.w800 : FontWeight.w600;
+    // V9 spec: CTA buttons are always radius 13 (never pill, never the 6px
+    // control radius). The prominent primary/hero CTA is 50px tall, 800
+    // weight; secondary/destructive stay 48px/600 as supporting actions.
+    final bool isPrimaryCta =
+        variant == EqButtonVariant.hero || variant == EqButtonVariant.primary;
+    final double height     = isPrimaryCta ? 50 : 48;
+    const double radius     = 13;
+    final FontWeight weight = isPrimaryCta ? FontWeight.w800 : FontWeight.w600;
 
     final button = SizedBox(
       height: height,

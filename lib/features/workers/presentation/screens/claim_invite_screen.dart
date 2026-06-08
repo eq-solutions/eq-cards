@@ -228,7 +228,8 @@ class _NotSignedIn extends StatelessWidget {
           ),
           const SizedBox(height: EqSpacing.sm),
           Text(
-            'After signing in, open this link again to activate.',
+            "We'll bring you straight back here to activate once you've "
+            'signed in.',
             style: EqTypography.label,
             textAlign: TextAlign.center,
           ),
