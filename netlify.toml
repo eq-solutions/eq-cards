@@ -35,3 +35,8 @@
   for = "/main.dart.js"
   [headers.values]
     Cache-Control = "public, max-age=604800, must-revalidate"
+
+[[headers]]
+  for = "/main.dart.wasm"
+  [headers.values]
+    Cache-Control = "public, max-age=604800, must-revalidate"
