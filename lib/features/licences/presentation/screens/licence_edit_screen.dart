@@ -56,6 +56,7 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
   String? _typeCode;
   DateTime? _issueDate;
   DateTime? _expiryDate;
+  bool _neverExpires = false;
   Uint8List? _pendingFront;
   Uint8List? _pendingBack;
   Licence? _existing;
@@ -95,7 +96,8 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
           _typeCode = existing.licenceType;
           _number.text = existing.licenceNumber;
           _issueDate = existing.issueDate;
-          _expiryDate = existing.expiryDate;
+          _expiryDate = existing.neverExpires ? null : existing.expiryDate;
+          _neverExpires = existing.neverExpires;
           _selectedState = existing.state;
           _authority.text = existing.issuingAuthority ?? '';
           _notes.text = existing.notes ?? '';
@@ -246,8 +248,8 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
       setState(() => _error = 'Please select the licence type.');
       return;
     }
-    if (_expiryDate == null) {
-      setState(() => _error = 'Please set an expiry date.');
+    if (!_neverExpires && _expiryDate == null) {
+      setState(() => _error = 'Please set an expiry date, or toggle "Never expires".');
       return;
     }
 
@@ -270,13 +272,21 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
       final uploader = ref.read(photoUploadProvider);
 
       // Step 1: upsert the row first (no photo paths if it's new).
+      // When neverExpires is true there is no meaningful expiry date; use
+      // a far-future sentinel so the non-nullable expiryDate field in the
+      // existing schema is satisfied. The never_expires flag is the source
+      // of truth and suppresses all expiry-based display and filter logic.
+      final effectiveExpiry = _neverExpires
+          ? DateTime(9999, 12, 31)
+          : _expiryDate!;
       final draft = Licence(
         id: _existing?.id,
         userId: userId,
         licenceType: _typeCode!,
         licenceNumber: _number.text.trim(),
         issueDate: _issueDate, // nullable — not all licences print an issue date
-        expiryDate: _expiryDate!,
+        expiryDate: effectiveExpiry,
+        neverExpires: _neverExpires,
         state: _selectedState,
         issuingAuthority: _textOrNull(_authority.text),
         notes: _textOrNull(_notes.text),
@@ -432,11 +442,39 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
                 onTap: () => _pickDate(forExpiry: false),
               ),
               const SizedBox(height: EqSpacing.md),
-              _DateField(
-                label: 'Expiry date',
-                value: _expiryDate,
-                onTap: () => _pickDate(forExpiry: true),
+              // "Never expires" toggle — when on, hides and clears the date
+              // picker. The toggle takes precedence over any stored expiryDate.
+              Container(
+                decoration: BoxDecoration(
+                  color: EqColours.surface,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: SwitchListTile(
+                  value: _neverExpires,
+                  onChanged: (v) => setState(() {
+                    _neverExpires = v;
+                    if (v) _expiryDate = null;
+                  }),
+                  title: Text(
+                    'This credential never expires',
+                    style: EqTypography.bodyM,
+                  ),
+                  activeThumbColor: EqColours.deep,
+                  activeTrackColor: EqColours.ice,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: EqSpacing.md,
+                    vertical: EqSpacing.xs,
+                  ),
+                ),
               ),
+              if (!_neverExpires) ...[
+                const SizedBox(height: EqSpacing.md),
+                _DateField(
+                  label: 'Expiry date',
+                  value: _expiryDate,
+                  onTap: () => _pickDate(forExpiry: true),
+                ),
+              ],
               const SizedBox(height: EqSpacing.md),
               DropdownButtonFormField<String>(
                 initialValue: _selectedState,

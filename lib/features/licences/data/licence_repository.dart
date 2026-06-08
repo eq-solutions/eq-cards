@@ -156,6 +156,7 @@ Map<String, dynamic> licenceToUpsertPayload(Licence l) {
   if (l.photoFrontPath != null) payload['photo_front_url'] = l.photoFrontPath;
   if (l.photoBackPath != null) payload['photo_back_url'] = l.photoBackPath;
   if (l.notes != null) payload['notes'] = l.notes;
+  payload['never_expires'] = l.neverExpires;
   return payload;
 }
 

@@ -33,6 +33,9 @@ abstract class Licence with _$Licence {
     String? issuingAuthority,
     String? state,
 
+    /// When true the credential is permanently valid regardless of [expiryDate].
+    @Default(false) bool neverExpires,
+
     /// Storage path in the `licence-photos` bucket — NOT a public URL.
     /// Format: `{userId}/{licenceId}/front.jpg`.
     @JsonKey(name: 'photo_front_url') String? photoFrontPath,
@@ -57,14 +60,17 @@ abstract class Licence with _$Licence {
       _$LicenceFromJson(json);
 
   /// True if today is strictly after `expiryDate`. The day of expiry itself
-  /// is treated as still valid.
-  bool get isExpired => DateTime.now().isAfter(expiryDate);
+  /// is treated as still valid. Always false when [neverExpires] is true.
+  bool get isExpired => !neverExpires && DateTime.now().isAfter(expiryDate);
 
   /// Whole-day delta to expiry, normalised to midnight on both sides so
   /// timezone offsets and time-of-day don't tip the count by ±1.
   ///
   /// Negative for already-expired licences. Zero on the day of expiry.
+  /// Always returns a large sentinel value when [neverExpires] is true so
+  /// callers that sort by urgency place these last.
   int get daysUntilExpiry {
+    if (neverExpires) return 999999;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final target = DateTime(expiryDate.year, expiryDate.month, expiryDate.day);
@@ -78,13 +84,14 @@ abstract class Licence with _$Licence {
   /// Note: the licence-list filter "Expiring soon" and the wallet-stats
   /// card on Settings use a tighter 30-day window via [isExpiringWithin].
   /// The 90-day band drives visual cues; the 30-day band drives "action
-  /// needed" surfaces.
-  bool get isExpiringSoon => !isExpired && daysUntilExpiry <= 90;
+  /// needed" surfaces. Always false when [neverExpires] is true.
+  bool get isExpiringSoon => !neverExpires && !isExpired && daysUntilExpiry <= 90;
 
   /// Parameterised version — `isExpiringWithin(days: 30)` returns true if
   /// the licence is valid today AND will expire within the next [days]
   /// days. Use this anywhere a hard-coded "expiring soon" threshold would
-  /// otherwise mismatch [isExpiringSoon]'s 90-day band.
+  /// otherwise mismatch [isExpiringSoon]'s 90-day band. Always false when
+  /// [neverExpires] is true.
   bool isExpiringWithin({required int days}) =>
-      !isExpired && daysUntilExpiry <= days;
+      !neverExpires && !isExpired && daysUntilExpiry <= days;
 }
