@@ -12,10 +12,6 @@ abstract class Routes {
   // Shown when a user has a valid Supabase session but no tenant provisioning.
   static const notProvisioned = '/auth/not-provisioned';
 
-  // PIN auth — gate shown after a valid session is restored.
-  static const pinSetup = '/auth/pin/setup';
-  static const pinEntry = '/auth/pin/enter';
-
   static const home = '/home';
   static const profile = '/profile';
   static const profileEdit = '/profile/edit';
