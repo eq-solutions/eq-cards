@@ -67,35 +67,30 @@
   </script>
 
   <!--
-    Service-worker kill-switch.
+    One-time legacy SW purge.
     The pre-Unit-4 build registered Flutter's default SW, which kept serving
     the old email-OTP entry screen (and stale Supabase URL) even after the
-    canonical flip. Commit 11f8712 stopped registering new SWs; this block
-    unregisters any SW already installed in users' browsers and clears the
-    caches it populated, then reloads once. No-op for clean clients. Safe to
-    leave in for a couple of releases; remove once telemetry shows no users
-    still arriving with a registration.
+    canonical flip. This block fires ONCE for existing users who had that
+    broken SW installed: it unregisters it, clears its caches, and sets
+    eq_sw_legacy_purged in localStorage so it never runs again. New users
+    (no prior SW) skip it entirely via the localStorage guard. After the
+    one-time purge the SW is free to register and stay registered — enabling
+    offline wallet support.
   -->
   <script>
     (function () {
       if (!('serviceWorker' in navigator)) return;
+      if (localStorage.getItem('eq_sw_legacy_purged') === '1') return;
       navigator.serviceWorker.getRegistrations().then(function (regs) {
-        if (!regs.length) return;
         Promise.all(regs.map(function (r) { return r.unregister(); }))
           .then(function () {
-            return (typeof caches !== 'undefined' && caches.keys)
-              ? caches.keys().then(function (keys) {
-                  return Promise.all(keys.map(function (k) { return caches.delete(k); }));
-                })
-              : null;
+            return caches.keys().then(function (keys) {
+              return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+            });
           })
-          .then(function () {
-            if (sessionStorage.getItem('eq_sw_purged') === '1') return;
-            sessionStorage.setItem('eq_sw_purged', '1');
-            location.reload();
-          })
-          .catch(function () { /* best-effort */ });
-      }).catch(function () { /* best-effort */ });
+          .then(function () { localStorage.setItem('eq_sw_legacy_purged', '1'); })
+          .catch(function () { localStorage.setItem('eq_sw_legacy_purged', '1'); });
+      });
     })();
   </script>
 
