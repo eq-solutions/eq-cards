@@ -1,13 +1,18 @@
+// ignore_for_file: avoid_web_libraries_in_flutter
 import 'dart:async';
+import 'dart:html' as html;
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/design/design_version.dart';
 import '../../../../core/error/failure.dart';
@@ -259,6 +264,9 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
               '${typeMap[l.licenceType] ?? l.licenceType} ${l.licenceNumber}'
                   .toLowerCase(),
           photoUrl: l.photoFrontSignedUrl,
+          // credentialId enables the Apple Wallet button. Licences map to
+          // worker_credentials on eq-canonical after the claim flow runs.
+          credentialId: l.id,
         ),
       for (final c in certs)
         _WalletItem(
@@ -654,6 +662,7 @@ class _WalletItem {
     required this.searchText,
     this.photoUrl,
     this.neverExpires = false,
+    this.credentialId,
   });
 
   final IconData icon;
@@ -669,6 +678,9 @@ class _WalletItem {
   /// always return false, and the tile shows a "No expiry" chip instead of a
   /// date.
   final bool neverExpires;
+  /// UUID of the `worker_credentials` row. When non-null and the user is on
+  /// iOS, an "Add to Apple Wallet" button is shown on the tile.
+  final String? credentialId;
 
   bool get isExpired =>
       !neverExpires && expiry != null && DateTime.now().isAfter(expiry!);
@@ -682,10 +694,88 @@ class _WalletItem {
 }
 
 /// V9 wallet tile — photo thumbnail (or icon chip) + title + meta + expiry badge.
-class _WalletTile extends StatelessWidget {
+/// On iOS web, shows an "Add to Apple Wallet" button for items with a
+/// [credentialId].
+class _WalletTile extends StatefulWidget {
   const _WalletTile({required this.item});
 
   final _WalletItem item;
+
+  @override
+  State<_WalletTile> createState() => _WalletTileState();
+}
+
+class _WalletTileState extends State<_WalletTile> {
+  bool _downloading = false;
+
+  /// True when running on iOS/iPadOS in a web browser.
+  static bool get _isIosWeb {
+    if (!kIsWeb) return false;
+    final ua = html.window.navigator.userAgent;
+    return ua.contains('iPhone') || ua.contains('iPad');
+  }
+
+  Future<void> _addToWallet(BuildContext context) async {
+    final credId = widget.item.credentialId;
+    if (credId == null) return;
+
+    final supabase = Supabase.instance.client;
+    final session = supabase.auth.currentSession;
+    if (session == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Sign in again to add to Wallet.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() => _downloading = true);
+    try {
+      final supabaseUrl = supabase.supabaseUrl;
+      final uri = Uri.parse(
+        '$supabaseUrl/functions/v1/generate-wallet-pass?credentialId=$credId',
+      );
+      final response = await http.get(
+        uri,
+        headers: {'Authorization': 'Bearer ${session.accessToken}'},
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Server returned ${response.statusCode}');
+      }
+
+      // Trigger browser download via a temporary anchor element.
+      final bytes = response.bodyBytes;
+      final blob = html.Blob(
+        <dynamic>[bytes],
+        'application/vnd.apple.pkpass',
+      );
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement(href: url)
+        ..download = '${widget.item.title}.pkpass'
+        ..style.display = 'none';
+      html.document.body?.append(anchor);
+      anchor.click();
+      anchor.remove();
+      html.Url.revokeObjectUrl(url);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not generate pass: ${e.toString()}'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: EqColours.ink,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _downloading = false);
+    }
+  }
 
   Widget _iconChip(IconData icon) => Container(
         color: EqColours.ice,
@@ -694,80 +784,132 @@ class _WalletTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final showWalletButton =
+        _isIosWeb && widget.item.credentialId != null;
+
     return Semantics(
       button: true,
-      label: [item.title, if (item.meta.isNotEmpty) item.meta].join(', '),
+      label: [widget.item.title, if (widget.item.meta.isNotEmpty) widget.item.meta].join(', '),
       excludeSemantics: true,
       child: EqCard(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-        onTap: item.onTap,
-        child: Row(
+        onTap: widget.item.onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Thumbnail: show licence photo if available, otherwise icon chip.
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: SizedBox(
-                width: 40,
-                height: 40,
-                child: item.photoUrl != null
-                    ? Image.network(
-                        item.photoUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => _iconChip(item.icon),
-                      )
-                    : _iconChip(item.icon),
-              ),
-            ),
-            const SizedBox(width: EqSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.title,
-                    style: EqTypography.bodyL
-                        .copyWith(fontWeight: FontWeight.w700),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+            Row(
+              children: [
+                // Thumbnail: show licence photo if available, otherwise icon chip.
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: widget.item.photoUrl != null
+                        ? Image.network(
+                            widget.item.photoUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) =>
+                                _iconChip(widget.item.icon),
+                          )
+                        : _iconChip(widget.item.icon),
                   ),
-                  if (item.meta.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      item.meta,
-                      style: EqTypography.label.copyWith(color: EqColours.g500),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(width: EqSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.item.title,
+                        style: EqTypography.bodyL
+                            .copyWith(fontWeight: FontWeight.w700),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (widget.item.meta.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          widget.item.meta,
+                          style: EqTypography.label
+                              .copyWith(color: EqColours.g500),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: EqSpacing.sm),
+                if (widget.item.neverExpires)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: EqSpacing.sm,
+                      vertical: 3,
                     ),
-                  ],
-                ],
-              ),
+                    decoration: BoxDecoration(
+                      color: EqColours.ice,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '∞  No expiry',
+                      style: EqTypography.label.copyWith(
+                        color: EqColours.deep,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  )
+                else if (widget.item.expiry != null)
+                  ExpiryBadge(expiry: widget.item.expiry!)
+                else
+                  Text(
+                    'No expiry',
+                    style:
+                        EqTypography.label.copyWith(color: EqColours.grey),
+                  ),
+              ],
             ),
-            const SizedBox(width: EqSpacing.sm),
-            if (item.neverExpires)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: EqSpacing.sm,
-                  vertical: 3,
-                ),
-                decoration: BoxDecoration(
-                  color: EqColours.ice,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '∞  No expiry',
-                  style: EqTypography.label.copyWith(
-                    color: EqColours.deep,
-                    fontWeight: FontWeight.w600,
+            // "Add to Apple Wallet" — only on iOS web when credentialId is set.
+            if (showWalletButton) ...[
+              const SizedBox(height: EqSpacing.sm),
+              SizedBox(
+                height: 40,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: EqSpacing.md,
+                    ),
+                  ),
+                  onPressed:
+                      _downloading ? null : () => _addToWallet(context),
+                  icon: _downloading
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          '',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                  label: Text(
+                    _downloading ? 'Generating…' : 'Add to Apple Wallet',
+                    style: EqTypography.label.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              )
-            else if (item.expiry != null)
-              ExpiryBadge(expiry: item.expiry!)
-            else
-              Text(
-                'No expiry',
-                style: EqTypography.label.copyWith(color: EqColours.grey),
               ),
+            ],
           ],
         ),
       ),
