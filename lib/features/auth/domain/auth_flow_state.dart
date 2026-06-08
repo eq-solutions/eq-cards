@@ -24,7 +24,8 @@ class AuthFlowAwaitingOtp extends AuthFlowState {
 }
 
 class AuthFlowVerifying extends AuthFlowState {
-  const AuthFlowVerifying();
+  const AuthFlowVerifying({this.isPhone = false});
+  final bool isPhone;
 }
 
 class AuthFlowError extends AuthFlowState {

@@ -163,9 +163,11 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: EqSpacing.xl),
-                    TextFormField(
+                    AutofillGroup(
+                      child: TextFormField(
                       controller: _codeController,
                       keyboardType: TextInputType.number,
+                      autofillHints: const [AutofillHints.oneTimeCode],
                       inputFormatters: [
                         FilteringTextInputFormatter.digitsOnly,
                         LengthLimitingTextInputFormatter(6),
@@ -190,6 +192,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                         if (v.trim().length != 6) return 'Code is 6 digits';
                         return null;
                       },
+                    ),
                     ),
                     if (error != null) ...[
                       const SizedBox(height: EqSpacing.md),

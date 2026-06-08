@@ -54,7 +54,7 @@ class AuthFlowNotifier extends _$AuthFlowNotifier {
   }
 
   Future<void> verifyPhoneOtp(String e164Phone, String token) async {
-    state = const AuthFlowVerifying();
+    state = const AuthFlowVerifying(isPhone: true);
     try {
       await ref.read(authRepositoryProvider).verifyPhoneOtp(e164Phone, token.trim());
     } on Failure catch (f) {
