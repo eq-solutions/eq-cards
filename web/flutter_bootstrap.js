@@ -1,9 +1,14 @@
 {{flutter_js}}
 {{flutter_build_config}}
 
-// Service worker intentionally disabled. Cards is served inside an iframe
-// on eq-canonical; aggressive SW caching trapped users on stale builds
-// after deploys (old email-OTP screen persisted after the Cards flip).
-// Without a SW the browser fetches the versioned main.dart.js directly
-// each time — correct for a shell-embedded micro-frontend.
-_flutter.loader.load();
+// Service worker enabled for offline wallet support (construction sites with
+// no signal). The previous kill-switch (and the one-time legacy purge in
+// index.html) removed the old stale SW; the new SW correctly serves the
+// current build and also powers the Cache API used by WalletCacheService.
+// flutter_service_worker.js is served with Cache-Control: no-store (netlify.toml)
+// so the browser always fetches it fresh, preventing the stale-build trap.
+_flutter.loader.load({
+  serviceWorkerSettings: {
+    serviceWorkerVersion: {{flutter_service_worker_version}},
+  },
+});

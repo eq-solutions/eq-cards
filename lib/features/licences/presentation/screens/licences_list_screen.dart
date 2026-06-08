@@ -21,13 +21,13 @@ import '../../../../core/utils/photo_upload.dart';
 import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_button.dart';
 import '../../../../core/widgets/eq_card.dart';
+import '../../../../core/widgets/offline_banner.dart';
 import '../../../auth/auth.dart';
 import '../../../certificates/data/models/certificate.dart';
 import '../../../certificates/presentation/notifiers/certificates_list_notifier.dart';
 import '../../../connections/presentation/widgets/pending_connections_banner.dart';
 import '../../../profile/presentation/screens/profile_fill_from_licence_screen.dart'
     show DlProfileFill;
-import '../../data/models/licence.dart';
 import '../../data/ocr_service.dart';
 import '../helpers/licence_crop.dart';
 import '../helpers/licences_list_helpers.dart';
@@ -101,6 +101,7 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
 
     final licences = asyncLicences.value;
     final certs = asyncCerts.value;
+    final bool fromCache = ref.watch(licencesFromCacheProvider) ?? false;
 
     // Combined wallet: licences are the primary source. A hard error there
     // shows the error state; certificates failing degrades silently to
@@ -122,66 +123,77 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          unawaited(ref.read(licencesListNotifierProvider.notifier).refresh());
-          await ref.read(certificatesListNotifierProvider.notifier).refresh();
-        },
-        child: Builder(
-          builder: (context) {
-            if (bothLoading) return const _LicencesSkeleton();
-            if (licencesFailed) {
-              return ListView(
-                children: [
-                  const CompleteProfileBanner(),
-                  Padding(
-                    padding: const EdgeInsets.all(EqSpacing.lg),
-                    child: _ListErrorState(
-                      error: asyncLicences.error!,
-                      onRetry: () => ref
-                          .read(licencesListNotifierProvider.notifier)
-                          .refresh(),
-                      onSignInAgain: () =>
-                          ref.read(authRepositoryProvider).signOut(),
-                    ),
-                  ),
-                ],
-              );
-            }
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Offline banner — amber strip shown when serving from cache with
+          // no network. Collapses to zero height when online or no cache.
+          OfflineBanner(fromCache: fromCache),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () async {
+                unawaited(
+                  ref.read(licencesListNotifierProvider.notifier).refresh(),
+                );
+                await ref
+                    .read(certificatesListNotifierProvider.notifier)
+                    .refresh();
+              },
+              child: Builder(
+                builder: (context) {
+                  if (bothLoading) return const _LicencesSkeleton();
+                  if (licencesFailed) {
+                    return ListView(
+                      children: [
+                        const CompleteProfileBanner(),
+                        Padding(
+                          padding: const EdgeInsets.all(EqSpacing.lg),
+                          child: _ListErrorState(
+                            error: asyncLicences.error!,
+                            onRetry: () => ref
+                                .read(licencesListNotifierProvider.notifier)
+                                .refresh(),
+                            onSignInAgain: () =>
+                                ref.read(authRepositoryProvider).signOut(),
+                          ),
+                        ),
+                      ],
+                    );
+                  }
 
-            final typeMap = <String, String>{};
-            asyncTypes.whenData((types) {
-              for (final t in types) {
-                typeMap[t.code] = t.label;
-              }
-            });
+                  final typeMap = <String, String>{};
+                  asyncTypes.whenData((types) {
+                    for (final t in types) {
+                      typeMap[t.code] = t.label;
+                    }
+                  });
 
-            final items = _buildWalletItems(
-              licences ?? const [],
-              certs ?? const [],
-              typeMap,
-            );
+                  final items = _buildWalletItems(
+                    licences ?? const [],
+                    certs ?? const [],
+                    typeMap,
+                  );
 
-            // Show the once-ever tap-to-copy hint on the next frame if the
-            // wallet has anything in it. Post-frame so we don't trigger UI
-            // changes during build.
-            if (items.isNotEmpty && !_hintCheckedThisSession) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) unawaited(_maybeShowTapToCopyHint(context));
-              });
-            }
+                  // Show the once-ever tap-to-copy hint on the next frame if
+                  // the wallet has anything in it. Post-frame so we don't
+                  // trigger UI changes during build.
+                  if (items.isNotEmpty && !_hintCheckedThisSession) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) unawaited(_maybeShowTapToCopyHint(context));
+                    });
+                  }
 
-            if (items.isEmpty) {
-              return ListView(
-                children: [
-                  const CompleteProfileBanner(),
-                  _EmptyState(
-                    onAdd: () => _showAddSheet(context, ref),
-                    version: designVersion,
-                  ),
-                ],
-              );
-            }
+                  if (items.isEmpty) {
+                    return ListView(
+                      children: [
+                        const CompleteProfileBanner(),
+                        _EmptyState(
+                          onAdd: () => _showAddSheet(context, ref),
+                          version: designVersion,
+                        ),
+                      ],
+                    );
+                  }
 
             // Search matches title / number / issuer / type; filter narrows
             // by expiry-bucket. Both apply across licences and certificates.
