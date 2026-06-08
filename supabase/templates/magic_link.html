@@ -7,150 +7,122 @@
   <style>
     * { box-sizing: border-box; }
     body {
-      margin: 0;
-      padding: 0;
-      background-color: #F6F3EE;
+      margin: 0; padding: 0;
+      background-color: #DCD9D4;
       font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
       color: #1A1A2E;
       -webkit-font-smoothing: antialiased;
     }
-    .wrapper {
-      max-width: 480px;
-      margin: 40px auto;
-      background: #ffffff;
-      border-radius: 12px;
+    .wrap {
+      max-width: 420px;
+      margin: 32px auto;
+      background: #F6F3EE;
+      border-radius: 24px;
       overflow: hidden;
-      border: 1px solid #E8E3D8;
+      border: 1px solid #C5C0B8;
     }
     .header {
-      background-color: #2986B4;
-      padding: 28px 32px 24px;
-    }
-    .header-logo {
+      background: #2986B4;
+      padding: 18px 24px 16px;
       display: flex;
       align-items: center;
       gap: 10px;
     }
     .header-mark {
-      width: 32px;
-      height: 32px;
-      background: rgba(255,255,255,0.2);
+      width: 30px; height: 30px;
+      background: rgba(255,255,255,0.18);
       border-radius: 8px;
       display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 16px;
-      font-weight: 800;
-      color: #ffffff;
-      letter-spacing: -0.5px;
+      align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 800;
+      color: #fff; letter-spacing: -0.5px;
       line-height: 1;
     }
     .header-name {
-      font-size: 18px;
-      font-weight: 700;
-      color: #ffffff;
-      letter-spacing: -0.3px;
+      font-size: 15px; font-weight: 700; color: #fff; letter-spacing: -0.2px;
     }
     .body {
-      padding: 36px 32px 28px;
+      padding: 28px 24px 20px;
     }
-    .body-heading {
-      font-size: 22px;
-      font-weight: 700;
-      color: #1A1A2E;
+    .eyebrow {
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: #2986B4; margin: 0 0 6px;
+    }
+    .heading {
+      font-size: 22px; font-weight: 700;
+      letter-spacing: -0.02em; color: #1A1A2E;
       margin: 0 0 8px;
-      letter-spacing: -0.3px;
     }
-    .body-sub {
-      font-size: 15px;
-      color: #666;
-      margin: 0 0 28px;
-      line-height: 1.5;
+    .lede {
+      font-size: 14px; color: #4B5563; line-height: 1.55; margin: 0 0 22px;
     }
-    .btn-wrap {
-      text-align: center;
-      margin: 0 0 24px;
-    }
+    /* CTA button */
     .btn {
-      display: inline-block;
-      background-color: #3DA8D8;
+      display: block;
+      background: #3DA8D8;
       color: #ffffff !important;
-      font-size: 15px;
-      font-weight: 700;
+      font-size: 15px; font-weight: 800;
       text-decoration: none;
-      padding: 14px 32px;
+      padding: 14px 24px;
+      border-radius: 13px;
+      text-align: center;
+      margin-bottom: 18px;
+    }
+    /* Link fallback tile */
+    .link-tile {
+      background: #FFFFFF;
+      border: 1px solid #D4CCBE;
       border-radius: 10px;
-      letter-spacing: -0.1px;
-    }
-    .link-fallback {
-      background: #F6F3EE;
-      border: 1px solid #E8E3D8;
-      border-radius: 8px;
-      padding: 14px 16px;
-      margin: 0 0 24px;
+      padding: 12px 14px;
+      margin-bottom: 18px;
       word-break: break-all;
-      font-size: 12px;
-      color: #888;
-      line-height: 1.6;
+      font-size: 11px; color: #9CA3AF; line-height: 1.55;
     }
-    .link-fallback a {
-      color: #3DA8D8;
-    }
+    .link-tile a { color: #3DA8D8; text-decoration: none; }
     .notice {
-      font-size: 14px;
-      color: #555;
-      line-height: 1.6;
-      margin: 0;
-      padding: 16px 0 0;
-      border-top: 1px solid #F0EDE8;
+      font-size: 12px; color: #6B7280; line-height: 1.55; margin: 0;
+      padding-top: 16px;
+      border-top: 1px solid #E4DDD2;
     }
     .footer {
-      background: #F6F3EE;
-      padding: 20px 32px;
-      font-size: 12px;
-      color: #999;
-      line-height: 1.6;
-      border-top: 1px solid #E8E3D8;
+      background: #EFEAE1;
+      border-top: 1px solid #D4CCBE;
+      padding: 14px 24px;
+      font-size: 11px; color: #9CA3AF; line-height: 1.6;
     }
-    .footer a {
-      color: #3DA8D8;
-      text-decoration: none;
-    }
+    .footer a { color: #3DA8D8; text-decoration: none; }
   </style>
 </head>
 <body>
-  <div class="wrapper">
+  <div class="wrap">
 
     <div class="header">
-      <div class="header-logo">
-        <div class="header-mark">EQ</div>
-        <div class="header-name">EQ Cards</div>
-      </div>
+      <div class="header-mark">EQ</div>
+      <div class="header-name">EQ Cards</div>
     </div>
 
     <div class="body">
-      <p class="body-heading">Sign in to EQ Cards</p>
-      <p class="body-sub">Click the button below to sign in. This link expires in 1 hour and can only be used once.</p>
+      <p class="eyebrow">Sign in</p>
+      <p class="heading">Sign in to EQ Cards</p>
+      <p class="lede">Click the button below to sign in. This link expires in 1 hour and can only be used once.</p>
 
-      <div class="btn-wrap">
-        <a href="{{ .ConfirmationURL }}" class="btn">Sign in to EQ Cards</a>
-      </div>
+      <a href="{{ .ConfirmationURL }}" class="btn">Sign in to EQ Cards</a>
 
-      <div class="link-fallback">
+      <div class="link-tile">
         If the button doesn't work, copy and paste this link into your browser:<br />
         <a href="{{ .ConfirmationURL }}">{{ .ConfirmationURL }}</a>
       </div>
 
       <p class="notice">
-        If you didn't request this link, you can safely ignore this email.
-        Your account won't be affected.
+        If you didn't request this, ignore this email — your account is not affected.
       </p>
     </div>
 
     <div class="footer">
-      <strong>EQ Solutions</strong> &mdash;
+      <strong style="color:#6B7280">EQ Solutions</strong> &mdash;
       <a href="https://cards.eq.solutions">cards.eq.solutions</a><br />
-      This is an automated message. Do not reply to this email.
+      Automated message. Do not reply.
     </div>
 
   </div>
