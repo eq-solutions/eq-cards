@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sign in to EQ Cards</title>
+  <title>Your EQ Cards sign-in code</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -22,6 +22,8 @@
       overflow: hidden;
       border: 1px solid #E8E3D8;
     }
+
+    /* Header */
     .header {
       background-color: #2986B4;
       padding: 28px 32px 24px;
@@ -51,6 +53,8 @@
       color: #ffffff;
       letter-spacing: -0.3px;
     }
+
+    /* Body */
     .body {
       padding: 36px 32px 28px;
     }
@@ -67,35 +71,41 @@
       margin: 0 0 28px;
       line-height: 1.5;
     }
-    .btn-wrap {
+
+    /* Code block */
+    .code-card {
+      background: #EAF5FB;
+      border: 1px solid #BFE0F0;
+      border-radius: 10px;
+      padding: 24px;
       text-align: center;
       margin: 0 0 24px;
     }
-    .btn {
-      display: inline-block;
-      background-color: #3DA8D8;
-      color: #ffffff !important;
-      font-size: 15px;
+    .code-label {
+      font-size: 11px;
       font-weight: 700;
-      text-decoration: none;
-      padding: 14px 32px;
-      border-radius: 10px;
-      letter-spacing: -0.1px;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: #3DA8D8;
+      margin: 0 0 12px;
     }
-    .link-fallback {
-      background: #F6F3EE;
-      border: 1px solid #E8E3D8;
-      border-radius: 8px;
-      padding: 14px 16px;
-      margin: 0 0 24px;
-      word-break: break-all;
+    .code {
+      font-size: 40px;
+      font-weight: 800;
+      letter-spacing: 10px;
+      color: #1A1A2E;
+      font-variant-numeric: tabular-nums;
+      margin: 0 0 10px;
+      /* Slightly indent to optically centre the gapped digits */
+      padding-left: 10px;
+    }
+    .code-expiry {
       font-size: 12px;
       color: #888;
-      line-height: 1.6;
+      margin: 0;
     }
-    .link-fallback a {
-      color: #3DA8D8;
-    }
+
+    /* Fine print */
     .notice {
       font-size: 14px;
       color: #555;
@@ -104,6 +114,8 @@
       padding: 16px 0 0;
       border-top: 1px solid #F0EDE8;
     }
+
+    /* Footer */
     .footer {
       background: #F6F3EE;
       padding: 20px 32px;
@@ -129,20 +141,17 @@
     </div>
 
     <div class="body">
-      <p class="body-heading">Sign in to EQ Cards</p>
-      <p class="body-sub">Click the button below to sign in. This link expires in 1 hour and can only be used once.</p>
+      <p class="body-heading">Your sign-in code</p>
+      <p class="body-sub">Use the code below to sign in. It expires in 1 hour.</p>
 
-      <div class="btn-wrap">
-        <a href="{{ .ConfirmationURL }}" class="btn">Sign in to EQ Cards</a>
-      </div>
-
-      <div class="link-fallback">
-        If the button doesn't work, copy and paste this link into your browser:<br />
-        <a href="{{ .ConfirmationURL }}">{{ .ConfirmationURL }}</a>
+      <div class="code-card">
+        <p class="code-label">One-time code</p>
+        <p class="code">{{ .Token }}</p>
+        <p class="code-expiry">Valid for 1 hour &nbsp;·&nbsp; Do not share</p>
       </div>
 
       <p class="notice">
-        If you didn't request this link, you can safely ignore this email.
+        If you didn't request this code, you can safely ignore this email.
         Your account won't be affected.
       </p>
     </div>
