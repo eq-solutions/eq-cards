@@ -24,6 +24,7 @@ import '../../../../core/widgets/eq_card.dart';
 import '../../../auth/auth.dart';
 import '../../../certificates/data/models/certificate.dart';
 import '../../../certificates/presentation/notifiers/certificates_list_notifier.dart';
+import '../../../connections/presentation/widgets/pending_connections_banner.dart';
 import '../../../profile/presentation/screens/profile_fill_from_licence_screen.dart'
     show DlProfileFill;
 import '../../data/models/licence.dart';
@@ -189,6 +190,7 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
               padding: const EdgeInsets.all(EqSpacing.md),
               children: [
                 const CompleteProfileBanner(),
+                const PendingConnectionsBanner(),
                 _SearchAndFilterBar(
                   query: _query,
                   controller: _searchCtrl,
@@ -238,7 +240,8 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
           icon: Icons.badge_outlined,
           title: typeMap[l.licenceType] ?? l.licenceType,
           meta: l.licenceNumber,
-          expiry: l.expiryDate,
+          expiry: l.neverExpires ? null : l.expiryDate,
+          neverExpires: l.neverExpires,
           onTap: () => context.go(Routes.licenceDetailFor(l.id!)),
           searchText:
               '${typeMap[l.licenceType] ?? l.licenceType} ${l.licenceNumber}'
@@ -638,6 +641,7 @@ class _WalletItem {
     required this.onTap,
     required this.searchText,
     this.photoUrl,
+    this.neverExpires = false,
   });
 
   final IconData icon;
@@ -649,10 +653,16 @@ class _WalletItem {
   /// Signed URL for the front-of-licence photo. Shown as a thumbnail when
   /// present; falls back to the icon chip when null.
   final String? photoUrl;
+  /// When true this credential never expires — isExpired and isExpiringSoon
+  /// always return false, and the tile shows a "No expiry" chip instead of a
+  /// date.
+  final bool neverExpires;
 
-  bool get isExpired => expiry != null && DateTime.now().isAfter(expiry!);
+  bool get isExpired =>
+      !neverExpires && expiry != null && DateTime.now().isAfter(expiry!);
 
   bool get isExpiringSoon {
+    if (neverExpires) return false;
     final e = expiry;
     if (e == null || isExpired) return false;
     return e.difference(DateTime.now()).inDays <= 30;
@@ -721,7 +731,25 @@ class _WalletTile extends StatelessWidget {
               ),
             ),
             const SizedBox(width: EqSpacing.sm),
-            if (item.expiry != null)
+            if (item.neverExpires)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: EqSpacing.sm,
+                  vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: EqColours.ice,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '∞  No expiry',
+                  style: EqTypography.label.copyWith(
+                    color: EqColours.deep,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              )
+            else if (item.expiry != null)
               ExpiryBadge(expiry: item.expiry!)
             else
               Text(

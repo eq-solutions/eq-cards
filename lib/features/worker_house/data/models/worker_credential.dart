@@ -21,6 +21,8 @@ abstract class WorkerCredential with _$WorkerCredential {
     String? stateTerritory,
     DateTime? issueDate,
     DateTime? expiryDate,
+    /// When true the credential never expires, regardless of [expiryDate].
+    @Default(false) bool neverExpires,
     String? photoFrontPath,
     String? photoBackPath,
     String? notes,
@@ -35,14 +37,20 @@ abstract class WorkerCredential with _$WorkerCredential {
   factory WorkerCredential.fromJson(Map<String, dynamic> json) =>
       _$WorkerCredentialFromJson(json);
 
+  /// Returns true only when [neverExpires] is false and the expiry date has
+  /// passed. Credentials flagged as never-expiring are always treated as valid.
   bool get isExpired =>
-      expiryDate != null && EqDates.isExpired(expiryDate!);
+      !neverExpires && expiryDate != null && EqDates.isExpired(expiryDate!);
 
+  /// Returns null when [neverExpires] is true; otherwise the whole-day delta
+  /// to the expiry date (negative when already expired).
   int? get daysUntilExpiry =>
-      expiryDate != null ? EqDates.daysUntil(expiryDate!) : null;
+      neverExpires ? null : (expiryDate != null ? EqDates.daysUntil(expiryDate!) : null);
 
+  /// Returns false when [neverExpires] is true — a no-expiry credential is
+  /// always valid and should never appear in "expiring soon" filters.
   bool get isExpiringSoon =>
-      expiryDate != null && EqDates.isExpiringSoon(expiryDate!);
+      !neverExpires && expiryDate != null && EqDates.isExpiringSoon(expiryDate!);
 }
 
 /// Human-readable labels for all credential types in the worker_credential_type enum.
