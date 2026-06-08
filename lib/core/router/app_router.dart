@@ -14,6 +14,8 @@ import '../../features/certificates/certificates.dart';
 import '../../features/legal/presentation/screens/legal_document_screen.dart';
 import '../../features/licences/licences.dart';
 import '../../features/onboarding/presentation/screens/onboarding_done_screen.dart';
+import '../../features/onboarding/presentation/screens/onboarding_review_screen.dart';
+import '../../features/onboarding/presentation/screens/onboarding_wallet_step_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_welcome_screen.dart';
 import '../../features/profile/profile.dart';
 import '../../features/settings/settings.dart';
@@ -92,6 +94,14 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: Routes.onboardingProfile,
         builder: (context, state) => const ProfileEditScreen(isOnboarding: true),
+      ),
+      GoRoute(
+        path: Routes.onboardingWallet,
+        builder: (context, state) => const OnboardingWalletStepScreen(),
+      ),
+      GoRoute(
+        path: Routes.onboardingReview,
+        builder: (context, state) => const OnboardingReviewScreen(),
       ),
       GoRoute(
         path: Routes.onboardingDone,
@@ -344,8 +354,10 @@ String? _redirect(
 
   // Onboarding routes require sign-in; bounce unauthenticated visitors.
   if (!isSignedIn && isOnboardingRoute) return signedOutDestination;
-  // Once profile is complete, onboarding routes redirect to the wallet.
-  if (isSignedIn && isOnboardingRoute) {
+  // Only redirect the root welcome screen away when profile is already
+  // complete — sub-routes (/wallet, /review, /done) must flow freely so
+  // the wizard continues after profile is saved in step 2.
+  if (isSignedIn && loc == Routes.onboarding) {
     final isComplete = profile.value?.isComplete ?? false;
     if (isComplete) return Routes.licencesList;
   }
