@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/routes.dart';
@@ -10,9 +11,9 @@ import '../../../../core/theme/eq_spacing.dart';
 import '../../../../core/theme/eq_typography.dart';
 import '../../../../core/validators/input_validators.dart';
 import '../../data/aus_phone.dart';
+import '../../data/auth_repository.dart';
 import '../../domain/auth_flow_state.dart';
 import '../notifiers/auth_flow_notifier.dart';
-import '../notifiers/join_context_notifier.dart';
 
 class EmailEntryScreen extends ConsumerStatefulWidget {
   const EmailEntryScreen({super.key});
@@ -28,6 +29,7 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
   final _phoneController = TextEditingController();
   final _emailFormKey = GlobalKey<FormState>();
   final _phoneFormKey = GlobalKey<FormState>();
+  bool _googleLoading = false;
 
   @override
   void initState() {
@@ -49,82 +51,6 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
     super.dispose();
   }
 
-  void _showJoinCodeSheet(BuildContext context) {
-    final codeController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-
-    unawaited(showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: EqColours.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          left: EqSpacing.xl,
-          right: EqSpacing.xl,
-          top: EqSpacing.lg,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + EqSpacing.xl,
-        ),
-        child: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Enter your join code',
-                style: EqTypography.headingM.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: EqColours.deep,
-                ),
-              ),
-              const SizedBox(height: EqSpacing.sm),
-              Text(
-                'Your manager will give you a short code for your team.',
-                style: EqTypography.bodyM.copyWith(color: EqColours.grey),
-              ),
-              const SizedBox(height: EqSpacing.lg),
-              TextFormField(
-                controller: codeController,
-                autocorrect: false,
-                autofocus: true,
-                textInputAction: TextInputAction.done,
-                decoration: const InputDecoration(
-                  labelText: 'Join code',
-                  hintText: 'e.g. sks',
-                ),
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) {
-                    return 'Enter your join code';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: EqSpacing.lg),
-              FilledButton(
-                onPressed: () {
-                  if (!formKey.currentState!.validate()) return;
-                  final slug = codeController.text.toLowerCase().trim();
-                  Navigator.of(ctx).pop();
-                  // Clear any stale join context before setting the new one.
-                  ref.read(joinContextNotifierProvider.notifier).clear();
-                  unawaited(context.push('${Routes.join}?tenant=$slug'));
-                },
-                style: FilledButton.styleFrom(
-                  backgroundColor: EqColours.sky,
-                  minimumSize: const Size.fromHeight(48),
-                ),
-                child: const Text('Continue'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    ));
-  }
-
   Future<void> _submitEmail() async {
     if (!_emailFormKey.currentState!.validate()) return;
     await ref
@@ -136,6 +62,16 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
     if (!_phoneFormKey.currentState!.validate()) return;
     final phone = normaliseAusMobile(_phoneController.text.trim())!;
     await ref.read(authFlowNotifierProvider.notifier).sendPhoneOtp(phone);
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() => _googleLoading = true);
+    try {
+      await ref.read(authRepositoryProvider).signInWithGoogle();
+      // On web this redirects — setState after is a no-op.
+    } catch (_) {
+      if (mounted) setState(() => _googleLoading = false);
+    }
   }
 
   @override
@@ -169,8 +105,8 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
                   // ── Brand ────────────────────────────────────────────────
                   Image.asset(
                     'assets/icon/launcher.png',
-                    width: 240,
-                    height: 240,
+                    width: 56,
+                    height: 56,
                     errorBuilder: (_, _, _) => const SizedBox.shrink(),
                   ),
                   const SizedBox(height: EqSpacing.lg),
@@ -318,20 +254,65 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
                         : const Text('Send code'),
                   ),
 
-                  const SizedBox(height: EqSpacing.md),
+                  const SizedBox(height: EqSpacing.xl),
 
-                  // ── Join with a join code ────────────────────────────────
-                  TextButton(
-                    onPressed: () => _showJoinCodeSheet(context),
-                    child: Text(
-                      'Join with a join code',
-                      style: EqTypography.bodyM.copyWith(
-                        color: EqColours.sky,
+                  // ── Divider ──────────────────────────────────────────────
+                  Row(
+                    children: [
+                      const Expanded(child: Divider()),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: EqSpacing.md,
+                        ),
+                        child: Text(
+                          'or',
+                          style: EqTypography.label
+                              .copyWith(color: EqColours.grey),
+                        ),
                       ),
-                    ),
+                      const Expanded(child: Divider()),
+                    ],
                   ),
 
                   const SizedBox(height: EqSpacing.lg),
+
+                  // ── Google sign-in ───────────────────────────────────────
+                  OutlinedButton(
+                    onPressed: (_googleLoading || isLoading)
+                        ? null
+                        : _signInWithGoogle,
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                      side: const BorderSide(color: EqColours.border),
+                      backgroundColor: EqColours.white,
+                      foregroundColor: EqColours.ink,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: _googleLoading
+                        ? const _LoadingSpinner(color: EqColours.grey)
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SvgPicture.asset(
+                                'assets/icons/google_logo.svg',
+                                width: 20,
+                                height: 20,
+                              ),
+                              const SizedBox(width: EqSpacing.sm),
+                              Text(
+                                'Continue with Google',
+                                style: EqTypography.bodyL.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                  color: EqColours.ink,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+
+                  const SizedBox(height: EqSpacing.xl),
                 ],
               ),
             ),
@@ -343,12 +324,13 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
 }
 
 class _LoadingSpinner extends StatelessWidget {
-  const _LoadingSpinner();
+  const _LoadingSpinner({this.color = Colors.white});
+  final Color color;
 
   @override
-  Widget build(BuildContext context) => const SizedBox(
+  Widget build(BuildContext context) => SizedBox(
         width: 20,
         height: 20,
-        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+        child: CircularProgressIndicator(color: color, strokeWidth: 2),
       );
 }
