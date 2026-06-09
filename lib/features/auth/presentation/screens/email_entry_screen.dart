@@ -100,7 +100,7 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
               const SizedBox(height: EqSpacing.lg),
               Text(
                 'Enter your company code',
-                style: EqTypography.headingS.copyWith(
+                style: EqTypography.headingM.copyWith(
                   fontWeight: FontWeight.w700,
                   color: EqColours.ink,
                 ),
