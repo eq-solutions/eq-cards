@@ -151,11 +151,15 @@ GoRouter appRouter(Ref ref) {
       ),
       // Join — public QR / join-code onboarding entry point.
       // Exempt from auth redirect so unauthenticated workers can land here.
+      // Supports ?tenant=<slug>&name=<org+name> — name is optional; QR admin
+      // page encodes it so the screen can show the real org name without a
+      // network fetch.
       GoRoute(
         path: Routes.join,
         builder: (context, state) {
           final tenant = state.uri.queryParameters['tenant'] ?? '';
-          return JoinTenantScreen(tenantSlug: tenant);
+          final name = state.uri.queryParameters['name'];
+          return JoinTenantScreen(tenantSlug: tenant, tenantName: name);
         },
       ),
       // Worker self-service: APP 12 access to own employment record.
