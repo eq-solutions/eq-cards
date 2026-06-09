@@ -114,9 +114,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
       _isPhone = flowState.isPhone;
     }
 
-    // Clear code on error transition; handle provision completion.
+    // Clear code on error/token-misuse transition; handle provision completion.
     ref.listen<AuthFlowState>(authFlowNotifierProvider, (_, next) {
-      if (next is AuthFlowError) {
+      if (next is AuthFlowError || next is AuthFlowTokenUsed) {
         _codeController.clear();
       } else if (next is AuthFlowProvisionComplete) {
         // Workspace created — clear context, open Shell, return to sign-in.
@@ -138,6 +138,74 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
         if (mounted) context.go(Routes.email);
       }
     });
+
+    // Token-misuse: dedicated "link already used" screen.
+    if (flowState is AuthFlowTokenUsed) {
+      return Scaffold(
+        backgroundColor: EqColours.white,
+        appBar: AppBar(
+          backgroundColor: EqColours.white,
+          elevation: 0,
+          leading: BackButton(
+            color: EqColours.ink,
+            onPressed: () {
+              ref.read(authFlowNotifierProvider.notifier).reset();
+              ref.read(joinContextNotifierProvider.notifier).clear();
+              ref.read(provisionContextNotifierProvider.notifier).clear();
+              context.go(Routes.email);
+            },
+          ),
+        ),
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Padding(
+                padding: const EdgeInsets.all(EqSpacing.xl),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'This link has already been used',
+                      style: EqTypography.headingL.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: EqColours.deep,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: EqSpacing.sm),
+                    Text(
+                      'Invitation links can only be used once. Ask your admin for a new link.',
+                      style: EqTypography.bodyM.copyWith(
+                        color: EqColours.grey,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: EqSpacing.xl),
+                    FilledButton(
+                      onPressed: () {
+                        ref.read(authFlowNotifierProvider.notifier).reset();
+                        ref.read(joinContextNotifierProvider.notifier).clear();
+                        ref
+                            .read(provisionContextNotifierProvider.notifier)
+                            .clear();
+                        context.go(Routes.email);
+                      },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: EqColours.sky,
+                        minimumSize: const Size.fromHeight(48),
+                      ),
+                      child: const Text('Back to sign in'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
 
     // Safety: stale navigation after app restart → back to entry screen.
     if (flowState is! AuthFlowAwaitingOtp &&
