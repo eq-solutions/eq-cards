@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:url_launcher/url_launcher.dart';
+
 import '../../../../core/router/routes.dart';
 import '../../../../core/theme/eq_colours.dart';
 import '../../../../core/theme/eq_spacing.dart';
@@ -12,6 +14,7 @@ import '../../../../core/theme/eq_typography.dart';
 import '../../domain/auth_flow_state.dart';
 import '../notifiers/auth_flow_notifier.dart';
 import '../notifiers/join_context_notifier.dart';
+import '../notifiers/provision_context_notifier.dart';
 
 // How long the resend button is disabled after sending a code.
 const _kResendCooldown = Duration(seconds: 30);
@@ -68,8 +71,15 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     final notifier = ref.read(authFlowNotifierProvider.notifier);
+    final provisionCtx = ref.read(provisionContextNotifierProvider);
     final joinCtx = ref.read(joinContextNotifierProvider);
-    if (_isPhone && joinCtx != null) {
+    if (_isPhone && provisionCtx != null) {
+      await notifier.provisionTenant(
+        _identifier,
+        _codeController.text,
+        provisionCtx.provisionToken,
+      );
+    } else if (_isPhone && joinCtx != null) {
       await notifier.joinTenant(
         _identifier,
         _codeController.text,
@@ -104,9 +114,22 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
       _isPhone = flowState.isPhone;
     }
 
-    // Clear code on error transition.
+    // Clear code on error transition; handle provision completion.
     ref.listen<AuthFlowState>(authFlowNotifierProvider, (_, next) {
-      if (next is AuthFlowError) _codeController.clear();
+      if (next is AuthFlowError) {
+        _codeController.clear();
+      } else if (next is AuthFlowProvisionComplete) {
+        // Workspace created — clear context, open Shell, return to sign-in.
+        ref.read(provisionContextNotifierProvider.notifier).clear();
+        final slug = next.tenantSlug;
+        if (slug.isNotEmpty) {
+          unawaited(launchUrl(
+            Uri.parse('https://core.eq.solutions/$slug'),
+            mode: LaunchMode.externalApplication,
+          ));
+        }
+        if (mounted) context.go(Routes.email);
+      }
     });
 
     // Safety: stale navigation after app restart → back to entry screen.
@@ -139,6 +162,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
           onPressed: () {
             ref.read(authFlowNotifierProvider.notifier).reset();
             ref.read(joinContextNotifierProvider.notifier).clear();
+            ref.read(provisionContextNotifierProvider.notifier).clear();
             context.pop();
           },
         ),

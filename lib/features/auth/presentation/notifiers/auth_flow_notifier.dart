@@ -88,6 +88,45 @@ class AuthFlowNotifier extends _$AuthFlowNotifier {
     }
   }
 
+  /// Verifies the phone OTP then calls shell-provision-tenant to atomically
+  /// create a new tenant workspace for [provisionToken].
+  ///
+  /// On success, signs out of Cards (the admin's session lives in Shell) and
+  /// emits [AuthFlowProvisionComplete] with the new [tenantSlug]. The OTP
+  /// screen listens for this state and opens Shell in an external browser.
+  Future<void> provisionTenant(
+    String e164Phone,
+    String token,
+    String provisionToken,
+  ) async {
+    state = const AuthFlowVerifying(isPhone: true);
+    try {
+      final authRepo = ref.read(authRepositoryProvider);
+      final accessToken =
+          await authRepo.verifyPhoneOtpOnly(e164Phone, token.trim());
+      if (accessToken == null) {
+        state = const AuthFlowError(
+          'Verification failed — please try again.',
+        );
+        return;
+      }
+      final tenantSlug = await authRepo.provisionTenantExchange(
+        e164Phone,
+        accessToken,
+        provisionToken,
+      );
+      // Sign out of Cards — the admin's workspace is in Shell.
+      // They'll log in to Shell using the same phone number.
+      await authRepo.signOut();
+      state = AuthFlowProvisionComplete(tenantSlug ?? '');
+    } on Failure catch (f) {
+      _setError(f, isPhone: true);
+    } catch (e, st) {
+      unawaited(Sentry.captureException(e, stackTrace: st));
+      state = const AuthFlowError('Something went wrong. Please try again.');
+    }
+  }
+
   void reset() => state = const AuthFlowIdle();
 
   /// Maps [f] to user-facing copy and pushes it to `state`. Failures whose

@@ -65,6 +65,11 @@ abstract class Routes {
   // Public route — no auth required.
   static const join = '/join';
 
+  // Provision — org admin self-provisions a new workspace via a one-time link.
+  // ?token=<uuid>&name=<orgName>  (name is optional display hint)
+  // Public route — no auth required.
+  static const provision = '/provision';
+
   // Worker self-service — APP 12 access to own employment record.
   static const workerHrRecord = '/settings/hr-record';
 }

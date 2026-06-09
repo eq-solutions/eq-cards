@@ -378,6 +378,98 @@ class AuthRepository {
     }
   }
 
+  /// Calls the Shell's shell-provision-tenant function to atomically create a
+  /// new tenant workspace for [provisionToken].
+  ///
+  /// The provision token is a one-time UUID issued by a platform admin via
+  /// shell-create-provision-token. On success the Shell creates all required
+  /// DB rows (tenants, users, org_memberships etc.) and returns the new
+  /// [tenantSlug]. The admin then logs into Shell directly using their phone —
+  /// no Cards session is set here since the admin's home is Shell, not Cards.
+  ///
+  /// Throws [ValidationFailure] with a user-facing message on any error,
+  /// including a duplicate-use attempt (409).
+  Future<String?> provisionTenantExchange(
+    String e164Phone,
+    String accessToken,
+    String provisionToken,
+  ) async {
+    unawaited(_breadcrumb('provision_tenant_exchange_started'));
+    try {
+      final uri = Uri.parse(
+        '$_kShellBaseUrl/.netlify/functions/shell-provision-tenant',
+      );
+      final response = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'phone': e164Phone,
+              'access_token': accessToken,
+              'provision_token': provisionToken,
+            }),
+          )
+          .timeout(const Duration(seconds: 20));
+
+      final Map<String, dynamic> body;
+      try {
+        body = jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (_) {
+        unawaited(_breadcrumb('provision_tenant_exchange_parse_error'));
+        throw const ValidationFailure(
+          'Something went wrong setting up your workspace. Please try again.',
+        );
+      }
+
+      if (response.statusCode == 409) {
+        unawaited(_breadcrumb('provision_tenant_exchange_link_used'));
+        throw ValidationFailure(
+          (body['error'] as String?) ??
+              'This invitation link has already been used.',
+        );
+      }
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        unawaited(
+          _breadcrumb('provision_tenant_exchange_http_error', {
+            'status': response.statusCode,
+          }),
+        );
+        unawaited(
+          Sentry.captureMessage(
+            'provisionTenantExchange: unexpected HTTP ${response.statusCode}',
+            level: SentryLevel.warning,
+          ),
+        );
+        throw ValidationFailure(
+          (body['error'] as String?) ??
+              'Something went wrong setting up your workspace. Please try again.',
+        );
+      }
+
+      if (body['valid'] != true) {
+        unawaited(_breadcrumb('provision_tenant_exchange_invalid'));
+        throw ValidationFailure(
+          (body['error'] as String?) ??
+              'Invalid or expired invitation link.',
+        );
+      }
+
+      unawaited(_breadcrumb('provision_tenant_exchange_succeeded'));
+      return body['tenant_slug'] as String?;
+    } on Failure {
+      rethrow;
+    } catch (e, st) {
+      unawaited(
+        _breadcrumb('provision_tenant_exchange_exception', {'error': e.toString()}),
+      );
+      unawaited(Sentry.captureException(e, stackTrace: st));
+      throw const ValidationFailure(
+        'Something went wrong setting up your workspace. Please try again.',
+      );
+    }
+  }
+
   Future<void> signOut() async {
     unawaited(_breadcrumb('sign_out_started'));
     try {

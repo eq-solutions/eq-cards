@@ -32,3 +32,12 @@ class AuthFlowError extends AuthFlowState {
   const AuthFlowError(this.message);
   final String message;
 }
+
+/// Emitted by [AuthFlowNotifier.provisionTenant] on successful workspace
+/// creation. The OTP screen listens for this state and opens Shell at
+/// `core.eq.solutions/:tenantSlug` in an external browser, then returns
+/// the user to the Cards sign-in screen.
+class AuthFlowProvisionComplete extends AuthFlowState {
+  const AuthFlowProvisionComplete(this.tenantSlug);
+  final String tenantSlug;
+}
