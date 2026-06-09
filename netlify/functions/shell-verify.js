@@ -22,7 +22,9 @@ import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET || '';
-const EQ_SECRET_SALT = process.env.EQ_SECRET_SALT || '';
+// S2-9: Shell session cookies are signed with EQ_SESSION_SALT; fall back to
+// EQ_SECRET_SALT so existing deploys without the new env var keep working.
+const EQ_SECRET_SALT = process.env.EQ_SESSION_SALT || process.env.EQ_SECRET_SALT || '';
 
 function jsonResponse(status, body) {
   return new Response(JSON.stringify(body), {
