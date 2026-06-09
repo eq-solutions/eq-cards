@@ -110,15 +110,19 @@ class AuthFlowNotifier extends _$AuthFlowNotifier {
         );
         return;
       }
-      final tenantSlug = await authRepo.provisionTenantExchange(
+      final (tenantSlug, handoffToken) = await authRepo.provisionTenantExchange(
         e164Phone,
         accessToken,
         provisionToken,
       );
-      // Sign out of Cards — the admin's workspace is in Shell.
-      // They'll log in to Shell using the same phone number.
+      // Sign out of Cards — the admin's home is Shell, not Cards.
+      // We sign out after capturing the tokens so the GoTrue JWT is
+      // still valid when Shell's shell-handoff-provision validates it.
       await authRepo.signOut();
-      state = AuthFlowProvisionComplete(tenantSlug ?? '');
+      state = AuthFlowProvisionComplete(
+        tenantSlug ?? '',
+        accessToken: handoffToken,
+      );
     } on Failure catch (f) {
       _setError(f, isPhone: true);
     } catch (e, st) {

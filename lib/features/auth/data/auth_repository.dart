@@ -384,12 +384,15 @@ class AuthRepository {
   /// The provision token is a one-time UUID issued by a platform admin via
   /// shell-create-provision-token. On success the Shell creates all required
   /// DB rows (tenants, users, org_memberships etc.) and returns the new
-  /// [tenantSlug]. The admin then logs into Shell directly using their phone —
-  /// no Cards session is set here since the admin's home is Shell, not Cards.
+  /// [tenantSlug] and [accessToken] (echoed back so Shell can auto-login the
+  /// admin via shell-handoff-provision — no second OTP required).
+  ///
+  /// Returns a record `(tenantSlug, accessToken)`. Either value may be null on
+  /// partial server responses; callers should handle null gracefully.
   ///
   /// Throws [ValidationFailure] with a user-facing message on any error,
   /// including a duplicate-use attempt (409).
-  Future<String?> provisionTenantExchange(
+  Future<(String?, String?)> provisionTenantExchange(
     String e164Phone,
     String accessToken,
     String provisionToken,
@@ -456,7 +459,10 @@ class AuthRepository {
       }
 
       unawaited(_breadcrumb('provision_tenant_exchange_succeeded'));
-      return body['tenant_slug'] as String?;
+      return (
+        body['tenant_slug'] as String?,
+        body['access_token'] as String?,
+      );
     } on Failure {
       rethrow;
     } catch (e, st) {

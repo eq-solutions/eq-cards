@@ -120,11 +120,18 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
         _codeController.clear();
       } else if (next is AuthFlowProvisionComplete) {
         // Workspace created — clear context, open Shell, return to sign-in.
+        // If the server returned an access_token, append it as #sh=<token>
+        // so Shell's SessionProvider can auto-log the admin in via
+        // shell-handoff-provision (no second OTP required).
         ref.read(provisionContextNotifierProvider.notifier).clear();
         final slug = next.tenantSlug;
         if (slug.isNotEmpty) {
+          final token = next.accessToken;
+          final fragment = (token != null && token.isNotEmpty)
+              ? '#sh=${Uri.encodeComponent(token)}'
+              : '';
           unawaited(launchUrl(
-            Uri.parse('https://core.eq.solutions/$slug'),
+            Uri.parse('https://core.eq.solutions/$slug$fragment'),
             mode: LaunchMode.externalApplication,
           ));
         }
