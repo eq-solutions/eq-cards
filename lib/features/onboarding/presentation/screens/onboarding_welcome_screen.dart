@@ -70,6 +70,8 @@ class OnboardingWelcomeScreen extends ConsumerWidget {
                 icon: Icons.verified_outlined,
                 text: 'Share verifiable records with site managers',
               ),
+              const SizedBox(height: EqSpacing.xl),
+              _DataDisclosure(),
               const Spacer(),
             ],
           ),
@@ -101,6 +103,37 @@ class _ValueProp extends StatelessWidget {
         const SizedBox(width: EqSpacing.md),
         Expanded(
           child: Text(text, style: EqTypography.bodyM),
+        ),
+      ],
+    );
+  }
+}
+
+/// Lightweight data disclosure shown before onboarding starts.
+/// Satisfies Australian Privacy Act obligations around overseas disclosure.
+class _DataDisclosure extends StatelessWidget {
+  const _DataDisclosure();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Your data is stored in Australia. Analytics and error '
+          'reporting may use services in the EU.',
+          style: EqTypography.label.copyWith(color: EqColours.g500),
+        ),
+        const SizedBox(height: 2),
+        GestureDetector(
+          onTap: () => context.push(Routes.privacyPolicy),
+          child: Text(
+            'Privacy Policy',
+            style: EqTypography.label.copyWith(
+              color: EqColours.sky,
+              decoration: TextDecoration.underline,
+            ),
+          ),
         ),
       ],
     );

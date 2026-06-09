@@ -275,12 +275,30 @@ class _Consent extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: EqColours.border),
             ),
-            child: Text(
-              'By activating, you agree to share your wallet with '
-              '${preview.orgName}. You can revoke access at any time '
-              'from Settings.',
-              style: EqTypography.label,
-              textAlign: TextAlign.center,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  'By activating, you agree to share your wallet with '
+                  '${preview.orgName}. Your profile data will be stored '
+                  'in ${preview.orgName}\'s EQ Cards workspace. '
+                  'You can revoke access at any time from Settings.',
+                  style: EqTypography.label,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: EqSpacing.sm),
+                GestureDetector(
+                  onTap: () => context.push(Routes.privacyPolicy),
+                  child: Text(
+                    'Privacy Policy',
+                    style: EqTypography.label.copyWith(
+                      color: EqColours.sky,
+                      decoration: TextDecoration.underline,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: EqSpacing.xl),
