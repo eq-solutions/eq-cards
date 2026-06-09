@@ -36,8 +36,8 @@ class _OnboardingReviewScreenState
     final walletTotal = licenceCount + certCount;
 
     final consentText = orgName != null
-        ? "I confirm that the information I've provided is accurate and consent to it being shared with $orgName for employment purposes."
-        : "I confirm that the information I've provided is accurate and consent to it being used for employment purposes.";
+        ? "I confirm the information I've provided is accurate and consent to it being stored in $orgName's EQ Cards workspace and used for employment purposes, in accordance with the Privacy Policy."
+        : "I confirm the information I've provided is accurate and consent to it being used for employment purposes, in accordance with the Privacy Policy.";
 
     return WizardShell(
       step: 4,
@@ -152,6 +152,19 @@ class _OnboardingReviewScreenState
                     ),
                   ),
                 ],
+              ),
+            ),
+          ),
+          const SizedBox(height: EqSpacing.sm),
+          Center(
+            child: GestureDetector(
+              onTap: () => context.push(Routes.privacyPolicy),
+              child: Text(
+                'Privacy Policy',
+                style: EqTypography.label.copyWith(
+                  color: EqColours.sky,
+                  decoration: TextDecoration.underline,
+                ),
               ),
             ),
           ),
