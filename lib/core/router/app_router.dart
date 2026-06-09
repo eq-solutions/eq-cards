@@ -24,6 +24,7 @@ import '../../features/workers/data/models/worker.dart';
 import '../../features/workers/presentation/screens/admin_members_screen.dart';
 import '../../features/workers/presentation/screens/admin_worker_detail_screen.dart';
 import '../../features/workers/presentation/screens/admin_worker_form_screen.dart';
+import '../../features/workers/presentation/screens/claim_by_phone_screen.dart';
 import '../../features/workers/presentation/screens/claim_invite_screen.dart';
 import '../../features/workers/presentation/screens/worker_hr_record_screen.dart';
 import '../shell/home_shell_screen.dart';
@@ -146,7 +147,13 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: Routes.claim,
         builder: (context, state) {
-          final token = state.uri.queryParameters['token'] ?? '';
+          final token  = state.uri.queryParameters['token']  ?? '';
+          final tenant = state.uri.queryParameters['tenant'] ?? '';
+          // QR scan path: no token, but tenant slug present.
+          // Worker enters their phone → lookup RPC → redirect to /claim?token=
+          if (token.isEmpty && tenant.isNotEmpty) {
+            return ClaimByPhoneScreen(tenantSlug: tenant);
+          }
           return ClaimInviteScreen(token: token);
         },
       ),

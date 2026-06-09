@@ -236,13 +236,18 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
-# Email template: OTP sign-in code. Uses {{ .Token }} (6-digit code) not
-# {{ .ConfirmationURL }} so users type the code rather than click a link.
-# Apply the same template content manually in the Supabase dashboard under
-# Authentication > Email Templates > Magic Link for the production project.
+# Combined sign-in email — shows the 6-digit OTP code AND a magic link button.
+# Both {{ .Token }} and {{ .ConfirmationURL }} are available in all Supabase
+# email OTP/magic-link sends, so one template covers both slots.
+# Production: paste email_otp.html into both "Magic Link" and "Email OTP"
+# slots in the Supabase dashboard (Authentication > Email Templates).
 [auth.email.template.magic_link]
 subject = "Your EQ sign-in code"
-content_path = "./templates/magic_link.html"
+content_path = "./templates/email_otp.html"
+
+[auth.email.template.email_otp]
+subject = "Your EQ sign-in code"
+content_path = "./templates/email_otp.html"
 
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]

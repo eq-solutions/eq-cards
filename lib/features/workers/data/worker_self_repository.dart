@@ -74,6 +74,25 @@ class WorkerSelfRepository {
     }
   }
 
+  /// Given a normalised AU phone number and a tenant slug, returns the UUID
+  /// token of the first unclaimed, non-expired worker invite for that
+  /// worker + org — or null if none exists.
+  ///
+  /// Called by [ClaimByPhoneScreen] when a worker scans the tenant QR code
+  /// (which has no per-worker token) and enters their mobile to look up their
+  /// invite. Callable without auth — SECURITY DEFINER, anon-accessible.
+  Future<String?> lookupInviteByPhone(String phone, String orgSlug) async {
+    try {
+      final result = await _client.rpc<dynamic>(
+        'eq_cards_lookup_invite_by_phone',
+        params: {'p_phone': phone, 'p_slug': orgSlug},
+      );
+      return result as String?;
+    } catch (e) {
+      _throw(e);
+    }
+  }
+
   /// Soft-deletes the current user's self-entered data.
   /// APP 17 — right to erasure of worker-owned information.
   /// Does NOT delete the org's HR record (workers table) — that is the

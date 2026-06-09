@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sign in to EQ Cards</title>
+  <title>Your EQ Cards sign-in code</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -12,6 +12,8 @@
       color: #1A1A2E;
       -webkit-font-smoothing: antialiased;
     }
+
+    /* ── Outer wrapper ── */
     .outer { padding: 32px 16px 48px; }
     .card {
       max-width: 440px;
@@ -20,6 +22,8 @@
       overflow: hidden;
       border: 1px solid #2E2E46;
     }
+
+    /* ── Hero — dark ink, mirrors shell left panel ── */
     .hero {
       background: #1A1A2E;
       padding: 16px 36px 24px;
@@ -28,11 +32,9 @@
     }
     .hero-logo {
       display: block;
-      width: 80%;
-      max-width: 300px;
+      width: 96px;
       height: auto;
       margin: 0 auto 16px;
-      /* Native white-on-transparent logo — no filter needed. */
     }
     .hero-app {
       font-size: 11px;
@@ -55,16 +57,75 @@
       color: rgba(255,255,255,0.5);
       line-height: 1.5;
     }
+
+    /* ── Body — warm sand ── */
     .body {
       background: #F6F3EE;
       padding: 28px 32px 24px;
     }
-    .lede {
-      font-size: 14px;
-      color: #4B5563;
-      line-height: 1.6;
+
+    /* Code tile */
+    .code-tile {
+      background: #FFFFFF;
+      border: 1px solid #D4CCBE;
+      border-radius: 12px;
+      padding: 20px 22px;
       margin-bottom: 22px;
+      text-align: center;
     }
+    .code-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #9CA3AF;
+      margin-bottom: 10px;
+    }
+    .code-value {
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      color: #1A1A2E;
+      line-height: 1;
+      margin-bottom: 10px;
+      font-variant-numeric: tabular-nums;
+    }
+    .code-pill {
+      display: inline-block;
+      background: #EAF5FB;
+      color: #2986B4;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 99px;
+      letter-spacing: 0.02em;
+    }
+
+    /* Divider */
+    .divider {
+      text-align: center;
+      margin: 0 0 18px;
+      position: relative;
+    }
+    .divider::before {
+      content: '';
+      display: block;
+      border-top: 1px solid #E4DDD2;
+      position: absolute;
+      top: 50%;
+      left: 0; right: 0;
+    }
+    .divider span {
+      display: inline-block;
+      position: relative;
+      background: #F6F3EE;
+      padding: 0 12px;
+      font-size: 11px;
+      color: #9CA3AF;
+      font-weight: 600;
+    }
+
+    /* CTA */
     .btn {
       display: block;
       background: #2986B4;
@@ -76,26 +137,18 @@
       border-radius: 13px;
       text-align: center;
       letter-spacing: -0.1px;
-      margin-bottom: 18px;
+      margin-bottom: 22px;
     }
-    .link-tile {
-      background: #FFFFFF;
-      border: 1px solid #D4CCBE;
-      border-radius: 10px;
-      padding: 13px 15px;
-      margin-bottom: 20px;
-      word-break: break-all;
-      font-size: 11px;
-      color: #9CA3AF;
-      line-height: 1.6;
-    }
-    .link-tile a { color: #3DA8D8; text-decoration: none; }
+
+    /* Notice */
     .notice {
       font-size: 12px;
       color: #9CA3AF;
       line-height: 1.6;
       text-align: center;
     }
+
+    /* ── Footer ── */
     .footer {
       background: #EFEAE1;
       border-top: 1px solid #D4CCBE;
@@ -113,25 +166,30 @@
   <div class="outer">
     <div class="card">
 
+      <!-- Dark ink hero — mirrors EQ Shell left panel -->
       <div class="hero">
         <img class="hero-logo"
              src="https://pub-409bd651f2e549f4907f5a856a9264ae.r2.dev/eq-white-on-transparent-cropped.svg"
-             alt="EQ" />
+             alt="EQ"
+             width="96"
+             height="96" />
         <div class="hero-app">EQ Cards</div>
-        <div class="hero-heading">Tap to sign in<br />to EQ Cards.</div>
-        <div class="hero-sub">This link expires in 1 hour and works once.</div>
+        <div class="hero-heading">Your sign-in<br />code is ready.</div>
+        <div class="hero-sub">Expires in 10 minutes — do not share.</div>
       </div>
 
+      <!-- Warm sand body -->
       <div class="body">
 
-        <p class="lede">One tap and you're in. No password needed.</p>
+        <div class="code-tile">
+          <div class="code-label">One-time code</div>
+          <div class="code-value">{{ .Token }}</div>
+          <span class="code-pill">Expires in 10 min</span>
+        </div>
+
+        <div class="divider"><span>or open a sign-in link</span></div>
 
         <a href="{{ .ConfirmationURL }}" class="btn">Sign in to EQ Cards →</a>
-
-        <div class="link-tile">
-          Button not working? Copy and paste this link into your browser:<br />
-          <a href="{{ .ConfirmationURL }}">{{ .ConfirmationURL }}</a>
-        </div>
 
         <p class="notice">
           Didn't request this? Ignore it — your account is safe.

@@ -30,6 +30,7 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
   final _emailFormKey = GlobalKey<FormState>();
   final _phoneFormKey = GlobalKey<FormState>();
   bool _googleLoading = false;
+  final _joinCodeController = TextEditingController();
 
   @override
   void initState() {
@@ -48,6 +49,7 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
     _tabController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
+    _joinCodeController.dispose();
     super.dispose();
   }
 
@@ -62,6 +64,86 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
     if (!_phoneFormKey.currentState!.validate()) return;
     final phone = normaliseAusMobile(_phoneController.text.trim())!;
     await ref.read(authFlowNotifierProvider.notifier).sendPhoneOtp(phone);
+  }
+
+  void _showJoinCodeSheet(BuildContext context) {
+    _joinCodeController.clear();
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: EqColours.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            EqSpacing.xl,
+            EqSpacing.lg,
+            EqSpacing.xl,
+            EqSpacing.xl + MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: EqColours.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: EqSpacing.lg),
+              Text(
+                'Enter your company code',
+                style: EqTypography.headingS.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: EqColours.ink,
+                ),
+              ),
+              const SizedBox(height: EqSpacing.xs),
+              Text(
+                'Your manager can give you this code.',
+                style: EqTypography.bodyM.copyWith(color: EqColours.grey),
+              ),
+              const SizedBox(height: EqSpacing.lg),
+              TextField(
+                controller: _joinCodeController,
+                autofocus: true,
+                autocorrect: false,
+                textCapitalization: TextCapitalization.none,
+                textInputAction: TextInputAction.go,
+                decoration: const InputDecoration(
+                  labelText: 'Company code',
+                  hintText: 'e.g. sks',
+                ),
+                onSubmitted: (_) => _submitJoinCode(ctx),
+              ),
+              const SizedBox(height: EqSpacing.lg),
+              FilledButton(
+                onPressed: () => _submitJoinCode(ctx),
+                style: FilledButton.styleFrom(
+                  backgroundColor: EqColours.sky,
+                  minimumSize: const Size.fromHeight(48),
+                ),
+                child: const Text('Join'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _submitJoinCode(BuildContext sheetContext) {
+    final code = _joinCodeController.text.trim().toLowerCase();
+    if (code.isEmpty) return;
+    Navigator.of(sheetContext).pop();
+    context.push('${Routes.join}?tenant=$code');
   }
 
   Future<void> _signInWithGoogle() async {
@@ -312,7 +394,22 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
                           ),
                   ),
 
-                  const SizedBox(height: EqSpacing.xl),
+                  const SizedBox(height: EqSpacing.md),
+
+                  // ── Join with a join code ────────────────────────────────
+                  Center(
+                    child: TextButton(
+                      onPressed: () => _showJoinCodeSheet(context),
+                      child: Text(
+                        'Join with a join code',
+                        style: EqTypography.bodyM.copyWith(
+                          color: EqColours.sky,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: EqSpacing.lg),
                 ],
               ),
             ),
