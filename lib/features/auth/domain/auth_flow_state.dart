@@ -33,6 +33,12 @@ class AuthFlowError extends AuthFlowState {
   final String message;
 }
 
+/// Emitted when a provision or join token has already been consumed.
+/// The OTP screen renders a dedicated "link already used" UI for this state.
+class AuthFlowTokenUsed extends AuthFlowState {
+  const AuthFlowTokenUsed();
+}
+
 /// Emitted by [AuthFlowNotifier.provisionTenant] on successful workspace
 /// creation. The OTP screen listens for this state and opens Shell at
 /// `core.eq.solutions/:tenantSlug#sh=<accessToken>` in an external browser.

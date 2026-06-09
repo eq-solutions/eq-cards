@@ -136,8 +136,23 @@ class AuthFlowNotifier extends _$AuthFlowNotifier {
   /// Maps [f] to user-facing copy and pushes it to `state`. Failures whose
   /// detail must not reach the user have their raw text sent to Sentry only —
   /// see [_reportOpaque]. [_message] stays pure so the mapping is unit-testable.
+  ///
+  /// When the failure message signals a token that has already been consumed,
+  /// emits [AuthFlowTokenUsed] instead of [AuthFlowError] so the OTP screen
+  /// can show the dedicated "link already used" UI.
   void _setError(Failure f, {required bool isPhone}) {
     _reportOpaque(f);
+    final raw = switch (f) {
+      ServerFailure(:final message) => message.toLowerCase(),
+      ValidationFailure(:final message) => message.toLowerCase(),
+      _ => '',
+    };
+    if (raw.contains('already') ||
+        raw.contains('used') ||
+        raw.contains('consumed')) {
+      state = const AuthFlowTokenUsed();
+      return;
+    }
     state = AuthFlowError(_message(f, isPhone: isPhone));
   }
 }
