@@ -111,8 +111,10 @@ class _ClaimInviteScreenState extends ConsumerState<ClaimInviteScreen> {
       PendingClaim.clear();
 
       setState(() => _phase = _Phase.success);
-      await Future<void>.delayed(const Duration(seconds: 2));
-      if (mounted) context.go(Routes.licencesList);
+      // Auto-navigate fallback after 8s so the screen never gets stuck.
+      // Primary path: worker taps "Open my wallet" below.
+      await Future<void>.delayed(const Duration(seconds: 8));
+      if (mounted && _phase == _Phase.success) context.go(Routes.licencesList);
     } catch (e) {
       final msg = switch (e.toString()) {
         final s when s.contains('invite_not_found') =>
@@ -156,7 +158,12 @@ class _ClaimInviteScreenState extends ConsumerState<ClaimInviteScreen> {
               ),
             _Phase.activating =>
               const _Loading(message: 'Activating your account…'),
-            _Phase.success => const _Success(),
+            _Phase.success => _Success(
+                orgName: _preview?.orgName,
+                onGoToWallet: () {
+                  if (mounted) context.go(Routes.licencesList);
+                },
+              ),
             _Phase.error => _Error(
                 message: _errorMessage,
                 onRetry: _loadPreview,
@@ -323,7 +330,10 @@ class _Consent extends StatelessWidget {
 // ── Success ───────────────────────────────────────────────────────────────────
 
 class _Success extends StatelessWidget {
-  const _Success();
+  const _Success({required this.onGoToWallet, this.orgName});
+
+  final VoidCallback onGoToWallet;
+  final String? orgName;
 
   @override
   Widget build(BuildContext context) {
@@ -337,9 +347,40 @@ class _Success extends StatelessWidget {
           Text("You're in.", style: EqTypography.headingL),
           const SizedBox(height: EqSpacing.sm),
           Text(
-            'Your profile and credentials are ready.\nTaking you to your wallet…',
+            'Your profile and credentials are ready.',
             style: EqTypography.bodyM.copyWith(color: EqColours.grey),
             textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: EqSpacing.xl),
+          EqButton(
+            label: 'Open my wallet',
+            onPressed: onGoToWallet,
+            fullWidth: true,
+          ),
+          const SizedBox(height: EqSpacing.xl),
+          Container(
+            padding: const EdgeInsets.all(EqSpacing.md),
+            decoration: BoxDecoration(
+              color: EqColours.surface,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: EqColours.border),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  'Access EQ on your computer',
+                  style: EqTypography.label.copyWith(fontWeight: FontWeight.w600),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: EqSpacing.xs),
+                Text(
+                  'Visit core.eq.solutions and sign in with your phone number to access your full EQ account'
+                  '${orgName != null ? ' at $orgName' : ''}.',
+                  style: EqTypography.label.copyWith(color: EqColours.grey),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           ),
         ],
       ),
