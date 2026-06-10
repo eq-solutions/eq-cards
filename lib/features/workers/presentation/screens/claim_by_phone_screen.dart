@@ -159,13 +159,37 @@ class _ClaimByPhoneScreenState extends ConsumerState<ClaimByPhoneScreen> {
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: EqColours.sky.withAlpha(80)),
                       ),
-                      child: Text(
-                        'No invite found for that number. '
-                        'Ask your manager to send you an invite link.',
-                        style: EqTypography.bodyM.copyWith(
-                          color: EqColours.deep,
-                        ),
-                        textAlign: TextAlign.center,
+                      child: Column(
+                        children: [
+                          Text(
+                            'No invite found for that number.',
+                            style: EqTypography.bodyM.copyWith(
+                              color: EqColours.deep,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: EqSpacing.xs),
+                          Text(
+                            'If your account is already set up, sign in with your '
+                            'mobile number on the main screen. '
+                            'Otherwise ask your manager to send you an invite.',
+                            style: EqTypography.bodyM.copyWith(
+                              color: EqColours.grey,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: EqSpacing.sm),
+                          TextButton(
+                            onPressed: () => context.go(Routes.email),
+                            child: Text(
+                              'Back to sign in',
+                              style: EqTypography.bodyM.copyWith(
+                                color: EqColours.sky,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: EqSpacing.lg),

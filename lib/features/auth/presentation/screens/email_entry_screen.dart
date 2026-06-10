@@ -140,7 +140,11 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
     final code = _joinCodeController.text.trim().toLowerCase();
     if (code.isEmpty) return;
     Navigator.of(sheetContext).pop();
-    context.push('${Routes.join}?tenant=$code');
+    // Send to the claim (invite-lookup) flow, not open enrollment.
+    // Workers entering a company code always have a pre-existing invite —
+    // /claim?tenant= finds it by phone; /join?tenant= would create a blank
+    // account and bypass their pre-loaded credentials.
+    context.push('${Routes.claim}?tenant=$code');
   }
 
   @override
@@ -188,7 +192,7 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
                   ),
                   const SizedBox(height: EqSpacing.xs),
                   Text(
-                    'Use the email or mobile linked to your account.',
+                    'Use your mobile number, or the email linked to your account.',
                     style: EqTypography.bodyM.copyWith(color: EqColours.grey),
                   ),
 
@@ -213,8 +217,8 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
                       indicatorWeight: 2,
                       dividerColor: Colors.transparent,
                       tabs: const [
-                        Tab(text: 'Email'),
                         Tab(text: 'Mobile'),
+                        Tab(text: 'Email'),
                       ],
                     ),
                   ),
@@ -228,34 +232,7 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
                     child: TabBarView(
                       controller: _tabController,
                       children: [
-                        // Email tab
-                        Form(
-                          key: _emailFormKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              TextFormField(
-                                controller: _emailController,
-                                keyboardType: TextInputType.emailAddress,
-                                autocorrect: false,
-                                textInputAction: TextInputAction.done,
-                                onFieldSubmitted: (_) => _submitEmail(),
-                                decoration: const InputDecoration(
-                                  labelText: 'Email address',
-                                  hintText: 'you@example.com',
-                                ),
-                                validator: (v) {
-                                  if (v == null || v.trim().isEmpty) {
-                                    return 'Enter your email address';
-                                  }
-                                  return validateEmail(v);
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Mobile tab
+                        // Mobile tab (index 0 — primary sign-in path for workers)
                         Form(
                           key: _phoneFormKey,
                           child: Column(
@@ -286,6 +263,33 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
                             ],
                           ),
                         ),
+
+                        // Email tab (index 1)
+                        Form(
+                          key: _emailFormKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              TextFormField(
+                                controller: _emailController,
+                                keyboardType: TextInputType.emailAddress,
+                                autocorrect: false,
+                                textInputAction: TextInputAction.done,
+                                onFieldSubmitted: (_) => _submitEmail(),
+                                decoration: const InputDecoration(
+                                  labelText: 'Email address',
+                                  hintText: 'you@example.com',
+                                ),
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty) {
+                                    return 'Enter your email address';
+                                  }
+                                  return validateEmail(v);
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -308,9 +312,9 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
                         ? null
                         : () {
                             if (_tabController.index == 0) {
-                              unawaited(_submitEmail());
-                            } else {
                               unawaited(_submitPhone());
+                            } else {
+                              unawaited(_submitEmail());
                             }
                           },
                     style: FilledButton.styleFrom(

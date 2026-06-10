@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../core/router/routes.dart';
 import '../../../../core/theme/eq_colours.dart';
 import '../../../../core/theme/eq_spacing.dart';
 import '../../../../core/theme/eq_typography.dart';
@@ -71,14 +73,19 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
                   const SizedBox(height: EqSpacing.sm),
                   Text(
                     "We couldn't link you to an EQ workspace. "
-                    'Sign out and try again — if the problem continues, '
-                    'ask your manager to check your account access.',
+                    'If you signed in with email, try your mobile number instead — '
+                    "that's the fastest way to access your account.",
                     style: EqTypography.bodyM.copyWith(color: EqColours.grey),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: EqSpacing.xl),
                   FilledButton(
-                    onPressed: _signingOut ? null : _signOut,
+                    onPressed: _signingOut
+                        ? null
+                        : () async {
+                            await ref.read(authRepositoryProvider).signOut();
+                            if (mounted) context.go(Routes.email);
+                          },
                     style: FilledButton.styleFrom(
                       backgroundColor: EqColours.sky,
                       minimumSize: const Size.fromHeight(48),
@@ -92,7 +99,15 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
                               strokeWidth: 2,
                             ),
                           )
-                        : const Text('Sign out and try again'),
+                        : const Text('Sign in with mobile instead'),
+                  ),
+                  const SizedBox(height: EqSpacing.sm),
+                  TextButton(
+                    onPressed: _signingOut ? null : _signOut,
+                    child: Text(
+                      'Sign out',
+                      style: EqTypography.bodyM.copyWith(color: EqColours.grey),
+                    ),
                   ),
                 ],
               ),
