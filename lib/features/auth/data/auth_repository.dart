@@ -178,6 +178,14 @@ class AuthRepository {
           )
           .timeout(const Duration(seconds: 15));
 
+      if (response.statusCode == 429) {
+        // Shell rate-limited the exchange — surface it to the user instead of
+        // silently routing them to the notProvisioned screen.
+        unawaited(_breadcrumb('phone_otp_shell_exchange_rate_limited'));
+        await _client.auth.signOut();
+        throw const ServerFailure(429, 'rate-limited');
+      }
+
       if (response.statusCode != 200) {
         unawaited(
           _breadcrumb('phone_otp_shell_exchange_http_error', {
@@ -228,6 +236,8 @@ class AuthRepository {
       await _client.auth.setSession(supabaseJwt, accessToken: supabaseJwt);
       unawaited(_breadcrumb('phone_otp_shell_exchange_succeeded'));
     } catch (e, st) {
+      // Mapped failures (e.g. 429 rate-limit) must surface to the caller.
+      if (e is Failure) rethrow;
       // Exchange failure is non-fatal — user lands on notProvisioned rather
       // than crashing. Capture for diagnostics.
       unawaited(_breadcrumb('phone_otp_shell_exchange_exception', {'error': e.toString()}));
