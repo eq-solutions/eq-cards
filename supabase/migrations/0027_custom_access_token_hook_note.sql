@@ -1,0 +1,15 @@
+-- 0027_custom_access_token_hook_note.sql
+-- Documents that the custom_access_token_hook is already built in the DB.
+-- It embeds tenant_id + eq_role + is_platform_admin into JWT app_metadata,
+-- eliminating the need for the phoneOtpShellExchange bridge call.
+--
+-- The hook function exists in the public schema on eq-canonical.
+-- To activate: Supabase dashboard → Authentication → Hooks →
+--   "Customize Access Token (JWT)" → select the hook function.
+--
+-- The Flutter app (auth_repository.dart + claim_invite_screen.dart) already
+-- guards the exchange call: if app_metadata.tenant_id is present (hook active),
+-- the exchange is skipped so the hook-minted JWT is not overwritten.
+--
+-- No DDL changes in this migration — hook function already deployed.
+SELECT 'custom_access_token_hook is built; enable in Supabase Auth → Hooks to retire phoneOtpShellExchange';
