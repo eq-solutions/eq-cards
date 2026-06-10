@@ -134,7 +134,13 @@ class AuthRepository {
 
       final accessToken = res.session?.accessToken;
       if (accessToken != null) {
-        await phoneOtpShellExchange(e164Phone, accessToken);
+        // Skip the exchange when the custom_access_token_hook has already
+        // embedded tenant_id — calling setSession() would replace the
+        // hook-minted JWT with the older shell JWT.
+        final tenantId = res.session?.user.appMetadata['tenant_id'];
+        if (tenantId == null) {
+          await phoneOtpShellExchange(e164Phone, accessToken);
+        }
       }
     } catch (e) {
       unawaited(_breadcrumb('phone_otp_verify_failed', {'error': e.toString()}));

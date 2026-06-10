@@ -179,6 +179,7 @@ class AdminWorkerRepository {
     if (w.emergencyContactPhone != null) 'emergency_contact_phone': w.emergencyContactPhone,
     if (w.emergencyContactRelationship != null)
       'emergency_contact_relationship': w.emergencyContactRelationship,
+    if (w.rightToWorkType != null) 'right_to_work_type': w.rightToWorkType,
     if (w.rightToWorkExpiry != null)
       'right_to_work_expiry': EqDates.iso(w.rightToWorkExpiry!),
   };

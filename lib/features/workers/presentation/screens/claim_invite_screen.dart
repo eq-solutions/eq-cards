@@ -97,19 +97,17 @@ class _ClaimInviteScreenState extends ConsumerState<ClaimInviteScreen> {
       final session = Supabase.instance.client.auth.currentSession;
       final rawPhone = session?.user.phone;
       final accessToken = session?.accessToken;
-      if (rawPhone != null && rawPhone.isNotEmpty && accessToken != null) {
+      // Skip the exchange when the hook has already embedded tenant_id.
+      final tenantId = session?.user.appMetadata['tenant_id'];
+      if (rawPhone != null && rawPhone.isNotEmpty && accessToken != null && tenantId == null) {
         final e164 = rawPhone.startsWith('+') ? rawPhone : '+$rawPhone';
-        // Best-effort: refresh the JWT so it carries tenant_id. The claim has
-        // already succeeded — if the shell exchange stalls or fails, proceed to
-        // success anyway rather than leaving the spinner stuck.
         try {
           await ref
               .read(authRepositoryProvider)
               .phoneOtpShellExchange(e164, accessToken)
               .timeout(const Duration(seconds: 10));
         } catch (_) {
-          // Non-fatal — the worker is claimed; the JWT will refresh on next
-          // navigation via the normal session-refresh cycle.
+          // Non-fatal — claim already committed; JWT refreshes on next navigation.
         }
       }
 
