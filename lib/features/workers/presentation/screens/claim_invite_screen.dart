@@ -99,9 +99,18 @@ class _ClaimInviteScreenState extends ConsumerState<ClaimInviteScreen> {
       final accessToken = session?.accessToken;
       if (rawPhone != null && rawPhone.isNotEmpty && accessToken != null) {
         final e164 = rawPhone.startsWith('+') ? rawPhone : '+$rawPhone';
-        await ref
-            .read(authRepositoryProvider)
-            .phoneOtpShellExchange(e164, accessToken);
+        // Best-effort: refresh the JWT so it carries tenant_id. The claim has
+        // already succeeded — if the shell exchange stalls or fails, proceed to
+        // success anyway rather than leaving the spinner stuck.
+        try {
+          await ref
+              .read(authRepositoryProvider)
+              .phoneOtpShellExchange(e164, accessToken)
+              .timeout(const Duration(seconds: 10));
+        } catch (_) {
+          // Non-fatal — the worker is claimed; the JWT will refresh on next
+          // navigation via the normal session-refresh cycle.
+        }
       }
 
       ref.invalidate(orgAdminOrgIdProvider);
