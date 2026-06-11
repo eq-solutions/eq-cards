@@ -1,27 +1,16 @@
-// Auth repository — three sign-in paths:
-//   1. Shell handoff: JWT minted by Shell, passed via #sh= URL hash.
-//      acceptHandoff() applies it as the active Supabase session.
-//   2. Email OTP: user types email, receives a 6-digit code, verifies it.
-//      sendOtp() / verifyOtp() wrap the Supabase gotrue methods.
-//   3. Google OAuth: signInWithGoogle() triggers Supabase's OAuth flow.
-//      On web, redirects to Google then back to the app — no extra package.
-//   - signOut() — the only outbound auth action the Cards UI takes
-//   - Breadcrumb helpers for Sentry diagnostics
+// Auth repository — sign-in paths:
+//   1. Phone OTP: verifyPhoneOtp() calls GoTrue, then (if the
+//      custom_access_token_hook is not yet active) phoneOtpShellExchange() to
+//      set the eq_shell_session cookie on core.eq.solutions.
+//   2. Email OTP: sendOtp() / verifyOtp() wrap Supabase gotrue methods.
+//   - joinTenantExchange() — claim/join-code flow post-verification.
+//   - signOut() — the only outbound auth action the Cards UI takes.
+//   - Breadcrumb helpers for Sentry diagnostics.
 //
-// Phone OTP sign-in requires a second step: after GoTrue verifies the SMS code
-// the raw GoTrue JWT carries no app_metadata.tenant_id (the Supabase
-// custom_access_token_hook that would inject it has not been enabled yet —
-// see docs/cards-canonical-api-rewire.md §5 and supabase/manual/). As a
-// bridge, phoneOtpShellExchange() calls the Shell's shell-login-phone-otp
-// function, which looks up the user in shell_control.users and returns a
-// shell-minted Supabase JWT that already contains tenant_id. Cards then calls
-// setSession() with that JWT so every subsequent operation (RLS, cards-api
-// gateway) sees the tenant claim correctly.
-//
-// Once the custom_access_token_hook is enabled and verified on eq-canonical,
-// the exchange call becomes redundant (the GoTrue JWT will carry tenant_id
-// natively) and can be removed — the auth state listener in
-// auth_state_provider.dart will continue to work unchanged.
+// When custom_access_token_hook is enabled on eq-canonical the GoTrue JWT
+// natively carries tenant_id via app_metadata, so phoneOtpShellExchange is
+// skipped (see the tenantId == null guard in verifyPhoneOtp). The Shell
+// exchange call is retained as a fallback for non-hook environments.
 
 import 'dart:async';
 import 'dart:convert';
@@ -48,28 +37,6 @@ const _kShellBaseUrl = String.fromEnvironment(
 class AuthRepository {
   AuthRepository(this._client);
   final SupabaseClient _client;
-
-  /// Apply a shell-minted JWT as the active Supabase session.
-  /// Throws a mapped Failure on rejection.
-  ///
-  /// The shell-minted token IS the access token (HS256 signed with the
-  /// canonical project JWT secret); there's no separate refresh token.
-  /// gotrue's setSession(refreshToken, {accessToken}) uses the access-
-  /// token branch when both are supplied — no /token grant_type=refresh
-  /// round-trip, just a getUser(accessToken) validation. We pass the
-  /// same token in both slots; the refreshToken slot is stored on the
-  /// Session but never used (we re-mint via the shell instead of
-  /// refreshing).
-  Future<void> acceptHandoff(String accessToken) async {
-    unawaited(_breadcrumb('handoff_accept_started'));
-    try {
-      await _client.auth.setSession(accessToken, accessToken: accessToken);
-      unawaited(_breadcrumb('handoff_accept_succeeded'));
-    } catch (e) {
-      unawaited(_breadcrumb('handoff_accept_failed', {'error': e.toString()}));
-      throw mapSupabaseError(e);
-    }
-  }
 
   /// Send a 6-digit OTP to [email]. The Supabase project must have email OTP
   /// enabled in Auth → Email → "Enable Email OTP" (distinct from magic links).
@@ -230,16 +197,12 @@ class AuthRepository {
         return;
       }
 
-      final supabaseJwt = body['supabase_jwt'] as String?;
-      if (supabaseJwt == null || supabaseJwt.isEmpty) {
-        unawaited(_breadcrumb('phone_otp_shell_exchange_missing_jwt'));
-        return;
-      }
-
-      // Replace the raw GoTrue session with the shell-minted JWT that carries
-      // tenant_id. Pattern mirrors IframeHandoffScreen._applyToken and the
-      // shell-verify handoff path.
-      await _client.auth.setSession(supabaseJwt, accessToken: supabaseJwt);
+      // Shell validated the user and set the eq_shell_session cookie on
+      // core.eq.solutions. With custom_access_token_hook enabled the GoTrue JWT
+      // already carries tenant_id from the initial verifyOTP call, so we do not
+      // need to call setSession here — gotrue_dart 2.20.0+ calls getUser()
+      // server-side inside setSession, which rejects shell-minted JWTs because
+      // they have no row in auth.sessions (→ session_not_found).
       unawaited(_breadcrumb('phone_otp_shell_exchange_succeeded'));
     } catch (e, st) {
       // Mapped failures (e.g. 429 rate-limit) must surface to the caller.
@@ -371,16 +334,16 @@ class AuthRepository {
         );
       }
 
-      final supabaseJwt = body['supabase_jwt'] as String?;
-      if (supabaseJwt == null || supabaseJwt.isEmpty) {
-        unawaited(_breadcrumb('join_tenant_exchange_missing_jwt'));
-        await _client.auth.signOut();
-        throw const ValidationFailure(
-          'Something went wrong joining the team. Please try again.',
-        );
+      // Shell set the cookie and validated the user. Refresh the GoTrue session
+      // so the hook injects the new tenant_id into the JWT.
+      // gotrue_dart 2.20.0+ calls getUser() inside setSession, which rejects
+      // shell-minted JWTs → use native refreshSession() instead.
+      try {
+        await _client.auth.refreshSession();
+      } catch (_) {
+        // Non-fatal — the hook may already have tenant_id in the current JWT
+        // if the session was just minted. Proceed and let the router decide.
       }
-
-      await _client.auth.setSession(supabaseJwt, accessToken: supabaseJwt);
       unawaited(_breadcrumb('join_tenant_exchange_succeeded', {'tenant': tenantSlug}));
     } on Failure {
       rethrow;
