@@ -14,14 +14,9 @@
 //
 //   3. Email OTP    — Non-iframe / non-web fallback (native, direct URL).
 
-import 'dart:async';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/router/routes.dart';
 import '../../../../core/theme/eq_colours.dart';
@@ -39,119 +34,20 @@ class IframeHandoffScreen extends ConsumerStatefulWidget {
 }
 
 class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
-  String? _error;
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _consumeShellAuth());
   }
 
-  /// Tries to establish a Supabase session from the shell JWT, in priority order.
+  /// gotrue_dart 2.20.0+ calls getUser() inside setSession, which rejects
+  /// shell-minted JWTs (no auth.sessions row → session_not_found). The iframe
+  /// handoff and #sh= hash paths are therefore broken. Redirect to phone OTP
+  /// sign-in, which works correctly via the custom_access_token_hook.
   Future<void> _consumeShellAuth() async {
-    if (!kIsWeb) {
-      if (mounted) context.go(Routes.email);
-      return;
-    }
-
-    if (HandoffPlatform.isInIframe()) {
-      // 1. postMessage — preferred path, JWT never in URL.
-      final pmToken = await HandoffPlatform.requestShellToken();
-      if (pmToken != null && pmToken.isNotEmpty) {
-        final ok = await _applyToken(pmToken);
-        if (ok) return;
-      }
-    }
-
-    // 2. URL hash — legacy fallback (#sh=<jwt> injected by shell).
-    await _consumeHash();
+    HandoffPlatform.replaceHashWithCleanPath();
+    if (mounted) context.go(Routes.email);
   }
-
-  /// Calls setSession with [token], navigates to licences on success.
-  /// Returns true on success, false on failure (error state already set).
-  ///
-  /// If the token is expired, gotrue 2.x falls back to calling
-  /// refreshSession(token) — but a shell JWT is not a Supabase refresh token,
-  /// so that call fails with validation_failed / refresh_token_not_found.
-  /// When we're in an iframe we can recover by requesting a fresh JWT via
-  /// postMessage before giving up.
-  Future<bool> _applyToken(String token, {bool retried = false}) async {
-    try {
-      await Supabase.instance.client.auth.signOut(scope: SignOutScope.local);
-      await Supabase.instance.client.auth.setSession(
-        token,
-        accessToken: token,
-      );
-      HandoffPlatform.replaceHashWithCleanPath();
-      if (mounted) context.go(Routes.licencesList);
-      return true;
-    } on AuthException catch (e) {
-      // If the token was stale (validation_failed / refresh_token_not_found)
-      // and we haven't retried yet, ask the shell for a fresh JWT and retry
-      // once. This covers the case where the #sh= hash token expired before
-      // the app initialised (e.g. slow load, app backgrounded).
-      final isTokenStale = e.code == 'validation_failed' ||
-          e.code == 'refresh_token_not_found';
-      if (isTokenStale && !retried && kIsWeb && HandoffPlatform.isInIframe()) {
-        final fresh = await HandoffPlatform.requestShellToken();
-        if (fresh != null && fresh.isNotEmpty) {
-          return _applyToken(fresh, retried: true);
-        }
-      }
-      debugPrint('IframeHandoffScreen: setSession failed: $e');
-      unawaited(Sentry.captureException(e, stackTrace: StackTrace.current));
-      setState(
-        () => _error = HandoffPlatform.isInIframe()
-            ? 'Sign-in failed. Reload EQ Cards from your portal at core.eq.solutions.'
-            : 'Sign-in failed. Sign out and back in at your tenant shell, then retry.',
-      );
-      return false;
-    } catch (e, stack) {
-      debugPrint('IframeHandoffScreen: setSession failed: $e');
-      unawaited(Sentry.captureException(e, stackTrace: stack));
-      setState(
-        () => _error = HandoffPlatform.isInIframe()
-            ? 'Sign-in failed. Reload EQ Cards from your portal at core.eq.solutions.'
-            : 'Sign-in failed. Sign out and back in at your tenant shell, then retry.',
-      );
-      return false;
-    }
-  }
-
-  Future<void> _consumeHash() async {
-    if (!kIsWeb) {
-      if (mounted) context.go(Routes.email);
-      return;
-    }
-
-    final hash = HandoffPlatform.currentHash();
-    if (hash.isEmpty || !hash.contains('sh=')) {
-      if (HandoffPlatform.isInIframe()) {
-        setState(
-          () => _error =
-              'Session expired. Reload EQ Cards from your portal at core.eq.solutions.',
-        );
-        return;
-      }
-      if (mounted) context.go(Routes.email);
-      return;
-    }
-
-    final payload = hash.startsWith('#') ? hash.substring(1) : hash;
-    final params = Uri.splitQueryString(payload);
-    final token = params['sh'];
-    if (token == null || token.isEmpty) {
-      setState(
-        () => _error =
-            'Handoff URL was malformed. Refresh from your tenant shell to retry.',
-      );
-      return;
-    }
-
-    await _applyToken(token);
-  }
-
-  void _goToEmail() => context.go(Routes.email);
 
   @override
   Widget build(BuildContext context) {
@@ -174,45 +70,21 @@ class _IframeHandoffScreenState extends ConsumerState<IframeHandoffScreen> {
                   ),
                   const SizedBox(height: EqSpacing.lg),
                   Text(
-                    _error != null ? 'Sign-in failed' : 'Signing you in…',
+                    'Signing you in…',
                     style: EqTypography.headingL.copyWith(
                       fontWeight: FontWeight.w700,
                       color: EqColours.deep,
                     ),
                   ),
                   const SizedBox(height: EqSpacing.md),
-                  if (_error != null)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          _error!,
-                          style:
-                              EqTypography.bodyM.copyWith(color: EqColours.ink),
-                          textAlign: TextAlign.center,
-                        ),
-                        if (!kIsWeb || !HandoffPlatform.isInIframe()) ...[
-                          const SizedBox(height: EqSpacing.lg),
-                          FilledButton(
-                            onPressed: _goToEmail,
-                            style: FilledButton.styleFrom(
-                              backgroundColor: EqColours.sky,
-                              minimumSize: const Size.fromHeight(48),
-                            ),
-                            child: const Text('Sign in with email'),
-                          ),
-                        ],
-                      ],
-                    )
-                  else
-                    const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        color: EqColours.sky,
-                        strokeWidth: 2,
-                      ),
+                  const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: EqColours.sky,
+                      strokeWidth: 2,
                     ),
+                  ),
                 ],
               ),
             ),

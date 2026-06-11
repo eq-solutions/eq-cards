@@ -3,60 +3,36 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-import 'package:supabase_flutter/supabase_flutter.dart'
-    show AuthChangeEvent;
 
 import '../../../../core/supabase/supabase_client_provider.dart';
-import '../screens/handoff_platform_io.dart'
-    if (dart.library.html) '../screens/handoff_platform_web.dart';
 
 part 'shell_session_refresh.g.dart';
 
-/// Keeps the Shell-minted Supabase JWT fresh while EQ Cards runs inside the
-/// EQ Shell iframe.
+/// Proactive session refresh for EQ Cards.
 ///
-/// Shell JWTs are standalone HS256 access tokens with NO Supabase
-/// refresh_token, so the client cannot auto-renew them. Left alone, the
-/// session dies at its 15-min TTL and every direct-RPC screen (profile,
-/// licences, certs) starts returning 401 / "session expired". This timer
-/// re-requests a fresh JWT from the parent shell — the same postMessage
-/// handshake the handoff uses — a few minutes before each token expires and
-/// applies it via setSession(), so the session never lapses.
+/// Phone-OTP sessions carry a real GoTrue refresh_token, so GoTrue's built-in
+/// auto-refresh handles renewal. This timer fires a few minutes before the
+/// GoTrue JWT expires as a belt-and-suspenders fallback for cases where the
+/// auto-refresh timer lagged (e.g. device sleep / backgrounded tab).
 ///
-/// Native / direct-URL (non-iframe) sessions DO carry a refresh_token and
-/// rely on Supabase's own auto-refresh, so this is a no-op there.
+/// Only active on web in-iframe context (where background-tab throttling most
+/// often causes the lag). Native and direct-URL builds rely on Supabase's own
+/// auto-refresh exclusively.
 @Riverpod(keepAlive: true)
 class ShellSessionRefresh extends _$ShellSessionRefresh {
   Timer? _timer;
 
-  // Re-mint at 7 min — 3.5 min before Supabase's own auto-refresh fires
-  // (~70 % of the 15-min TTL = 10.5 min). Shell JWTs have no real
-  // refresh_token; if Supabase's timer wins the race it tries to refresh
-  // using the shell JWT, gets "Refresh token invalid", and fires signedOut.
-  // The signedOut handler recovers, but the brief gap causes Sentry noise and
-  // a visible auth flicker. 7 min gives enough headroom even when the device
-  // sleeps briefly or the postMessage round-trip is slow.
+  // Fire at 7 min — well before the 15-min GoTrue TTL expires, and a couple
+  // minutes ahead of Supabase's own auto-refresh (~10.5 min). Gives headroom
+  // for device sleep / backgrounded tab delaying the internal timer.
   static const Duration _refreshInterval = Duration(minutes: 7);
   static const Duration _retryDelay = Duration(seconds: 30);
 
   @override
   void build() {
-    if (!kIsWeb || !HandoffPlatform.isInIframe()) return;
+    if (!kIsWeb) return;
     ref.onDispose(() => _timer?.cancel());
     _schedule(_refreshInterval);
-
-    // Safety-net: if Supabase's auto-refresh fires before our timer (shouldn't
-    // happen with the 9-min interval, but belt-and-suspenders) it will try to
-    // use the shell JWT as a refresh_token → 401 → signedOut. Catch that and
-    // immediately re-request a fresh shell token.
-    final client = ref.read(supabaseClientProvider);
-    final authSub = client.auth.onAuthStateChange.listen((event) {
-      if (event.event == AuthChangeEvent.signedOut) {
-        _timer?.cancel();
-        unawaited(_tick());
-      }
-    });
-    ref.onDispose(() => unawaited(authSub.cancel()));
   }
 
   void _schedule(Duration delay) {
@@ -66,19 +42,13 @@ class ShellSessionRefresh extends _$ShellSessionRefresh {
 
   Future<void> _tick() async {
     final client = ref.read(supabaseClientProvider);
-    // In iframe context always try to get a fresh shell token — even if the
-    // session is null (which happens when Supabase's auto-refresh fails and
-    // fires signedOut). The shell's response is the true gate: if it returns
-    // a token we re-establish; if it returns null the user has intentionally
-    // signed out of the shell and we let the app redirect to auth.
+    // Phone-OTP sessions carry a real GoTrue refresh_token; use native refresh.
+    // gotrue_dart 2.20.0+ calls getUser() inside setSession, which rejects
+    // shell-minted JWTs (no auth.sessions row → session_not_found), so we no
+    // longer use the postMessage shell-token path here.
     var next = _refreshInterval;
     try {
-      final token = await HandoffPlatform.requestShellToken();
-      if (token != null && token.isNotEmpty) {
-        await client.auth.setSession(token, accessToken: token);
-      } else {
-        next = _retryDelay;
-      }
+      await client.auth.refreshSession();
     } catch (e, stack) {
       unawaited(Sentry.captureException(e, stackTrace: stack));
       next = _retryDelay;

@@ -1,14 +1,9 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../features/auth/auth.dart';
-// Platform bridge for the Shell iframe handoff. Conditional import: the web
-// build pulls in the dart:html implementation, the VM (test) build the stub.
-import '../../features/auth/presentation/screens/handoff_platform_io.dart'
-    if (dart.library.html) '../../features/auth/presentation/screens/handoff_platform_web.dart';
 import '../../features/auth/presentation/screens/not_provisioned_screen.dart';
 import '../../features/auth/presentation/screens/provision_tenant_screen.dart';
 import '../../features/certificates/certificates.dart';
@@ -376,16 +371,14 @@ String? _redirect(
   }
   // Signed-out users on the notProvisioned route go back to sign-in.
   if (!isSignedIn && loc == Routes.notProvisioned) {
-    final inShellIframeEarly = kIsWeb && HandoffPlatform.isInIframe();
-    return inShellIframeEarly ? Routes.handoff : Routes.email;
+    return Routes.email;
   }
 
-  // Inside the Shell iframe, a missing/expired session must re-run the silent
-  // handoff (postMessage re-auth) — NOT bounce to email OTP. Shell-minted JWTs
-  // carry no Supabase refresh_token, so the only way to renew is a fresh mint
-  // from the parent shell, which the handoff screen requests on entry.
-  final inShellIframe = kIsWeb && HandoffPlatform.isInIframe();
-  final signedOutDestination = inShellIframe ? Routes.handoff : Routes.email;
+  // gotrue_dart 2.20.0+ rejects shell-minted JWTs in setSession (calls
+  // getUser() server-side → session_not_found). The iframe handoff path is
+  // therefore broken; direct unauthenticated users to phone OTP sign-in
+  // regardless of iframe context.
+  final signedOutDestination = Routes.email;
 
   // Onboarding routes require sign-in; bounce unauthenticated visitors.
   if (!isSignedIn && isOnboardingRoute) return signedOutDestination;
