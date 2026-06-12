@@ -13,8 +13,6 @@ export 'presentation/notifiers/join_context_notifier.dart'
 export 'presentation/notifiers/provision_context_notifier.dart'
     show ProvisionContextNotifier, provisionContextNotifierProvider;
 export 'presentation/screens/email_entry_screen.dart' show EmailEntryScreen;
-export 'presentation/screens/iframe_handoff_screen.dart'
-    show IframeHandoffScreen;
 export 'presentation/screens/join_tenant_screen.dart' show JoinTenantScreen;
 export 'presentation/screens/otp_screen.dart' show OtpScreen;
 export 'presentation/screens/provision_tenant_screen.dart'

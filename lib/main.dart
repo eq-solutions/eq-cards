@@ -28,9 +28,8 @@ Future<void> main() async {
   // query params are lost. Read them now while the raw URL is still intact.
   final inviteOrgName = kIsWeb ? Uri.base.queryParameters['org'] : null;
 
-  // Path-based URLs — required for the #sh=<jwt> Shell handoff. Hash strategy
-  // would treat #sh=<jwt> as a route path; path strategy treats it as a URL
-  // fragment so GoRouter sees "/" and IframeHandoffScreen reads the hash.
+  // Path-based URLs — required for clean deep-link routing (/claim, /join, etc).
+  // Hash strategy would treat query fragments as route paths.
   usePathUrlStrategy();
 
   // Single runZonedGuarded around everything: binding init, plugin setup, Sentry

@@ -9,18 +9,12 @@ import '../../../../core/theme/eq_typography.dart';
 import '../../data/auth_repository.dart';
 
 /// Shown when a user has authenticated successfully (valid Supabase session)
-/// but their account has not been provisioned to any EQ workspace — i.e.
-/// app_metadata.tenant_id is absent from the JWT.
+/// but app_metadata.tenant_id is absent from the JWT — meaning the
+/// custom_access_token_hook did not find this user in shell_control.users.
 ///
-/// For phone OTP: AuthRepository.verifyPhoneOtp() calls the Shell's
-/// shell-login-phone-otp function to get a tenant-aware JWT. This screen is
-/// reached only when that exchange fails (user not in shell_control.users,
-/// Shell misconfigured, or network error). The fix is for their manager to
-/// provision them in the Shell admin, then ask the user to sign in again.
-///
-/// For email OTP / Google OAuth: the custom_access_token_hook on eq-canonical
-/// is not yet enabled, so those sessions never carry tenant_id. See
-/// docs/cards-canonical-api-rewire.md §5 for the hook enablement plan.
+/// Most common cause: the worker's phone number hasn't been added to any
+/// workspace yet. Fix: manager adds the worker in the Shell admin, then the
+/// worker signs in again.
 class NotProvisionedScreen extends ConsumerStatefulWidget {
   const NotProvisionedScreen({super.key});
 
@@ -63,7 +57,7 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
                   ),
                   const SizedBox(height: EqSpacing.lg),
                   Text(
-                    'No workspace access',
+                    "You're not set up yet",
                     style: EqTypography.headingL.copyWith(
                       fontWeight: FontWeight.w700,
                       color: EqColours.deep,
@@ -72,9 +66,8 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
                   ),
                   const SizedBox(height: EqSpacing.sm),
                   Text(
-                    "We couldn't link you to an EQ workspace. "
-                    'If you signed in with email, try your mobile number instead — '
-                    "that's the fastest way to access your account.",
+                    "Your number isn't linked to an EQ workspace. "
+                    'Ask your manager to add you, then sign in again.',
                     style: EqTypography.bodyM.copyWith(color: EqColours.grey),
                     textAlign: TextAlign.center,
                   ),
@@ -99,15 +92,7 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
                               strokeWidth: 2,
                             ),
                           )
-                        : const Text('Sign in with mobile instead'),
-                  ),
-                  const SizedBox(height: EqSpacing.sm),
-                  TextButton(
-                    onPressed: _signingOut ? null : _signOut,
-                    child: Text(
-                      'Sign out',
-                      style: EqTypography.bodyM.copyWith(color: EqColours.grey),
-                    ),
+                        : const Text('Back to sign in'),
                   ),
                 ],
               ),

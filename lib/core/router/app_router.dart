@@ -53,12 +53,6 @@ GoRouter appRouter(Ref ref) {
         path: Routes.splash,
         builder: (context, state) => const _SplashScreen(),
       ),
-      // Shell handoff — reads #sh=<jwt> from URL hash and calls setSession.
-      // Redirects to /auth/email if no token is present in the hash.
-      GoRoute(
-        path: Routes.handoff,
-        builder: (context, state) => const IframeHandoffScreen(),
-      ),
       // Email OTP — direct sign-in outside the Shell.
       GoRoute(
         path: Routes.email,
@@ -374,10 +368,6 @@ String? _redirect(
     return Routes.email;
   }
 
-  // gotrue_dart 2.20.0+ rejects shell-minted JWTs in setSession (calls
-  // getUser() server-side → session_not_found). The iframe handoff path is
-  // therefore broken; direct unauthenticated users to phone OTP sign-in
-  // regardless of iframe context.
   final signedOutDestination = Routes.email;
 
   // Onboarding routes require sign-in; bounce unauthenticated visitors.
@@ -391,7 +381,7 @@ String? _redirect(
   }
 
   if (loc == Routes.splash || loc == Routes.home) {
-    if (!isSignedIn) return Routes.handoff;
+    if (!isSignedIn) return Routes.email;
     // Wait for profile to load before deciding where to send the user. The
     // notifier listens to profileNotifierProvider so a second bump fires once
     // the AsyncData arrives and this branch is re-evaluated.
@@ -400,13 +390,10 @@ String? _redirect(
     return isComplete ? Routes.licencesList : Routes.onboarding;
   }
 
-  // Handoff is always processed even when a session exists — it needs to
-  // clear any stale session and apply the fresh Shell JWT.
   // not-provisioned is exempt: a tenant-less user belongs there, and the gate
   // above already moves a provisioned user off it. Bouncing it here would loop.
   if (isSignedIn &&
       isAuthRoute &&
-      loc != Routes.handoff &&
       loc != Routes.notProvisioned) {
     return Routes.licencesList;
   }
