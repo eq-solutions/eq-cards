@@ -52,7 +52,8 @@ class _ClaimInviteScreenState extends ConsumerState<ClaimInviteScreen> {
     try {
       final preview = await ref
           .read(workerSelfRepositoryProvider)
-          .previewInvite(widget.token);
+          .previewInvite(widget.token)
+          .timeout(const Duration(seconds: 15));
 
       if (!mounted) return;
 
@@ -71,6 +72,12 @@ class _ClaimInviteScreenState extends ConsumerState<ClaimInviteScreen> {
 
       setState(
           () => _phase = isSignedIn ? _Phase.consent : _Phase.notSignedIn);
+    } on TimeoutException {
+      if (!mounted) return;
+      setState(() {
+        _phase = _Phase.error;
+        _errorMessage = 'Taking too long to load. Check your connection and try again.';
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() {

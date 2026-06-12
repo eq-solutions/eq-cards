@@ -1,6 +1,6 @@
 // Web implementation of the image-download save step. dart:html lives here
 // behind a conditional import so flutter test (VM target) doesn't blow up
-// trying to resolve it — mirrors the handoff_platform_web.dart pattern.
+// trying to resolve it — conditional import keeps dart:html off the VM target.
 //
 // dart:html is required to build the object-URL blob and click the anchor; its
 // legacy API surfaces deprecated members. All expected on this web-only file.

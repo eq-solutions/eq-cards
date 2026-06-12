@@ -1,10 +1,6 @@
 abstract class Routes {
   static const splash = '/';
 
-  // Handoff — reads #sh=<jwt> from the URL hash and calls setSession.
-  // Used by the Shell to inject a session token into the Cards iframe.
-  static const handoff = '/auth/handoff';
-
   // Email OTP — direct sign-in for users accessing Cards outside the Shell.
   static const email = '/auth/email';
   static const otp = '/auth/otp';
