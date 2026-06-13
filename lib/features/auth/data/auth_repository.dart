@@ -439,8 +439,17 @@ class AuthRepository {
   Future<void> autoProvision() async {
     unawaited(_breadcrumb('auto_provision_started'));
     try {
-      await _client.rpc('eq_cards_auto_provision');
-      await _client.auth.refreshSession();
+      await _client.rpc<dynamic>('eq_cards_auto_provision');
+      // Refresh so the hook injects tenant_id into the JWT. Bounded + non-fatal:
+      // provisioning is already committed, and an un-timed refresh here was
+      // leaving first-time tradies stuck on the provisioning spinner.
+      try {
+        await _client.auth
+            .refreshSession()
+            .timeout(const Duration(seconds: 10));
+      } catch (_) {
+        // Non-fatal — the JWT refreshes on next navigation/token expiry.
+      }
       unawaited(_breadcrumb('auto_provision_succeeded'));
     } catch (e, st) {
       unawaited(_breadcrumb('auto_provision_failed', {'error': e.toString()}));

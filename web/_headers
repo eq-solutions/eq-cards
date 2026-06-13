@@ -33,11 +33,13 @@
 #     on the not-provisioned screen.
 #   - https://eu.i.posthog.com / eu-assets — PostHog ingest + SDK helpers
 #   - https://*.sentry.io — Sentry envelope ingestion (US/EU regions)
+#   - https://browser.sentry-cdn.com — Sentry web SDK bundle (script-src); without
+#     it the loader is CSP-blocked and breadcrumbs/errors never reach Sentry on web
 #
 # 'unsafe-inline' on script-src is required by Flutter's bootstrap (inline
 # script injects flutter_bootstrap.js). 'unsafe-eval' is required by DDC in
 # debug builds and by CanvasKit; release builds still need it for CanvasKit.
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://eu.i.posthog.com https://eu-assets.i.posthog.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' blob: data: https://www.gstatic.com https://jvknxcmbtrfnxfrwfimn.supabase.co; connect-src 'self' blob: data: https://www.gstatic.com https://fonts.gstatic.com https://fonts.googleapis.com https://jvknxcmbtrfnxfrwfimn.supabase.co wss://jvknxcmbtrfnxfrwfimn.supabase.co https://core.eq.solutions https://eu.i.posthog.com https://eu-assets.i.posthog.com https://*.sentry.io; manifest-src 'self'; worker-src 'self' blob:; frame-ancestors 'self' https://*.eq.solutions
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://eu.i.posthog.com https://eu-assets.i.posthog.com https://cdnjs.cloudflare.com https://browser.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' blob: data: https://www.gstatic.com https://jvknxcmbtrfnxfrwfimn.supabase.co; connect-src 'self' blob: data: https://www.gstatic.com https://fonts.gstatic.com https://fonts.googleapis.com https://jvknxcmbtrfnxfrwfimn.supabase.co wss://jvknxcmbtrfnxfrwfimn.supabase.co https://core.eq.solutions https://eu.i.posthog.com https://eu-assets.i.posthog.com https://*.sentry.io; manifest-src 'self'; worker-src 'self' blob:; frame-ancestors 'self' https://*.eq.solutions
 
 # main.dart.js is NOT content-addressed (same filename across builds), so
 # immutable would cause browsers to serve a stale build indefinitely. Use

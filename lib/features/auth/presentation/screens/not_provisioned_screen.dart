@@ -43,8 +43,12 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
     });
     try {
       await ref.read(authRepositoryProvider).autoProvision();
-      // Router re-evaluates automatically — refreshSession() inside autoProvision()
-      // triggers onAuthStateChange, which bumps the GoRouter notifier.
+      if (!mounted) return;
+      // Navigate explicitly to the wallet. Relying only on the auth-state
+      // listener to re-route left first-time tradies stuck on the spinner when
+      // the token-refresh event didn't re-fire the redirect. The JWT now
+      // carries the personal tenant_id, so the provisioning gate lets us in.
+      context.go(Routes.licencesList);
     } catch (_) {
       if (mounted) {
         setState(() {
