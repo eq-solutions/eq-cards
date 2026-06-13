@@ -906,12 +906,13 @@ class _WorkspacesSection extends ConsumerStatefulWidget {
 }
 
 class _WorkspacesSectionState extends ConsumerState<_WorkspacesSection> {
-  String? _switching;
+  /// tenantId an operation (switch or disconnect) is currently running on.
+  String? _busy;
   String? _error;
 
   Future<void> _switchTo(String tenantId) async {
     setState(() {
-      _switching = tenantId;
+      _busy = tenantId;
       _error = null;
     });
     try {
@@ -919,12 +920,55 @@ class _WorkspacesSectionState extends ConsumerState<_WorkspacesSection> {
       ref.invalidate(myTenantsProvider);
     } catch (_) {
       if (mounted) {
-        setState(() {
-          _error = 'Could not switch workspace. Please try again.';
-        });
+        setState(() => _error = 'Could not switch workspace. Please try again.');
       }
     } finally {
-      if (mounted) setState(() => _switching = null);
+      if (mounted) setState(() => _busy = null);
+    }
+  }
+
+  Future<void> _disconnect(TenantMembership tenant) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Disconnect from ${tenant.name}?'),
+        content: Text(
+          "You'll stop seeing ${tenant.name}'s licences and records in your "
+          'wallet, and switch back to your personal wallet. Anything in your '
+          'personal wallet stays.\n\n'
+          'You can reconnect later with a join code from ${tenant.name}.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text(
+              'Disconnect',
+              style: TextStyle(color: EqColours.error),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() {
+      _busy = tenant.tenantId;
+      _error = null;
+    });
+    try {
+      await ref.read(workspaceRepositoryProvider).revokeOrgAccess(tenant.tenantId);
+      ref.invalidate(myTenantsProvider);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error =
+            'Could not disconnect from ${tenant.name}. Please try again.');
+      }
+    } finally {
+      if (mounted) setState(() => _busy = null);
     }
   }
 
@@ -933,6 +977,7 @@ class _WorkspacesSectionState extends ConsumerState<_WorkspacesSection> {
     final tenants = ref.watch(myTenantsProvider).value;
     if (tenants == null || tenants.length < 2) return const SizedBox.shrink();
 
+    final idle = _busy == null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -949,9 +994,11 @@ class _WorkspacesSectionState extends ConsumerState<_WorkspacesSection> {
                 if (i > 0) const Divider(height: 1),
                 _WorkspaceRow(
                   tenant: tenants[i],
-                  loading: _switching == tenants[i].tenantId,
-                  onSwitch: _switching == null
-                      ? () => _switchTo(tenants[i].tenantId)
+                  loading: _busy == tenants[i].tenantId,
+                  onSwitch:
+                      idle ? () => _switchTo(tenants[i].tenantId) : null,
+                  onDisconnect: idle && tenants[i].isDisconnectable
+                      ? () => _disconnect(tenants[i])
                       : null,
                 ),
               ],
@@ -981,11 +1028,13 @@ class _WorkspaceRow extends StatelessWidget {
     required this.tenant,
     required this.loading,
     required this.onSwitch,
+    required this.onDisconnect,
   });
 
   final TenantMembership tenant;
   final bool loading;
   final VoidCallback? onSwitch;
+  final VoidCallback? onDisconnect;
 
   @override
   Widget build(BuildContext context) {
@@ -1013,19 +1062,7 @@ class _WorkspaceRow extends StatelessWidget {
               ],
             ),
           ),
-          if (tenant.isActive)
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.check_circle, color: EqColours.sky, size: 16),
-                const SizedBox(width: 4),
-                Text(
-                  'Active',
-                  style: EqTypography.label.copyWith(color: EqColours.sky),
-                ),
-              ],
-            )
-          else if (loading)
+          if (loading)
             const SizedBox(
               width: 16,
               height: 16,
@@ -1034,29 +1071,51 @@ class _WorkspaceRow extends StatelessWidget {
                 valueColor: AlwaysStoppedAnimation(EqColours.sky),
               ),
             )
-          else
-            SizedBox(
-              height: 32,
-              child: OutlinedButton(
-                onPressed: onSwitch,
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  minimumSize: Size.zero,
-                  side: BorderSide(
-                    color: onSwitch != null ? EqColours.sky : EqColours.border,
+          else ...[
+            if (tenant.isActive)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.check_circle,
+                      color: EqColours.sky, size: 16),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Active',
+                    style: EqTypography.label.copyWith(color: EqColours.sky),
                   ),
-                  foregroundColor: EqColours.sky,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: Text(
-                  'Switch',
-                  style: EqTypography.label.copyWith(
-                    color:
-                        onSwitch != null ? EqColours.sky : EqColours.grey,
+                ],
+              )
+            else
+              SizedBox(
+                height: 32,
+                child: OutlinedButton(
+                  onPressed: onSwitch,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    minimumSize: Size.zero,
+                    side: BorderSide(
+                      color:
+                          onSwitch != null ? EqColours.sky : EqColours.border,
+                    ),
+                    foregroundColor: EqColours.sky,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    'Switch',
+                    style: EqTypography.label.copyWith(
+                      color: onSwitch != null ? EqColours.sky : EqColours.grey,
+                    ),
                   ),
                 ),
               ),
-            ),
+            if (onDisconnect != null)
+              IconButton(
+                onPressed: onDisconnect,
+                visualDensity: VisualDensity.compact,
+                tooltip: 'Disconnect',
+                icon: const Icon(Icons.link_off, color: EqColours.grey),
+              ),
+          ],
         ],
       ),
     );

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/router/pending_claim.dart';
@@ -139,16 +140,34 @@ class _ClaimInviteScreenState extends ConsumerState<ClaimInviteScreen> {
       // Primary path: worker taps "Open my wallet" below.
       await Future<void>.delayed(const Duration(seconds: 8));
       if (mounted && _phase == _Phase.success) context.go(Routes.licencesList);
-    } catch (e) {
-      final msg = switch (e.toString()) {
-        final s when s.contains('invite_not_found') =>
+    } catch (e, st) {
+      // Known invite states are expected outcomes — surface a clear message,
+      // don't page anyone. Anything else is a real failure in the claim path
+      // (the chain that's otherwise unobservable) — capture it so a broken
+      // first-time activation shows up in Sentry instead of dying silently.
+      final s = e.toString();
+      final isExpected = s.contains('invite_not_found') ||
+          s.contains('invite_already_claimed') ||
+          s.contains('invite_expired');
+      final msg = switch (s) {
+        _ when s.contains('invite_not_found') =>
           'This invite link is not valid.',
-        final s when s.contains('invite_already_claimed') =>
+        _ when s.contains('invite_already_claimed') =>
           'This invite has already been used.',
-        final s when s.contains('invite_expired') =>
+        _ when s.contains('invite_expired') =>
           'This invite has expired. Ask your admin to send a new one.',
         _ => 'Something went wrong. Please try again or contact your admin.',
       };
+      if (!isExpected) {
+        unawaited(Sentry.captureException(
+          e,
+          stackTrace: st,
+          withScope: (scope) async {
+            await scope.setTag('flow', 'claim_activate');
+            await scope.setContexts('claim', {'token': widget.token});
+          },
+        ));
+      }
       if (!mounted) return;
       setState(() {
         _phase = _Phase.error;

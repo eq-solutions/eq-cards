@@ -12,6 +12,7 @@ class TenantMembership {
     required this.slug,
     required this.isPersonal,
     required this.isActive,
+    required this.isHome,
   });
 
   factory TenantMembership.fromJson(Map<String, dynamic> json) =>
@@ -21,6 +22,7 @@ class TenantMembership {
         slug: json['slug'] as String,
         isPersonal: json['is_personal'] as bool? ?? false,
         isActive: json['is_active'] as bool? ?? false,
+        isHome: json['is_home'] as bool? ?? false,
       );
 
   final String tenantId;
@@ -28,6 +30,11 @@ class TenantMembership {
   final String slug;
   final bool isPersonal;
   final bool isActive;
+  final bool isHome;
+
+  /// An optional employer connection the worker can leave. Their own personal
+  /// wallet and their home tenant are not disconnectable from Settings.
+  bool get isDisconnectable => !isPersonal && !isHome;
 }
 
 class WorkspaceRepository {
@@ -45,6 +52,16 @@ class WorkspaceRepository {
     await _client.rpc<dynamic>(
       'eq_cards_set_active_tenant',
       params: {'p_tenant_id': tenantId},
+    );
+    await _client.auth.refreshSession();
+  }
+
+  /// Disconnect from an optional employer. The DB falls the active context
+  /// back to the home tenant; we refresh the JWT so the org context drops.
+  Future<void> revokeOrgAccess(String orgId) async {
+    await _client.rpc<dynamic>(
+      'eq_cards_revoke_org_access',
+      params: {'p_org_id': orgId},
     );
     await _client.auth.refreshSession();
   }
