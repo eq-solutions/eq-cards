@@ -17,6 +17,7 @@ import '../../../auth/auth.dart';
 import '../../../licences/data/models/licence.dart';
 import '../../../licences/presentation/notifiers/licences_list_notifier.dart';
 import '../../../profile/presentation/notifiers/profile_notifier.dart';
+import '../../../workers/data/access_request_repository.dart';
 import '../../../workers/data/worker_self_repository.dart';
 import '../../../workers/presentation/providers/org_admin_provider.dart';
 import '../../data/workspace_repository.dart';
@@ -38,6 +39,9 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(EqSpacing.md),
         children: [
+          // Incoming employer connection requests — the consent prompt. Shown
+          // first because it's the most action-worthy item when present.
+          const _AccessRequestsSection(),
           // Wallet stats — quick at-a-glance summary derived from existing
           // licence data (no new schema). Hidden until the licence list
           // resolves successfully so the page doesn't flicker on cold load.
@@ -892,6 +896,215 @@ class _WorkerJoinQrCard extends StatelessWidget {
         ),
         const SizedBox(height: EqSpacing.lg),
       ],
+    );
+  }
+}
+
+/// Incoming employer connection requests — the worker's consent gate. An
+/// employer asked to connect to this tradie's wallet; they approve or decline.
+/// Hidden when there are none.
+class _AccessRequestsSection extends ConsumerStatefulWidget {
+  const _AccessRequestsSection();
+
+  @override
+  ConsumerState<_AccessRequestsSection> createState() =>
+      _AccessRequestsSectionState();
+}
+
+class _AccessRequestsSectionState
+    extends ConsumerState<_AccessRequestsSection> {
+  String? _busy; // requestId currently being processed
+
+  Future<void> _approve(IncomingAccessRequest r) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Connect to ${r.orgName}?'),
+        content: Text(
+          '${r.orgName} will be able to see the licences and certificates in '
+          'your wallet. Your wallet stays yours — you can disconnect any time '
+          'under Workspaces.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Connect'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await _run(r, approve: true, success: 'Connected to ${r.orgName}.');
+  }
+
+  Future<void> _run(
+    IncomingAccessRequest r, {
+    required bool approve,
+    required String success,
+  }) async {
+    setState(() => _busy = r.requestId);
+    try {
+      await ref
+          .read(accessRequestRepositoryProvider)
+          .respond(r.requestId, approve: approve);
+      ref.invalidate(incomingAccessRequestsProvider);
+      // Approving adds the org as a switchable workspace — refresh that list.
+      if (approve) ref.invalidate(myTenantsProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(success),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: EqColours.ink,
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Something went wrong. Please try again.'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: EqColours.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = null);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final requests = ref.watch(incomingAccessRequestsProvider).value;
+    if (requests == null || requests.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: EqSpacing.sm),
+          child: Text('Connection requests', style: EqTypography.label),
+        ),
+        const SizedBox(height: EqSpacing.sm),
+        EqCard(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              for (var i = 0; i < requests.length; i++) ...[
+                if (i > 0) const Divider(height: 1),
+                _AccessRequestRow(
+                  request: requests[i],
+                  busy: _busy == requests[i].requestId,
+                  onApprove: _busy == null
+                      ? () => _approve(requests[i])
+                      : null,
+                  onDecline: _busy == null
+                      ? () => _run(requests[i],
+                          approve: false, success: 'Request declined.')
+                      : null,
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: EqSpacing.lg),
+      ],
+    );
+  }
+}
+
+class _AccessRequestRow extends StatelessWidget {
+  const _AccessRequestRow({
+    required this.request,
+    required this.busy,
+    required this.onApprove,
+    required this.onDecline,
+  });
+
+  final IncomingAccessRequest request;
+  final bool busy;
+  final VoidCallback? onApprove;
+  final VoidCallback? onDecline;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(EqSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.domain_add_outlined, color: EqColours.ink),
+              const SizedBox(width: EqSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(request.orgName, style: EqTypography.bodyL),
+                    const SizedBox(height: EqSpacing.xs),
+                    Text(
+                      'wants to connect to your wallet',
+                      style: EqTypography.label,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (request.note != null && request.note!.isNotEmpty) ...[
+            const SizedBox(height: EqSpacing.sm),
+            Text(
+              '“${request.note!}”',
+              style: EqTypography.label.copyWith(color: EqColours.grey),
+            ),
+          ],
+          const SizedBox(height: EqSpacing.md),
+          if (busy)
+            const Center(
+              child: SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation(EqColours.sky),
+                ),
+              ),
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton(
+                    onPressed: onApprove,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: EqColours.sky,
+                      minimumSize: const Size.fromHeight(40),
+                    ),
+                    child: const Text('Connect'),
+                  ),
+                ),
+                const SizedBox(width: EqSpacing.sm),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: onDecline,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: EqColours.grey,
+                      minimumSize: const Size.fromHeight(40),
+                      side: const BorderSide(color: EqColours.border),
+                    ),
+                    child: const Text('Decline'),
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
     );
   }
 }
