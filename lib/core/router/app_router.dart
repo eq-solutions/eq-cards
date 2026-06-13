@@ -339,8 +339,8 @@ String? _redirect(
     // During phone OTP verification the shell exchange runs AFTER GoTrue emits
     // the first onAuthStateChange (raw JWT, no tenant_id). Exempting the OTP
     // screen here keeps the user on the loading spinner instead of flashing
-    // through notProvisioned. The second onAuthStateChange (shell JWT, has
-    // tenant_id) then routes to licencesList normally.
+    // through notProvisioned. Once the exchange completes and the session
+    // refreshes with tenant_id, the router re-evaluates and routes normally.
     final isPhoneExchangeInProgress =
         flowState is AuthFlowVerifying && flowState.isPhone && loc == Routes.otp;
     if (tenantId == null && loc != Routes.notProvisioned && !isClaimRoute && !isJoinRoute && !isProvisionRoute && !isPhoneExchangeInProgress) {

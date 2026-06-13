@@ -185,14 +185,15 @@ class AuthRepository {
       }
 
       if (body['valid'] != true) {
-        // Shell returned valid:false — user not in shell_control.users, phone
-        // mismatch, or a transient error (GoTrue token reject, inactive tenant).
-        // Sign out so GoRouter clears back to the phone sign-in screen. The
-        // user can retry immediately; if the problem persists they contact their
-        // manager. Signing out is preferable to leaving the user on the
-        // notProvisioned screen with no actionable path.
+        // Shell returned valid:false — user not in shell_control.users yet.
+        // Do NOT sign out here. A first-time claimer signs in via phone BEFORE
+        // the claim RPC runs, so they are never in shell_control.users at this
+        // point. Signing out destroys the session and clears PendingClaim,
+        // locking them in a sign-in loop and preventing them from ever reaching
+        // the /claim Activate screen.
+        // Returning silently lets the router decide: if PendingClaim.token is
+        // set it routes to /claim; otherwise it routes to notProvisioned.
         unawaited(_breadcrumb('phone_otp_shell_exchange_not_provisioned'));
-        await _client.auth.signOut();
         return;
       }
 

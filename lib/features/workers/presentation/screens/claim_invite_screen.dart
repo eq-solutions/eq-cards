@@ -118,6 +118,16 @@ class _ClaimInviteScreenState extends ConsumerState<ClaimInviteScreen> {
         }
       }
 
+      // Refresh the session so the custom_access_token_hook now injects
+      // tenant_id — the claim RPC just wrote the shell_control.users entry
+      // that the hook reads. Without this the JWT still has no tenant_id and
+      // the router bounces the worker to notProvisioned after "Open my wallet".
+      try {
+        await Supabase.instance.client.auth.refreshSession();
+      } catch (_) {
+        // Non-fatal — JWT refreshes on next token expiry.
+      }
+
       ref.invalidate(orgAdminOrgIdProvider);
 
       // Claim done — the worker now has a tenant. Drop the pending token so the
