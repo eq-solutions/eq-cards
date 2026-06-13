@@ -11,6 +11,18 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
+# Smart front door: the bare root serves the static marketing page
+# (web/welcome.html), NOT the Flutter app. welcome.html detects an existing
+# EQ session client-side and bounces returning/core users straight to /splash,
+# so only cold visitors actually see the marketing pitch. This exact-match
+# rule must sit ABOVE the SPA catch-all (first match wins). Every other route
+# (/splash, /email, /claim, /join, /licences, …) still falls through to the
+# Flutter app, so deep links and the existing pilot are unaffected.
+[[redirects]]
+  from   = "/"
+  to     = "/welcome.html"
+  status = 200
+
 [[redirects]]
   from   = "/*"
   to     = "/index.html"
@@ -28,6 +40,13 @@
 
 [[headers]]
   for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+# welcome.html carries the session-detect/redirect logic — must always be
+# revalidated so the front-door behaviour can't be pinned by a stale cache.
+[[headers]]
+  for = "/welcome.html"
   [headers.values]
     Cache-Control = "no-cache"
 

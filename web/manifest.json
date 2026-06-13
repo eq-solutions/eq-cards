@@ -1,7 +1,7 @@
 {
     "name": "EQ Cards",
     "short_name": "EQ Cards",
-    "start_url": ".",
+    "start_url": "/splash",
     "display": "standalone",
     "background_color": "#FFFFFF",
     "theme_color": "#3DA8D8",

@@ -6,5 +6,15 @@
 # Static files (assets/, icons/, canvaskit/, *.js, *.json, *.png, etc.) are
 # served as files because Netlify checks the literal path before applying
 # the rewrite — only paths that don't match a real file fall through here.
+#
+# Smart front door: the bare root serves the static marketing page
+# (welcome.html), which detects an existing EQ session client-side and bounces
+# returning/core users straight to /splash — so only cold visitors see the
+# pitch. This exact-match rule MUST come before the SPA catch-all (first match
+# wins). Every other path still falls through to the Flutter app, so deep links
+# (/claim, /join, /email, …) and the live pilot are unaffected.
+# NOTE: _redirects is the authoritative source — the deploy zips build/web only,
+# so the repo-root netlify.toml is not shipped. Keep this rule here.
 
-/*    /index.html   200
+/             /welcome.html   200
+/*            /index.html     200

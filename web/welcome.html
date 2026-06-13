@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#3DA8D8">
+  <meta name="description" content="EQ Cards — a free digital wallet for tradies. Keep your licences, tickets and certificates on you, and show them in a tap on any job.">
+  <title>EQ Cards — your licences and tickets, always on you</title>
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!--
+    Smart front door. This static page is served at "/" (see netlify.toml).
+    A returning EQ user — or a core user handed off from core.eq.solutions —
+    already has a Supabase session persisted in this browser's localStorage.
+    Detect it SYNCHRONOUSLY, before any marketing paints, and bounce them
+    straight into the app at /splash (where GoRouter routes them to their
+    wallet). Cold visitors with no session fall through and see the pitch.
+
+    Detection is version-tolerant: supabase_flutter persists via
+    shared_preferences (web → localStorage, often under a "flutter." prefix)
+    and the key/encoding has shifted across package versions, so we scan all
+    keys for an auth-token blob and check it hasn't expired rather than
+    hardcoding one key. Expired/absent → stay on the marketing page.
+  -->
+  <script>
+    (function () {
+      function hasLiveSession() {
+        try {
+          for (var i = 0; i < localStorage.length; i++) {
+            var k = localStorage.key(i);
+            if (!k) continue;
+            if (!/auth.?token/i.test(k) && !/sb-.*-auth-token/i.test(k)) continue;
+            var raw = localStorage.getItem(k);
+            if (!raw) continue;
+            // shared_preferences_web may JSON-encode the stored string.
+            var val = raw;
+            try { var p = JSON.parse(raw); if (typeof p === 'string') val = p; } catch (e) {}
+            if (!/access_token/.test(val)) continue;
+            var m = val.match(/"expires_at"\s*:\s*(\d+)/);
+            if (m) { if (parseInt(m[1], 10) * 1000 > Date.now()) return true; }
+            else { return true; }
+          }
+        } catch (e) {}
+        return false;
+      }
+      if (hasLiveSession()) { location.replace('/splash'); }
+    })();
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #1A1A2E;
+      background: #EAF5FB;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      justify-content: center;
+    }
+    .wrap { width: 100%; max-width: 480px; min-height: 100%; background: #FFFFFF; display: flex; flex-direction: column; }
+    .hero { background: #EAF5FB; padding: 40px 28px 32px; }
+    .brand { display: flex; align-items: center; gap: 9px; margin-bottom: 36px; }
+    .brand-mark { width: 30px; height: 30px; background: #3DA8D8; border-radius: 8px; color: #FFFFFF;
+      display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; }
+    .brand-name { font-weight: 700; font-size: 18px; }
+    h1 { font-weight: 700; font-size: 28px; line-height: 1.22; letter-spacing: -0.01em; }
+    .sub { font-size: 16px; line-height: 1.55; color: #46637A; margin-top: 14px; }
+    .body { padding: 26px 28px 32px; display: flex; flex-direction: column; flex: 1; }
+    .btn { width: 100%; font-family: inherit; font-size: 16px; padding: 16px; border-radius: 12px;
+      cursor: pointer; text-align: center; text-decoration: none; display: block; border: none; }
+    .btn-primary { background: #3DA8D8; color: #FFFFFF; font-weight: 700; }
+    .btn-secondary { background: #FFFFFF; color: #2986B4; font-weight: 500; border: 1.5px solid #2986B4;
+      padding: 14px; margin-top: 12px; }
+    .features { display: flex; flex-direction: column; gap: 16px; margin-top: 28px; }
+    .feature { display: flex; align-items: center; gap: 13px; }
+    .feature-icon { min-width: 36px; height: 36px; background: #EAF5FB; border-radius: 10px; color: #2986B4;
+      display: inline-flex; align-items: center; justify-content: center; }
+    .feature-icon svg { width: 19px; height: 19px; stroke: currentColor; fill: none; stroke-width: 2;
+      stroke-linecap: round; stroke-linejoin: round; }
+    .feature-text { font-size: 15px; }
+    .signin { text-align: center; margin-top: auto; padding-top: 26px; }
+    .divider { border-top: 1px solid #EAF0F4; padding-top: 20px; margin-top: 26px; }
+    .signin a { color: #2986B4; font-weight: 500; text-decoration: none; }
+    .muted { color: #46637A; font-size: 15px; }
+    .footer { text-align: center; margin-top: 18px; font-size: 12px; color: #9AAAB7; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <div class="brand">
+        <span class="brand-mark">EQ</span>
+        <span class="brand-name">EQ Cards</span>
+      </div>
+      <h1>Your licences and tickets, always on you.</h1>
+      <p class="sub">Free for tradies. Add your cards once, show them in a tap — on any job, for any employer.</p>
+    </section>
+
+    <section class="body">
+      <a class="btn btn-primary" href="/email">Create your free wallet</a>
+      <a class="btn btn-secondary" href="/join">I've got a code from my employer</a>
+
+      <div class="features">
+        <div class="feature">
+          <span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M13 3 4 14h7l-1 7 9-11h-7z"/></svg></span>
+          <span class="feature-text">Add a licence in seconds</span>
+        </div>
+        <div class="feature">
+          <span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M14 14h3v3M20 14v6M17 20h-3"/></svg></span>
+          <span class="feature-text">Show a QR at the gate</span>
+        </div>
+        <div class="feature">
+          <span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-3"/><path d="M9 9v.01M9 13v.01M9 17v.01"/></svg></span>
+          <span class="feature-text">Switch employers, keep your wallet</span>
+        </div>
+      </div>
+
+      <div class="signin">
+        <div class="divider">
+          <span class="muted">Already set up? </span><a href="/email">Sign in</a>
+        </div>
+        <div class="footer">Built by EQ Solutions</div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
