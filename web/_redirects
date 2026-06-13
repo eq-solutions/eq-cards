@@ -16,5 +16,9 @@
 # NOTE: _redirects is the authoritative source — the deploy zips build/web only,
 # so the repo-root netlify.toml is not shipped. Keep this rule here.
 
-/             /welcome.html   200
+# 200! (forced): the bare "/" maps to index.html as the directory index, and
+# Netlify lets an existing file shadow a non-forced rewrite — so without the
+# "!" this rule is silently ignored and "/" serves the Flutter app. The force
+# flag applies the rewrite to welcome.html anyway.
+/             /welcome.html   200!
 /*            /index.html     200

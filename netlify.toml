@@ -22,6 +22,7 @@
   from   = "/"
   to     = "/welcome.html"
   status = 200
+  force  = true  # "/" is shadowed by index.html (dir index) without force
 
 [[redirects]]
   from   = "/*"
