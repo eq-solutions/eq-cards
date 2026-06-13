@@ -21,12 +21,7 @@ import '../../data/models/profile.dart';
 import '../notifiers/profile_notifier.dart';
 
 class ProfileEditScreen extends ConsumerStatefulWidget {
-  const ProfileEditScreen({super.key, this.isOnboarding = false});
-
-  /// When true, the screen is part of the onboarding wizard: the AppBar title
-  /// changes, the save button reads "Save and continue", and saving navigates
-  /// to /onboarding/done instead of popping the stack.
-  final bool isOnboarding;
+  const ProfileEditScreen({super.key});
 
   @override
   ConsumerState<ProfileEditScreen> createState() => _ProfileEditScreenState();
@@ -156,13 +151,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     try {
       await ref.read(profileNotifierProvider.notifier).save(draft);
       _emitFieldEvents(_initial, draft);
-      if (mounted) {
-        if (widget.isOnboarding) {
-          context.go(Routes.onboardingWallet);
-        } else {
-          context.pop();
-        }
-      }
+      if (mounted) context.pop();
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -245,16 +234,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     }
 
     return Scaffold(
-      appBar: EqAppBar(
-        title: widget.isOnboarding ? 'Your details' : 'Edit profile',
-        leading: widget.isOnboarding
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back),
-                color: EqColours.white,
-                onPressed: () => context.go(Routes.onboarding),
-              )
-            : null,
-      ),
+      appBar: const EqAppBar(title: 'Edit profile'),
       body: SafeArea(
         child: CallbackShortcuts(
           bindings: {
@@ -385,7 +365,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                   ),
                 ),
               EqButton(
-                label: widget.isOnboarding ? 'Save and continue' : 'Save',
+                label: 'Save',
                 onPressed: _saving ? null : _save,
                 isLoading: _saving,
                 fullWidth: true,

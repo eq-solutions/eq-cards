@@ -9,10 +9,6 @@ import '../../features/auth/presentation/screens/provision_tenant_screen.dart';
 import '../../features/certificates/certificates.dart';
 import '../../features/legal/presentation/screens/legal_document_screen.dart';
 import '../../features/licences/licences.dart';
-import '../../features/onboarding/presentation/screens/onboarding_done_screen.dart';
-import '../../features/onboarding/presentation/screens/onboarding_review_screen.dart';
-import '../../features/onboarding/presentation/screens/onboarding_wallet_step_screen.dart';
-import '../../features/onboarding/presentation/screens/onboarding_welcome_screen.dart';
 import '../../features/profile/profile.dart';
 import '../../features/settings/settings.dart';
 import '../../features/workers/data/models/worker.dart';
@@ -36,7 +32,6 @@ GoRouter appRouter(Ref ref) {
   // Bridge: Riverpod state changes -> ChangeNotifier -> GoRouter refresh.
   final notifier = _AuthRouterNotifier();
   ref.listen(authStateChangesProvider, (_, _) => notifier.bump());
-  ref.listen(profileNotifierProvider, (_, _) => notifier.bump());
   ref.listen(authFlowNotifierProvider, (_, _) => notifier.bump());
   ref.onDispose(notifier.dispose);
 
@@ -44,9 +39,8 @@ GoRouter appRouter(Ref ref) {
     initialLocation: Routes.splash,
     refreshListenable: notifier,
     redirect: (context, state) {
-      final AsyncValue<Profile?> profile = ref.read(profileNotifierProvider);
       final AuthFlowState flowState = ref.read(authFlowNotifierProvider);
-      return _redirect(context, state, profile, flowState);
+      return _redirect(context, state, flowState);
     },
     routes: [
       GoRoute(
@@ -66,28 +60,6 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: Routes.notProvisioned,
         builder: (context, state) => const NotProvisionedScreen(),
-      ),
-      // Onboarding wizard — shown on first sign-in when profile is incomplete.
-      // Full-screen flows outside the shell (no bottom nav).
-      GoRoute(
-        path: Routes.onboarding,
-        builder: (context, state) => const OnboardingWelcomeScreen(),
-      ),
-      GoRoute(
-        path: Routes.onboardingProfile,
-        builder: (context, state) => const ProfileEditScreen(isOnboarding: true),
-      ),
-      GoRoute(
-        path: Routes.onboardingWallet,
-        builder: (context, state) => const OnboardingWalletStepScreen(),
-      ),
-      GoRoute(
-        path: Routes.onboardingReview,
-        builder: (context, state) => const OnboardingReviewScreen(),
-      ),
-      GoRoute(
-        path: Routes.onboardingDone,
-        builder: (context, state) => const OnboardingDoneScreen(),
       ),
       // Legal documents — top-level routes outside the shell so they can be
       // reached from anywhere (Settings, share sheet, etc.) and present as
@@ -296,7 +268,6 @@ GoRouter appRouter(Ref ref) {
 String? _redirect(
   BuildContext context,
   GoRouterState state,
-  AsyncValue<Profile?> profile,
   AuthFlowState flowState,
 ) {
   // Treat an expired session the same as no session. Without this, an
@@ -307,7 +278,6 @@ String? _redirect(
   final isSignedIn = session != null && !session.isExpired;
   final loc = state.matchedLocation;
   final isAuthRoute = loc.startsWith('/auth/');
-  final isOnboardingRoute = loc.startsWith('/onboarding');
   // Legal documents are reachable without sign-in so users can review the
   // Privacy Policy and Terms before sign-in.
   final isLegalRoute = loc.startsWith('/legal/');
@@ -369,16 +339,6 @@ String? _redirect(
   }
 
   final signedOutDestination = Routes.email;
-
-  // Onboarding routes require sign-in; bounce unauthenticated visitors.
-  if (!isSignedIn && isOnboardingRoute) return signedOutDestination;
-  // Only redirect the root welcome screen away when profile is already
-  // complete — sub-routes (/wallet, /review, /done) must flow freely so
-  // the wizard continues after profile is saved in step 2.
-  if (isSignedIn && loc == Routes.onboarding) {
-    final isComplete = profile.value?.isComplete ?? false;
-    if (isComplete) return Routes.licencesList;
-  }
 
   if (loc == Routes.splash || loc == Routes.home) {
     if (!isSignedIn) return Routes.email;

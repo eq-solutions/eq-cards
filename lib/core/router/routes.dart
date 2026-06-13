@@ -27,13 +27,6 @@ abstract class Routes {
   static const privacyPolicy = '/legal/privacy';
   static const termsOfUse = '/legal/terms';
 
-  // Onboarding wizard — shown on first sign-in when profile is incomplete.
-  static const onboarding = '/onboarding';
-  static const onboardingProfile = '/onboarding/profile';
-  static const onboardingWallet = '/onboarding/wallet';
-  static const onboardingReview = '/onboarding/review';
-  static const onboardingDone = '/onboarding/done';
-
   // D2: public licence-verification page — no auth required.
   static const share = '/share';
 
