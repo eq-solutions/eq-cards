@@ -382,12 +382,12 @@ String? _redirect(
 
   if (loc == Routes.splash || loc == Routes.home) {
     if (!isSignedIn) return Routes.email;
-    // Wait for profile to load before deciding where to send the user. The
-    // notifier listens to profileNotifierProvider so a second bump fires once
-    // the AsyncData arrives and this branch is re-evaluated.
-    if (profile is! AsyncData) return null;
-    final isComplete = profile.value?.isComplete ?? false;
-    return isComplete ? Routes.licencesList : Routes.onboarding;
+    // Signed-in users at the root always have a workspace by this point — the
+    // provisioning gate above redirects tenant-less users away. Go straight to
+    // the wallet. The onboarding wizard is no longer a forced step (it was
+    // cancelled — payroll PII out of scope); the soft "complete your profile"
+    // banner inside the wallet handles the nudge instead. No profile wait.
+    return Routes.licencesList;
   }
 
   // not-provisioned is exempt: a tenant-less user belongs there, and the gate
