@@ -19,6 +19,7 @@ import '../../../licences/presentation/notifiers/licences_list_notifier.dart';
 import '../../../profile/presentation/notifiers/profile_notifier.dart';
 import '../../../workers/data/worker_self_repository.dart';
 import '../../../workers/presentation/providers/org_admin_provider.dart';
+import '../../data/workspace_repository.dart';
 import '../helpers/data_export.dart';
 import '../notifiers/biometric_settings_notifier.dart';
 import '../notifiers/privacy_settings_notifier.dart';
@@ -78,6 +79,8 @@ class SettingsScreen extends ConsumerWidget {
               ),
           // Worker join QR — only visible to managers/supervisors.
           _WorkerJoinQrCard(),
+          // Workspace switcher — only shown when worker has 2+ tenants.
+          const _WorkspacesSection(),
           EqCard(
             padding: EdgeInsets.zero,
             child: Column(
@@ -889,6 +892,173 @@ class _WorkerJoinQrCard extends StatelessWidget {
         ),
         const SizedBox(height: EqSpacing.lg),
       ],
+    );
+  }
+}
+
+/// Workspace context switcher — shown only when the worker belongs to 2+
+/// tenants (personal + at least one org). Personal-only workers see nothing.
+class _WorkspacesSection extends ConsumerStatefulWidget {
+  const _WorkspacesSection();
+
+  @override
+  ConsumerState<_WorkspacesSection> createState() => _WorkspacesSectionState();
+}
+
+class _WorkspacesSectionState extends ConsumerState<_WorkspacesSection> {
+  String? _switching;
+  String? _error;
+
+  Future<void> _switchTo(String tenantId) async {
+    setState(() {
+      _switching = tenantId;
+      _error = null;
+    });
+    try {
+      await ref.read(workspaceRepositoryProvider).setActiveTenant(tenantId);
+      ref.invalidate(myTenantsProvider);
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _error = 'Could not switch workspace. Please try again.';
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _switching = null);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tenants = ref.watch(myTenantsProvider).value;
+    if (tenants == null || tenants.length < 2) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: EqSpacing.sm),
+          child: Text('Workspaces', style: EqTypography.label),
+        ),
+        const SizedBox(height: EqSpacing.sm),
+        EqCard(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              for (var i = 0; i < tenants.length; i++) ...[
+                if (i > 0) const Divider(height: 1),
+                _WorkspaceRow(
+                  tenant: tenants[i],
+                  loading: _switching == tenants[i].tenantId,
+                  onSwitch: _switching == null
+                      ? () => _switchTo(tenants[i].tenantId)
+                      : null,
+                ),
+              ],
+              if (_error != null) ...[
+                const Divider(height: 1),
+                Padding(
+                  padding: const EdgeInsets.all(EqSpacing.md),
+                  child: Text(
+                    _error!,
+                    style:
+                        EqTypography.label.copyWith(color: EqColours.error),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: EqSpacing.lg),
+      ],
+    );
+  }
+}
+
+class _WorkspaceRow extends StatelessWidget {
+  const _WorkspaceRow({
+    required this.tenant,
+    required this.loading,
+    required this.onSwitch,
+  });
+
+  final TenantMembership tenant;
+  final bool loading;
+  final VoidCallback? onSwitch;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(EqSpacing.md),
+      child: Row(
+        children: [
+          Icon(
+            tenant.isPersonal ? Icons.person_outline : Icons.domain_outlined,
+            color: EqColours.ink,
+          ),
+          const SizedBox(width: EqSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  tenant.isPersonal ? 'Personal wallet' : tenant.name,
+                  style: EqTypography.bodyL,
+                ),
+                if (!tenant.isPersonal) ...[
+                  const SizedBox(height: EqSpacing.xs),
+                  Text(tenant.slug, style: EqTypography.label),
+                ],
+              ],
+            ),
+          ),
+          if (tenant.isActive)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.check_circle, color: EqColours.sky, size: 16),
+                const SizedBox(width: 4),
+                Text(
+                  'Active',
+                  style: EqTypography.label.copyWith(color: EqColours.sky),
+                ),
+              ],
+            )
+          else if (loading)
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation(EqColours.sky),
+              ),
+            )
+          else
+            SizedBox(
+              height: 32,
+              child: OutlinedButton(
+                onPressed: onSwitch,
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  minimumSize: Size.zero,
+                  side: BorderSide(
+                    color: onSwitch != null ? EqColours.sky : EqColours.border,
+                  ),
+                  foregroundColor: EqColours.sky,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  'Switch',
+                  style: EqTypography.label.copyWith(
+                    color:
+                        onSwitch != null ? EqColours.sky : EqColours.grey,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
