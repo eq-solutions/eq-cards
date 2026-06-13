@@ -428,6 +428,27 @@ class AuthRepository {
     }
   }
 
+  /// Self-provision a personal shell identity for a standalone worker.
+  ///
+  /// Called from the WelcomeScreen "Start my personal wallet" button.
+  /// Creates a shell_control.users row keyed to the __personal__ tenant, then
+  /// refreshes the GoTrue session so the custom_access_token_hook injects
+  /// tenant_id. GoRouter's auth listener picks up the new claims and routes
+  /// to the wallet automatically. Idempotent — safe to call if the shell
+  /// identity already exists.
+  Future<void> autoProvision() async {
+    unawaited(_breadcrumb('auto_provision_started'));
+    try {
+      await _client.rpc('eq_cards_auto_provision');
+      await _client.auth.refreshSession();
+      unawaited(_breadcrumb('auto_provision_succeeded'));
+    } catch (e, st) {
+      unawaited(_breadcrumb('auto_provision_failed', {'error': e.toString()}));
+      unawaited(Sentry.captureException(e, stackTrace: st));
+      throw mapSupabaseError(e);
+    }
+  }
+
   Future<void> signOut() async {
     unawaited(_breadcrumb('sign_out_started'));
     try {

@@ -8,13 +8,15 @@ import '../../../../core/theme/eq_spacing.dart';
 import '../../../../core/theme/eq_typography.dart';
 import '../../data/auth_repository.dart';
 
-/// Shown when a user has authenticated successfully (valid Supabase session)
-/// but app_metadata.tenant_id is absent from the JWT — meaning the
-/// custom_access_token_hook did not find this user in shell_control.users.
+/// Shown when a user has authenticated (valid Supabase session) but has no
+/// tenant_id in their JWT — no shell_control.users row exists yet.
 ///
-/// Most common cause: the worker's phone number hasn't been added to any
-/// workspace yet. Fix: manager adds the worker in the Shell admin, then the
-/// worker signs in again.
+/// Two paths:
+///   1. Standalone tradie — "Start my personal wallet" calls
+///      eq_cards_auto_provision() then refreshSession(). The hook injects
+///      tenant_id into the new JWT and the router routes to the wallet.
+///   2. Employer code — enter a join code (tenant slug) and navigate to
+///      the join-tenant flow where the worker's phone is matched to an invite.
 class NotProvisionedScreen extends ConsumerStatefulWidget {
   const NotProvisionedScreen({super.key});
 
@@ -24,16 +26,39 @@ class NotProvisionedScreen extends ConsumerStatefulWidget {
 }
 
 class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
-  bool _signingOut = false;
+  bool _provisioning = false;
+  String? _error;
+  final _codeController = TextEditingController();
 
-  Future<void> _signOut() async {
-    setState(() => _signingOut = true);
+  @override
+  void dispose() {
+    _codeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _startPersonalWallet() async {
+    setState(() {
+      _provisioning = true;
+      _error = null;
+    });
     try {
-      await ref.read(authRepositoryProvider).signOut();
-    } finally {
-      if (mounted) setState(() => _signingOut = false);
+      await ref.read(authRepositoryProvider).autoProvision();
+      // Router re-evaluates automatically — refreshSession() inside autoProvision()
+      // triggers onAuthStateChange, which bumps the GoRouter notifier.
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _provisioning = false;
+          _error = 'Could not set up your wallet. Please try again.';
+        });
+      }
     }
-    // GoRouter's auth listener picks up the signOut and redirects to email.
+  }
+
+  void _joinWithCode() {
+    final code = _codeController.text.trim().toLowerCase();
+    if (code.isEmpty) return;
+    context.go('${Routes.join}?tenant=$code');
   }
 
   @override
@@ -51,13 +76,13 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Icon(
-                    Icons.lock_outline,
+                    Icons.badge_outlined,
                     size: 56,
-                    color: EqColours.grey,
+                    color: EqColours.sky,
                   ),
                   const SizedBox(height: EqSpacing.lg),
                   Text(
-                    "You're not set up yet",
+                    'Welcome to EQ Cards',
                     style: EqTypography.headingL.copyWith(
                       fontWeight: FontWeight.w700,
                       color: EqColours.deep,
@@ -66,24 +91,18 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
                   ),
                   const SizedBox(height: EqSpacing.sm),
                   Text(
-                    "Your number isn't linked to an EQ workspace. "
-                    'Ask your manager to add you, then sign in again.',
+                    'Your digital wallet for licences, certificates and your employment record.',
                     style: EqTypography.bodyM.copyWith(color: EqColours.grey),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: EqSpacing.xl),
                   FilledButton(
-                    onPressed: _signingOut
-                        ? null
-                        : () async {
-                            await ref.read(authRepositoryProvider).signOut();
-                            if (mounted) context.go(Routes.email);
-                          },
+                    onPressed: _provisioning ? null : _startPersonalWallet,
                     style: FilledButton.styleFrom(
                       backgroundColor: EqColours.sky,
                       minimumSize: const Size.fromHeight(48),
                     ),
-                    child: _signingOut
+                    child: _provisioning
                         ? const SizedBox(
                             width: 20,
                             height: 20,
@@ -92,7 +111,87 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
                               strokeWidth: 2,
                             ),
                           )
-                        : const Text('Back to sign in'),
+                        : const Text('Start my personal wallet'),
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: EqSpacing.sm),
+                    Text(
+                      _error!,
+                      style: EqTypography.label.copyWith(
+                        color: EqColours.error,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                  const SizedBox(height: EqSpacing.xl),
+                  Row(
+                    children: [
+                      const Expanded(child: Divider()),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: EqSpacing.md,
+                        ),
+                        child: Text(
+                          'or',
+                          style: EqTypography.label
+                              .copyWith(color: EqColours.grey),
+                        ),
+                      ),
+                      const Expanded(child: Divider()),
+                    ],
+                  ),
+                  const SizedBox(height: EqSpacing.lg),
+                  Text(
+                    'Have a code from your employer?',
+                    style: EqTypography.label.copyWith(color: EqColours.grey),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: EqSpacing.sm),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _codeController,
+                          decoration: const InputDecoration(
+                            hintText: 'Enter join code',
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 14,
+                            ),
+                          ),
+                          autocorrect: false,
+                          textCapitalization: TextCapitalization.none,
+                          onSubmitted: (_) => _joinWithCode(),
+                        ),
+                      ),
+                      const SizedBox(width: EqSpacing.sm),
+                      SizedBox(
+                        height: 48,
+                        child: FilledButton(
+                          onPressed: _joinWithCode,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: EqColours.deep,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                          ),
+                          child: const Icon(
+                            Icons.arrow_forward,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: EqSpacing.xl),
+                  TextButton(
+                    onPressed: () =>
+                        ref.read(authRepositoryProvider).signOut(),
+                    child: Text(
+                      'Back to sign in',
+                      style: EqTypography.label.copyWith(color: EqColours.grey),
+                    ),
                   ),
                 ],
               ),
