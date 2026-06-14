@@ -1,6 +1,4 @@
-// ignore_for_file: avoid_web_libraries_in_flutter
 import 'dart:async';
-import 'dart:html' as html;
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -8,11 +6,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/design/design_version.dart';
 import '../../../../core/error/failure.dart';
@@ -26,11 +22,12 @@ import '../../../../core/utils/photo_upload.dart';
 import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_button.dart';
 import '../../../../core/widgets/eq_card.dart';
+import '../../../../core/widgets/ocr_loading_dialog.dart';
 import '../../../../core/widgets/offline_banner.dart';
 import '../../../auth/auth.dart';
 import '../../../certificates/data/models/certificate.dart';
-import '../../../certificates/presentation/screens/certificate_add_screen.dart'
-    show CertPrefill;
+import '../../../certificates/presentation/cert_capture_flow.dart'
+    show certCaptureFlow;
 import '../../../certificates/presentation/notifiers/certificates_list_notifier.dart';
 import '../../../connections/presentation/widgets/pending_connections_banner.dart';
 import '../../../profile/presentation/screens/profile_fill_from_licence_screen.dart'
@@ -365,7 +362,7 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
                 ),
                 onTap: () async {
                   Navigator.of(sheetContext).pop();
-                  await _certCaptureFlow(context, ref);
+                  await certCaptureFlow(context, ref);
                 },
               ),
               ListTile(
@@ -441,7 +438,7 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
     final loadingDialog = showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const _OcrLoadingDialog(),
+      builder: (_) => const OcrLoadingDialog(noun: 'licence'),
     );
 
     unawaited(
@@ -666,98 +663,6 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
     }
   }
 
-  Future<void> _certCaptureFlow(BuildContext context, WidgetRef ref) async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(
-      source: kIsWeb ? ImageSource.gallery : ImageSource.camera,
-      preferredCameraDevice: CameraDevice.rear,
-      imageQuality: 85,
-    );
-    if (picked == null || !context.mounted) return;
-
-    XFile? croppedFile;
-    Uint8List rawBytes;
-    if (kIsWeb) {
-      final pickedBytes = await picked.readAsBytes();
-      if (!context.mounted) return;
-      final cropped = await Navigator.of(context).push<Uint8List>(
-        MaterialPageRoute(
-          fullscreenDialog: true,
-          builder: (_) => LicenceCropScreen(imageBytes: pickedBytes),
-        ),
-      );
-      if (cropped == null || !context.mounted) return;
-      rawBytes = cropped;
-    } else {
-      final c = await cropLicencePhoto(
-        context,
-        picked,
-        actionLabel: 'Use photo',
-      );
-      if (c == null || !context.mounted) return;
-      croppedFile = c;
-      rawBytes = await c.readAsBytes();
-    }
-
-    if (!context.mounted) return;
-    final loadingDialog = showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const _OcrLoadingDialog(),
-    );
-
-    var bytes = rawBytes;
-    var mime = 'image/jpeg';
-    if (kIsWeb) {
-      try {
-        bytes = await stripExifAndCompress(rawBytes);
-      } catch (_) {}
-    }
-
-    OcrExtraction? extraction;
-    var cancelled = false;
-    final ocr = ref.read(ocrServiceProvider);
-    final ocrCall = (kIsWeb || croppedFile == null
-            ? ocr.extractFromBytesViaEdgeFunction(bytes, mimeType: mime)
-            : ocr.extractFromFile(File(croppedFile.path)))
-        .then<void>((r) => extraction = r)
-        .catchError((Object e, StackTrace st) {
-      unawaited(Sentry.captureException(e, stackTrace: st));
-    });
-
-    final cancelCall =
-        loadingDialog.then<void>((result) { if (result ?? false) cancelled = true; });
-    await Future.any<void>([ocrCall, cancelCall]);
-
-    if (!cancelled) {
-      try {
-        if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
-      } catch (_) {}
-    }
-    unawaited(loadingDialog);
-    unawaited(ocrCall);
-    if (!context.mounted) return;
-
-    const certTypeSet = {
-      'white_card', 'first_aid', 'lv_cpr', 'working_at_heights',
-      'confined_space', 'boom_ewp', 'forklift', 'dogman', 'rigger',
-    };
-    final ocrType = extraction?.licenceTypeCandidate;
-    final certType =
-        (!cancelled && ocrType != null && certTypeSet.contains(ocrType))
-            ? ocrType
-            : null;
-
-    context.go(
-      Routes.certificateCreate,
-      extra: CertPrefill(
-        photoBytes: bytes,
-        expiryDate: cancelled ? null : extraction?.expiryDateCandidate,
-        suggestedType: certType,
-      ),
-    );
-  }
-
 }
 
 /// A single entry in the unified wallet — either a licence or a certificate,
@@ -816,77 +721,6 @@ class _WalletTile extends StatefulWidget {
 }
 
 class _WalletTileState extends State<_WalletTile> {
-  bool _downloading = false;
-
-  /// True when running on iOS/iPadOS in a web browser.
-  static bool get _isIosWeb {
-    if (!kIsWeb) return false;
-    final ua = html.window.navigator.userAgent;
-    return ua.contains('iPhone') || ua.contains('iPad');
-  }
-
-  Future<void> _addToWallet(BuildContext context) async {
-    final credId = widget.item.credentialId;
-    if (credId == null) return;
-
-    final supabase = Supabase.instance.client;
-    final session = supabase.auth.currentSession;
-    if (session == null) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Sign in again to add to Wallet.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-      return;
-    }
-
-    setState(() => _downloading = true);
-    try {
-      const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
-      final uri = Uri.parse(
-        '$supabaseUrl/functions/v1/generate-wallet-pass?credentialId=$credId',
-      );
-      final response = await http.get(
-        uri,
-        headers: {'Authorization': 'Bearer ${session.accessToken}'},
-      );
-
-      if (response.statusCode != 200) {
-        throw Exception('Server returned ${response.statusCode}');
-      }
-
-      // Trigger browser download via a temporary anchor element.
-      final bytes = response.bodyBytes;
-      final blob = html.Blob(
-        <dynamic>[bytes],
-        'application/vnd.apple.pkpass',
-      );
-      final url = html.Url.createObjectUrlFromBlob(blob);
-      final anchor = html.AnchorElement(href: url)
-        ..download = '${widget.item.title}.pkpass'
-        ..style.display = 'none';
-      html.document.body?.append(anchor);
-      anchor.click();
-      anchor.remove();
-      html.Url.revokeObjectUrl(url);
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not generate pass: ${e.toString()}'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: EqColours.ink,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _downloading = false);
-    }
-  }
-
   Widget _iconChip(IconData icon) => Container(
         color: EqColours.ice,
         child: Center(child: Icon(icon, size: 18, color: EqColours.deep)),
@@ -1499,91 +1333,6 @@ class _SearchAndFilterBar extends StatelessWidget {
           ],
         ),
       ],
-    );
-  }
-}
-
-/// Modal shown while the OCR Edge Function processes an uploaded photo.
-/// Initially non-dismissable to prevent the user picking the same photo
-/// twice while the round-trip is in flight (3-8s typical on Sonnet vision).
-/// After 8 seconds a Cancel button appears so a user can escape if the
-/// network has stalled. Anything longer than 8s is past the median p95.
-class _OcrLoadingDialog extends StatefulWidget {
-  const _OcrLoadingDialog();
-
-  @override
-  State<_OcrLoadingDialog> createState() => _OcrLoadingDialogState();
-}
-
-class _OcrLoadingDialogState extends State<_OcrLoadingDialog> {
-  bool _allowCancel = false;
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer(const Duration(seconds: 5), () {
-      if (mounted) setState(() => _allowCancel = true);
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return PopScope(
-      canPop: _allowCancel,
-      child: Dialog(
-        backgroundColor: EqColours.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(EqSpacing.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(
-                width: 40,
-                height: 40,
-                child: CircularProgressIndicator(
-                  strokeWidth: 3,
-                  color: EqColours.sky,
-                ),
-              ),
-              const SizedBox(height: EqSpacing.md),
-              Text('Reading your licence…', style: EqTypography.bodyL),
-              const SizedBox(height: EqSpacing.xs),
-              Text(
-                _allowCancel
-                    ? 'Taking longer than usual — tap below to fill the '
-                        'details in yourself instead.'
-                    : 'Usually 5–10 seconds. '
-                        'First scan of the day may take a little longer.',
-                textAlign: TextAlign.center,
-                style: EqTypography.label.copyWith(color: EqColours.grey),
-              ),
-              if (_allowCancel) ...[
-                const SizedBox(height: EqSpacing.md),
-                TextButton(
-                  // Pop with `true` so the _captureFlow race-handler knows
-                  // this was a user-initiated skip, not the dialog being
-                  // dismissed because OCR finished.
-                  onPressed: () => Navigator.of(context).pop(true),
-                  child: Text(
-                    'Skip OCR, fill manually',
-                    style: EqTypography.bodyM.copyWith(color: EqColours.deep),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

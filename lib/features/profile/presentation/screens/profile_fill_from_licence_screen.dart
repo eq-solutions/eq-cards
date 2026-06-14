@@ -295,7 +295,7 @@ class _ProfileFillFromLicenceScreenState
                   Text(
                     _error!,
                     style: EqTypography.bodyM.copyWith(
-                      color: Colors.red.shade700,
+                      color: EqColours.error,
                     ),
                   ),
                   const SizedBox(height: EqSpacing.md),

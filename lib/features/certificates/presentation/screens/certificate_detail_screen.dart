@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -9,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/error/user_messages.dart';
 import '../../../../core/router/routes.dart';
+import '../../../../core/utils/clipboard_utils.dart';
 import '../../../../core/theme/eq_colours.dart';
 import '../../../../core/theme/eq_spacing.dart';
 import '../../../../core/theme/eq_typography.dart';
@@ -120,16 +120,6 @@ class _CertificateDetailBody extends StatelessWidget {
   final Certificate cert;
   final VoidCallback onDelete;
 
-  static void _copyField(BuildContext context, String value, String label) {
-    unawaited(Clipboard.setData(ClipboardData(text: value)));
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('$label copied'),
-      duration: const Duration(seconds: 2),
-      behavior: SnackBarBehavior.floating,
-      backgroundColor: EqColours.ink,
-    ));
-  }
-
   @override
   Widget build(BuildContext context) {
     final dateFmt = DateFormat('d MMMM yyyy');
@@ -170,7 +160,7 @@ class _CertificateDetailBody extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           InkWell(
-                            onTap: () => _copyField(context, cert.title, 'Title'),
+                            onTap: () => unawaited(copyWithFeedback(context: context, value: cert.title, label: 'Title')),
                             borderRadius: BorderRadius.circular(4),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -219,7 +209,7 @@ class _CertificateDetailBody extends StatelessWidget {
                   _DetailRow(
                     label: 'Issuer',
                     value: cert.issuer!,
-                    onTap: () => _copyField(context, cert.issuer!, 'Issuer'),
+                    onTap: () => unawaited(copyWithFeedback(context: context, value: cert.issuer!, label: 'Issuer')),
                   ),
                 if (cert.issueDate != null)
                   _DetailRow(

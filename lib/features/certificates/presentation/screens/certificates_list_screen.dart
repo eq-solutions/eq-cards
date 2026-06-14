@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +13,7 @@ import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_button.dart';
 import '../../../auth/auth.dart';
 import '../../data/models/certificate.dart';
+import '../cert_capture_flow.dart';
 import '../notifiers/certificates_list_notifier.dart';
 import '../widgets/certificate_card.dart';
 
@@ -50,6 +52,41 @@ class _CertificatesListScreenState
     }).toList();
   }
 
+  Future<void> _showAddSheet(BuildContext context) {
+    return showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.document_scanner_outlined),
+              title: Text(
+                kIsWeb ? 'Upload a certificate photo' : 'Scan a certificate',
+              ),
+              subtitle: const Text(
+                'First aid, working at heights, white card — OCR reads the expiry',
+              ),
+              onTap: () async {
+                Navigator.of(sheetContext).pop();
+                await certCaptureFlow(context, ref);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('Enter manually'),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                context.go(Routes.certificateCreate);
+              },
+            ),
+            const SizedBox(height: EqSpacing.sm),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final asyncCerts = ref.watch(certificatesListNotifierProvider);
@@ -62,7 +99,7 @@ class _CertificatesListScreenState
           IconButton(
             icon: const Icon(Icons.add),
             tooltip: 'Add certificate',
-            onPressed: () => context.go(Routes.certificateCreate),
+            onPressed: () => _showAddSheet(context),
           ),
         ],
       ),
@@ -92,7 +129,8 @@ class _CertificatesListScreenState
               return ListView(
                 children: [
                   _EmptyState(
-                    onAdd: () => context.go(Routes.certificateCreate),
+                    onScan: () => certCaptureFlow(context, ref),
+                    onManual: () => context.go(Routes.certificateCreate),
                   ),
                 ],
               );
@@ -167,9 +205,10 @@ class _CertificatesListScreenState
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onAdd});
+  const _EmptyState({required this.onScan, required this.onManual});
 
-  final VoidCallback onAdd;
+  final Future<void> Function() onScan;
+  final VoidCallback onManual;
 
   @override
   Widget build(BuildContext context) {
@@ -199,7 +238,19 @@ class _EmptyState extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: EqSpacing.xl),
-          EqButton(label: 'Add certificate', onPressed: onAdd, fullWidth: true),
+          EqButton(
+            label: kIsWeb ? 'Upload a certificate photo' : 'Scan a certificate',
+            onPressed: onScan,
+            fullWidth: true,
+          ),
+          const SizedBox(height: EqSpacing.sm),
+          TextButton(
+            onPressed: onManual,
+            child: Text(
+              'Enter manually instead',
+              style: EqTypography.bodyM.copyWith(color: EqColours.deep),
+            ),
+          ),
         ],
       ),
     );
