@@ -894,9 +894,6 @@ class _WalletTileState extends State<_WalletTile> {
 
   @override
   Widget build(BuildContext context) {
-    final showWalletButton =
-        _isIosWeb && widget.item.credentialId != null;
-
     return Semantics(
       button: true,
       label: [widget.item.title, if (widget.item.meta.isNotEmpty) widget.item.meta].join(', '),
@@ -979,47 +976,6 @@ class _WalletTileState extends State<_WalletTile> {
                   ),
               ],
             ),
-            // "Add to Apple Wallet" — only on iOS web when credentialId is set.
-            if (showWalletButton) ...[
-              const SizedBox(height: EqSpacing.sm),
-              SizedBox(
-                height: 40,
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: EqSpacing.md,
-                    ),
-                  ),
-                  onPressed:
-                      _downloading ? null : () => _addToWallet(context),
-                  icon: _downloading
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text(
-                          '',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                  label: Text(
-                    _downloading ? 'Generating…' : 'Add to Apple Wallet',
-                    style: EqTypography.label.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ],
           ],
         ),
       ),
