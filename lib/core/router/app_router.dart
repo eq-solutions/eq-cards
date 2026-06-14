@@ -212,8 +212,9 @@ GoRouter appRouter(Ref ref) {
                 routes: [
                   GoRoute(
                     path: 'new',
-                    builder: (context, state) =>
-                        const CertificateAddScreen(),
+                    builder: (context, state) => CertificateAddScreen(
+                      prefill: state.extra as CertPrefill?,
+                    ),
                   ),
                   GoRoute(
                     path: ':id',

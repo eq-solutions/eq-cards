@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -119,6 +120,16 @@ class _CertificateDetailBody extends StatelessWidget {
   final Certificate cert;
   final VoidCallback onDelete;
 
+  static void _copyField(BuildContext context, String value, String label) {
+    unawaited(Clipboard.setData(ClipboardData(text: value)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('$label copied'),
+      duration: const Duration(seconds: 2),
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: EqColours.ink,
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     final dateFmt = DateFormat('d MMMM yyyy');
@@ -158,10 +169,29 @@ class _CertificateDetailBody extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            cert.title,
-                            style: EqTypography.headingM.copyWith(
-                              fontWeight: FontWeight.w700,
+                          InkWell(
+                            onTap: () => _copyField(context, cert.title, 'Title'),
+                            borderRadius: BorderRadius.circular(4),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    cert.title,
+                                    style: EqTypography.headingM.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                                const Padding(
+                                  padding: EdgeInsets.only(left: EqSpacing.xs, top: 2),
+                                  child: Icon(
+                                    Icons.copy_outlined,
+                                    size: 16,
+                                    color: EqColours.grey,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           const SizedBox(height: EqSpacing.xs),
@@ -186,7 +216,11 @@ class _CertificateDetailBody extends StatelessWidget {
             child: Column(
               children: [
                 if (cert.issuer != null)
-                  _DetailRow(label: 'Issuer', value: cert.issuer!),
+                  _DetailRow(
+                    label: 'Issuer',
+                    value: cert.issuer!,
+                    onTap: () => _copyField(context, cert.issuer!, 'Issuer'),
+                  ),
                 if (cert.issueDate != null)
                   _DetailRow(
                     label: 'Issued',
@@ -276,15 +310,17 @@ class _DetailRow extends StatelessWidget {
     required this.label,
     required this.value,
     this.trailing,
+    this.onTap,
   });
 
   final String label;
   final String value;
   final Widget? trailing;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    final content = Padding(
       padding: const EdgeInsets.symmetric(vertical: EqSpacing.sm),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,9 +339,20 @@ class _DetailRow extends StatelessWidget {
               style: EqTypography.bodyM.copyWith(fontWeight: FontWeight.w500),
             ),
           ),
-          ?trailing,
+          if (trailing != null) trailing!,
+          if (onTap != null)
+            const Padding(
+              padding: EdgeInsets.only(left: EqSpacing.sm),
+              child: Icon(Icons.copy_outlined, size: 16, color: EqColours.grey),
+            ),
         ],
       ),
+    );
+    if (onTap == null) return content;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(4),
+      child: content,
     );
   }
 }

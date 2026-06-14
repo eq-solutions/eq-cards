@@ -19,11 +19,22 @@ import '../../data/certificate_repository.dart';
 import '../../data/models/certificate.dart';
 import '../notifiers/certificates_list_notifier.dart';
 
+/// OCR result + photo bytes passed from the scan-certificate flow.
+class CertPrefill {
+  const CertPrefill({this.photoBytes, this.expiryDate, this.suggestedType});
+  final Uint8List? photoBytes;
+  final DateTime? expiryDate;
+  final String? suggestedType;
+}
+
 class CertificateAddScreen extends ConsumerStatefulWidget {
-  const CertificateAddScreen({super.key, this.certificateId});
+  const CertificateAddScreen({super.key, this.certificateId, this.prefill});
 
   /// Non-null when editing an existing certificate.
   final String? certificateId;
+
+  /// Pre-populated data from the scan flow — null when adding manually.
+  final CertPrefill? prefill;
 
   @override
   ConsumerState<CertificateAddScreen> createState() =>
@@ -59,6 +70,23 @@ class _CertificateAddScreenState extends ConsumerState<CertificateAddScreen> {
     super.initState();
     if (_isEdit) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _hydrate());
+    } else {
+      _applyPrefill();
+    }
+  }
+
+  void _applyPrefill() {
+    final pre = widget.prefill;
+    if (pre == null) return;
+    if (pre.photoBytes != null) {
+      _pendingBytes = pre.photoBytes;
+      _pendingMime = 'image/jpeg';
+      _pendingFileName = 'scanned_cert.jpg';
+    }
+    if (pre.expiryDate != null) _expiryDate = pre.expiryDate;
+    if (pre.suggestedType != null &&
+        certTypeLabels.containsKey(pre.suggestedType)) {
+      _certType = pre.suggestedType!;
     }
   }
 
@@ -261,6 +289,36 @@ class _CertificateAddScreenState extends ConsumerState<CertificateAddScreen> {
                 required: !_isEdit,
               ),
               const SizedBox(height: EqSpacing.lg),
+
+              // ── OCR prefill banner ───────────────────────────
+              if (widget.prefill != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(EqSpacing.md),
+                  decoration: BoxDecoration(
+                    color: EqColours.surface,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: EqColours.sky, width: 1),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.auto_awesome_outlined,
+                        size: 20,
+                        color: EqColours.deep,
+                      ),
+                      const SizedBox(width: EqSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          'Photo scanned. Check type and expiry — OCR can misread small text.',
+                          style: EqTypography.bodyM,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: EqSpacing.lg),
+              ],
 
               // ── Title ────────────────────────────────────────
               EqTextField(
