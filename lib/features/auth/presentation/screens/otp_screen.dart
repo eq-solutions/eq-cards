@@ -4,9 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../core/router/pending_claim.dart';
 import '../../../../core/router/routes.dart';
 import '../../../../core/theme/eq_colours.dart';
 import '../../../../core/theme/eq_spacing.dart';
@@ -74,6 +77,8 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     final provisionCtx = ref.read(provisionContextNotifierProvider);
     final joinCtx = ref.read(joinContextNotifierProvider);
     if (_isPhone && provisionCtx != null) {
+      // Provisioning a new workspace opens Shell externally — handled by the
+      // AuthFlowProvisionComplete listener, not by landing in Cards.
       await notifier.provisionTenant(
         _identifier,
         _codeController.text,
@@ -85,10 +90,61 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
         _codeController.text,
         joinCtx.tenantSlug,
       );
+      await _resolveAndLand();
     } else if (_isPhone) {
       await notifier.verifyPhoneOtp(_identifier, _codeController.text);
+      await _resolveAndLand();
     } else {
       await notifier.verifyOtp(_identifier, _codeController.text);
+      await _resolveAndLand();
+    }
+  }
+
+  /// Deterministic landing after a verify completes. The verify call has
+  /// already settled the session (OTP verified + any shell exchange done), so
+  /// we decide on the REAL session and navigate explicitly — instead of
+  /// leaving the screen on a spinner waiting for the router to re-route, which
+  /// could hang forever or flash through to the wrong screen.
+  ///
+  /// Gives the JWT hook one bounded refresh to embed tenant_id, then routes:
+  /// wallet if a workspace is present, the claim screen if an invite is
+  /// pending, otherwise the Welcome screen. Always lands somewhere.
+  Future<void> _resolveAndLand() async {
+    if (!mounted) return;
+    // Errors are shown on this screen — don't navigate over them.
+    final flow = ref.read(authFlowNotifierProvider);
+    if (flow is AuthFlowError || flow is AuthFlowTokenUsed) return;
+
+    final auth = Supabase.instance.client.auth;
+    String? tenantId() =>
+        auth.currentSession?.user.appMetadata['tenant_id'] as String?;
+
+    // One bounded, non-fatal refresh so the hook can mint a tenant-bearing JWT
+    // for a known user whose initial verify didn't carry it yet.
+    if (tenantId() == null) {
+      try {
+        await auth.refreshSession().timeout(const Duration(seconds: 10));
+      } catch (_) {
+        // Non-fatal — fall through and decide on whatever we have.
+      }
+    }
+    if (!mounted) return;
+
+    final tenant = tenantId();
+    final pending = PendingClaim.token;
+    final hasPending = pending != null && pending.isNotEmpty;
+    unawaited(Sentry.addBreadcrumb(Breadcrumb(
+      category: 'auth',
+      message: 'otp_landing',
+      data: {'has_tenant': tenant != null, 'has_pending_claim': hasPending},
+    )));
+
+    if (tenant != null) {
+      context.go(Routes.licencesList);
+    } else if (hasPending) {
+      context.go('${Routes.claim}?token=$pending');
+    } else {
+      context.go(Routes.notProvisioned);
     }
   }
 
