@@ -193,7 +193,8 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
                       children: [
                         const CompleteProfileBanner(),
                         _EmptyState(
-                          onAdd: () => _showAddSheet(context, ref),
+                          onScan: () => unawaited(_captureFlow(context, ref)),
+                          onManual: () => context.go(Routes.licenceCreate),
                           version: designVersion,
                         ),
                       ],
@@ -923,26 +924,33 @@ class _WalletTileState extends State<_WalletTile> {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onAdd, this.version = DesignVersion.linear});
+  const _EmptyState({
+    required this.onScan,
+    required this.onManual,
+    this.version = DesignVersion.linear,
+  });
 
-  final VoidCallback onAdd;
+  final VoidCallback onScan;
+  final VoidCallback onManual;
   final DesignVersion version;
 
   @override
   Widget build(BuildContext context) {
     return switch (version) {
-      DesignVersion.linear => _IllustrationEmpty(onAdd: onAdd),
-      DesignVersion.wallet => _ActionGridEmpty(onAdd: onAdd),
-      DesignVersion.photoFirst => _DashboardEmpty(onAdd: onAdd),
+      DesignVersion.linear => _IllustrationEmpty(onScan: onScan, onManual: onManual),
+      DesignVersion.wallet => _ActionGridEmpty(onScan: onScan, onManual: onManual),
+      DesignVersion.photoFirst => _DashboardEmpty(onScan: onScan, onManual: onManual),
     };
   }
 }
 
-// Linear → simple icon + headline + button.
+// Linear — scan-first. Primary CTA goes straight to the capture flow;
+// manual entry is a secondary text link so it's there without competing.
 class _IllustrationEmpty extends StatelessWidget {
-  const _IllustrationEmpty({required this.onAdd});
+  const _IllustrationEmpty({required this.onScan, required this.onManual});
 
-  final VoidCallback onAdd;
+  final VoidCallback onScan;
+  final VoidCallback onManual;
 
   @override
   Widget build(BuildContext context) {
@@ -953,8 +961,6 @@ class _IllustrationEmpty extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // EQ launcher mark — first impression for a new user opening the
-          // wallet for the first time.
           Image.asset(
             'assets/icon/launcher.png',
             width: 96,
@@ -967,14 +973,15 @@ class _IllustrationEmpty extends StatelessWidget {
           ),
           const SizedBox(height: EqSpacing.md),
           Text(
-            'No licences yet',
+            'Your licences, one place',
             style: EqTypography.headingL,
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: EqSpacing.sm),
           Text(
-            'Add your first licence — White Card, Driver Licence, First Aid, '
-            'whatever you carry on site.',
+            kIsWeb
+                ? 'Upload a photo of your licence — we read the number, type, and expiry automatically.'
+                : 'Take a photo of your licence — we read the number, type, and expiry automatically.',
             style: EqTypography.bodyM.copyWith(color: EqColours.grey),
             textAlign: TextAlign.center,
           ),
@@ -988,18 +995,31 @@ class _IllustrationEmpty extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: EqSpacing.xl),
-          EqButton(label: 'Add licence', onPressed: onAdd, fullWidth: true),
+          EqButton(
+            label: kIsWeb ? 'Upload a licence photo' : 'Scan my licence',
+            onPressed: onScan,
+            fullWidth: true,
+          ),
+          const SizedBox(height: EqSpacing.sm),
+          TextButton(
+            onPressed: onManual,
+            child: Text(
+              'Enter manually instead',
+              style: EqTypography.bodyM.copyWith(color: EqColours.grey),
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-// Wallet → 3-action grid: Take photo / Upload / Manual entry.
+// Wallet → 2-action grid: scan (OCR) / manual entry.
 class _ActionGridEmpty extends StatelessWidget {
-  const _ActionGridEmpty({required this.onAdd});
+  const _ActionGridEmpty({required this.onScan, required this.onManual});
 
-  final VoidCallback onAdd;
+  final VoidCallback onScan;
+  final VoidCallback onManual;
 
   @override
   Widget build(BuildContext context) {
@@ -1016,7 +1036,9 @@ class _ActionGridEmpty extends StatelessWidget {
           ),
           const SizedBox(height: EqSpacing.sm),
           Text(
-            'Three ways to add a licence. Pick whatever fits.',
+            kIsWeb
+                ? 'Upload a photo and we read the fields. Or type them in.'
+                : 'Take a photo and we read the fields. Or type them in.',
             style: EqTypography.bodyM.copyWith(color: EqColours.grey),
             textAlign: TextAlign.center,
           ),
@@ -1031,24 +1053,19 @@ class _ActionGridEmpty extends StatelessWidget {
           ),
           const SizedBox(height: EqSpacing.xl),
           _ActionTile(
-            icon: Icons.camera_alt_outlined,
-            label: 'Photo + auto-fill',
-            subtitle: 'Snap your licence; we read the fields.',
-            onTap: onAdd,
-          ),
-          const SizedBox(height: EqSpacing.sm),
-          _ActionTile(
-            icon: Icons.upload_outlined,
-            label: 'Upload from gallery',
-            subtitle: 'Pick an existing photo from your phone.',
-            onTap: onAdd,
+            icon: kIsWeb ? Icons.upload_outlined : Icons.camera_alt_outlined,
+            label: kIsWeb ? 'Upload a licence photo' : 'Scan my licence',
+            subtitle: kIsWeb
+                ? 'Pick a photo; we read the number, type, and expiry.'
+                : 'Take a photo; we read the number, type, and expiry.',
+            onTap: onScan,
           ),
           const SizedBox(height: EqSpacing.sm),
           _ActionTile(
             icon: Icons.edit_outlined,
-            label: 'Type it in',
-            subtitle: 'Manual entry. Faster if you know the details.',
-            onTap: onAdd,
+            label: 'Enter manually',
+            subtitle: 'Type in the details yourself.',
+            onTap: onManual,
           ),
         ],
       ),
@@ -1114,9 +1131,10 @@ class _ActionTile extends StatelessWidget {
 
 // Photo-first → dashboard-style with "0 licences · 0 expiring" stat strip.
 class _DashboardEmpty extends StatelessWidget {
-  const _DashboardEmpty({required this.onAdd});
+  const _DashboardEmpty({required this.onScan, required this.onManual});
 
-  final VoidCallback onAdd;
+  final VoidCallback onScan;
+  final VoidCallback onManual;
 
   @override
   Widget build(BuildContext context) {
@@ -1126,8 +1144,8 @@ class _DashboardEmpty extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: EqSpacing.md),
-          Row(
-            children: const [
+          const Row(
+            children: [
               Expanded(child: _StatTile(value: '0', label: 'Licences')),
               SizedBox(width: EqSpacing.md),
               Expanded(child: _StatTile(value: '0', label: 'Expiring 30d')),
@@ -1165,9 +1183,17 @@ class _DashboardEmpty extends StatelessWidget {
                 ),
                 const SizedBox(height: EqSpacing.lg),
                 EqButton(
-                  label: 'Add a licence',
-                  onPressed: onAdd,
+                  label: kIsWeb ? 'Upload a licence photo' : 'Scan my licence',
+                  onPressed: onScan,
                   fullWidth: true,
+                ),
+                const SizedBox(height: EqSpacing.sm),
+                TextButton(
+                  onPressed: onManual,
+                  child: Text(
+                    'Enter manually instead',
+                    style: EqTypography.bodyM.copyWith(color: EqColours.grey),
+                  ),
                 ),
               ],
             ),
