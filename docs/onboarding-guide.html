@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Getting started — EQ Cards</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: #F5F7FA;
+      color: #1A1A2E;
+      padding: 2rem 1rem;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .page {
+      background: #fff;
+      max-width: 720px;
+      margin: 0 auto;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    }
+
+    /* Header */
+    .hd {
+      background: #3DA8D8;
+      padding: 2rem 2.5rem 1.75rem;
+    }
+    .hd-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 1rem;
+    }
+    .logo-label {
+      color: rgba(255,255,255,.85);
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .hd h1 {
+      color: #fff;
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .hd p {
+      color: rgba(255,255,255,.8);
+      font-size: 14px;
+      margin-top: 6px;
+    }
+
+    /* Body */
+    .body {
+      padding: 2rem 2.5rem 1.5rem;
+    }
+
+    .sec {
+      margin-bottom: 2rem;
+    }
+    .sec-tag {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: #3DA8D8;
+      margin-bottom: .75rem;
+    }
+
+    /* Two-column entry paths */
+    .grid2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 520px) {
+      .grid2 { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: #EAF5FB;
+      border-radius: 10px;
+      padding: 1.1rem 1.25rem;
+    }
+    .card-h {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #2986B4;
+      margin-bottom: .75rem;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    ol.steps {
+      list-style: none;
+      counter-reset: s;
+      padding: 0;
+    }
+    ol.steps li {
+      counter-increment: s;
+      display: flex;
+      gap: 9px;
+      font-size: 13px;
+      line-height: 1.55;
+      color: #1A1A2E;
+      margin-bottom: .5rem;
+    }
+    ol.steps li::before {
+      content: counter(s);
+      min-width: 20px;
+      height: 20px;
+      background: #3DA8D8;
+      color: #fff;
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .tip {
+      border-left: 3px solid #3DA8D8;
+      background: #d8eef8;
+      border-radius: 0 6px 6px 0;
+      padding: .6rem .85rem;
+      font-size: 12.5px;
+      color: #1A5F7A;
+      margin-top: .75rem;
+      line-height: 1.5;
+    }
+
+    hr.div {
+      border: none;
+      border-top: 1.5px solid #EAF5FB;
+      margin: 1.5rem 0;
+    }
+
+    /* Row items (scan/manual) */
+    .row-item {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+    }
+    .icon-box {
+      width: 36px;
+      height: 36px;
+      background: #EAF5FB;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 18px;
+    }
+    .row-body h3 {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #1A1A2E;
+      margin-bottom: 3px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .row-body p {
+      font-size: 13px;
+      color: #4A4A6A;
+      line-height: 1.55;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+    .badge-sky  { background: #EAF5FB; color: #2986B4; }
+    .badge-ink  { background: #1A1A2E; color: #fff; }
+
+    strong { font-weight: 600; }
+
+    /* Footer */
+    .footer {
+      border-top: 1.5px solid #EAF5FB;
+      padding: 1rem 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .footer-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .footer-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #3DA8D8;
+    }
+    .footer-text { font-size: 12px; color: #999; }
+    .footer-url  { font-size: 12px; color: #3DA8D8; font-weight: 600; text-decoration: none; }
+    .footer-url:hover { text-decoration: underline; }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      .page { box-shadow: none; border-radius: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <div class="hd">
+      <div class="hd-brand">
+        <svg width="36" height="36" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" aria-label="EQ Solutions" role="img" style="border-radius:8px;flex-shrink:0">
+          <rect width="1024" height="1024" fill="#EAF5FB" rx="128" ry="128"/>
+          <g transform="translate(128,128) scale(0.75)">
+            <path fill="#3DA8D8" d="M721.22,622.17l46.95,47q-31,12.78-67,12.78-70.68,0-121.58-48.84a162,162,0,0,1-31.23-40.81c15.14-18.46,31.52-39,46-58.58q5.83,34.5,28.53,58.21,30.47,31.86,78.27,31.85A121.63,121.63,0,0,0,721.22,622.17Z"/>
+            <path fill="#3DA8D8" d="M874.32,508.74q0,36.54-12.29,67l-52.8-52.81c.45-4.58.65-9.33.65-14.2q0-51.27-30.45-83.1t-78.27-31.89c-41.88,0-71.72,22-93.95,55.63-23.45,35.54-44.66,72.83-73.39,104.55C493,599,439.3,647.71,390.38,667.77c-2.58,1.07-5.2,2.09-7.86,3-.53.21-1,.37-1.55.53-1.11.37-2.22.74-3.28,1.11-3.89,1.23-7.41,2.25-10.6,3.11-1.19.33-2.34.61-3.44.86-.82.2-1.6.41-2.37.57-6.47,1.52-10.36,2.09-11.1,2.17a.31.31,0,0,1-.12,0,217.44,217.44,0,0,1-34.71,2.71q-70.68,0-121.58-48.84T142.89,508.74q0-75.47,50.88-124.32t121.58-48.84q56.11,0,96.28,27.35t65.08,77.94L251.61,565.56l-25.05-48.72,164.39-91Q374.32,409.1,358,401.45t-42.65-7.7q-47.83,0-78.31,31.89t-30.5,83.1q0,51.27,30.5,83.14t78.31,31.85a213,213,0,0,0,43.18-6.35c66.73-17.07,122.15-91,160.31-144.09,20.46-28.45,35.28-64.47,60.7-88.87q50.91-48.81,121.58-48.84,71.3,0,122.23,48.84T874.32,508.74Z"/>
+            <rect fill="#3DA8D8" x="745.11" y="474.28" width="66.9" height="223.16" transform="translate(-186.23 722.12) rotate(-45)"/>
+          </g>
+        </svg>
+        <span class="logo-label">EQ Cards — member guide</span>
+      </div>
+      <h1>Getting started with your wallet</h1>
+      <p>Keep your licences and tickets in one place — ready to show on site.</p>
+    </div>
+
+    <div class="body">
+
+      <!-- Step 1 -->
+      <div class="sec">
+        <div class="sec-tag">Step 1 — Getting in</div>
+        <div class="grid2">
+
+          <div class="card">
+            <div class="card-h">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2986B4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+              Invited by your employer
+            </div>
+            <ol class="steps">
+              <li>Your manager sends you a link by SMS or a QR code to scan.</li>
+              <li>Open the link — you'll see your name and who sent the invite.</li>
+              <li>Tap <strong>Sign in</strong>, verify your mobile, then tap <strong>Activate my account</strong>.</li>
+              <li>Your wallet opens — any details your employer loaded are already there.</li>
+            </ol>
+            <div class="tip">If you got a QR or join code (not a personal link), enter the mobile your manager used to register you, then tap <strong>Find my invite</strong>.</div>
+          </div>
+
+          <div class="card">
+            <div class="card-h">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2986B4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+              Signing up yourself
+            </div>
+            <ol class="steps">
+              <li>Open the app or go to <strong>cards.eq.solutions</strong>.</li>
+              <li>Tap the <strong>Mobile</strong> tab and enter your Australian mobile number.</li>
+              <li>Tap <strong>Send code</strong> — a 6-digit SMS arrives within a minute.</li>
+              <li>Enter the code. You're in.</li>
+            </ol>
+            <div class="tip">Have a company code from your employer (e.g. <strong>sks</strong>)? Tap <strong>Join with a join code</strong> on the sign-in screen instead.</div>
+          </div>
+
+        </div>
+      </div>
+
+      <hr class="div">
+
+      <!-- Step 2 -->
+      <div class="sec">
+        <div class="sec-tag">Step 2 — Adding a licence</div>
+        <div class="row-item">
+          <div class="icon-box">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3DA8D8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="m6 7 4 4 6-6"/></svg>
+          </div>
+          <div class="row-body">
+            <h3>Scan <span class="badge badge-sky">Fastest</span></h3>
+            <p>Tap <strong>+</strong> in the top-right of your Wallet, then choose <strong>Scan a licence</strong>. Point your camera at your licence card. The app reads your number, name, and expiry. Review the result, then tap <strong>Save</strong>.</p>
+          </div>
+        </div>
+        <div class="row-item">
+          <div class="icon-box">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3DA8D8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </div>
+          <div class="row-body">
+            <h3>Enter manually</h3>
+            <p>Tap <strong>+</strong>, choose <strong>Enter a licence manually</strong>, and fill in the type, number, and expiry date yourself.</p>
+          </div>
+        </div>
+      </div>
+
+      <hr class="div">
+
+      <!-- Step 3 -->
+      <div class="sec">
+        <div class="sec-tag">Step 3 — Adding a certificate</div>
+        <div class="row-item">
+          <div class="icon-box">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3DA8D8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+          </div>
+          <div class="row-body">
+            <h3>Scan <span class="badge badge-sky">Fastest</span></h3>
+            <p>Go to the <strong>Certs</strong> tab and tap <strong>+</strong> (or use <strong>+</strong> from the Wallet tab). Choose <strong>Scan a certificate</strong>. Works for First Aid, White Card, Working at Heights, and other site tickets. The app reads the expiry date — check it, then save.</p>
+          </div>
+        </div>
+        <div class="row-item">
+          <div class="icon-box">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3DA8D8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </div>
+          <div class="row-body">
+            <h3>Enter manually</h3>
+            <p>Choose <strong>Enter manually</strong> and type in the certificate type, issuer, and expiry.</p>
+          </div>
+        </div>
+      </div>
+
+      <hr class="div">
+
+      <!-- Step 4 -->
+      <div class="sec">
+        <div class="sec-tag">Step 4 — Showing a licence on site</div>
+        <div class="row-item">
+          <div class="icon-box">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3DA8D8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="5" height="5" rx="1"/><rect x="16" y="3" width="5" height="5" rx="1"/><rect x="3" y="16" width="5" height="5" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3M13 3v5M3 13h5M13 21v-5M16 13h5v5"/></svg>
+          </div>
+          <div class="row-body">
+            <h3>QR verification <span class="badge badge-ink">Supervisor-friendly</span></h3>
+            <p>Open a licence from your wallet and tap the <strong>QR code icon</strong> in the top-right corner. Your supervisor scans it and sees your verified licence details instantly — no app needed on their end. You can also copy the link and send it as a text message.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="footer">
+      <div class="footer-left">
+        <div class="footer-dot"></div>
+        <span class="footer-text">EQ Solutions &middot; 2026</span>
+      </div>
+      <a class="footer-url" href="https://cards.eq.solutions">cards.eq.solutions</a>
+    </div>
+
+  </div>
+</body>
+</html>
