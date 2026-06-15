@@ -80,7 +80,7 @@ class WorkerSelfRepository {
   /// token of the first unclaimed, non-expired worker invite for that
   /// worker + org — or null if none exists.
   ///
-  /// Called by [ClaimByPhoneScreen] when a worker scans the tenant QR code
+  /// Called by ClaimByPhoneScreen when a worker scans the tenant QR code
   /// (which has no per-worker token) and enters their mobile to look up their
   /// invite. Anon — no session yet.
   ///
