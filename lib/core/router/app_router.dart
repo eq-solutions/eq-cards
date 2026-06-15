@@ -47,6 +47,11 @@ GoRouter appRouter(Ref ref) {
         path: Routes.splash,
         builder: (context, state) => const _SplashScreen(),
       ),
+      // Shell iframe entry point — shows splash while the router redirect fires.
+      GoRoute(
+        path: Routes.handoff,
+        builder: (context, state) => const _SplashScreen(),
+      ),
       // Email OTP — direct sign-in outside the Shell.
       GoRoute(
         path: Routes.email,
@@ -336,6 +341,10 @@ String? _redirect(
   }
   // Signed-out users on the notProvisioned route go back to sign-in.
   if (!isSignedIn && loc == Routes.notProvisioned) {
+    return Routes.email;
+  }
+  // Signed-out users landing on the Shell handoff route go to sign-in.
+  if (!isSignedIn && loc == Routes.handoff) {
     return Routes.email;
   }
 

@@ -1,6 +1,11 @@
 abstract class Routes {
   static const splash = '/';
 
+  // Shell iframe entry point — loaded by CardsIframe.tsx with ?shell=1.
+  // If already signed in, the router redirects to licencesList.
+  // If not signed in, redirected to email sign-in.
+  static const handoff = '/auth/handoff';
+
   // Email OTP — direct sign-in for users accessing Cards outside the Shell.
   static const email = '/auth/email';
   static const otp = '/auth/otp';
