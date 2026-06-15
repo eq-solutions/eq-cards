@@ -42,6 +42,12 @@ class ShellSessionRefresh extends _$ShellSessionRefresh {
 
   Future<void> _tick() async {
     final client = ref.read(supabaseClientProvider);
+    // Skip when there is no session — firing with no session throws
+    // AuthSessionMissingException, which is not worth capturing.
+    if (client.auth.currentSession == null) {
+      _schedule(_refreshInterval);
+      return;
+    }
     // Phone-OTP sessions carry a real GoTrue refresh_token; use native refresh.
     // gotrue_dart 2.20.0+ calls getUser() inside setSession, which rejects
     // shell-minted JWTs (no auth.sessions row → session_not_found), so we no

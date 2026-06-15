@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/router/routes.dart';
 import '../../../../core/theme/eq_colours.dart';
@@ -44,11 +45,32 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
     try {
       await ref.read(authRepositoryProvider).autoProvision();
       if (!mounted) return;
-      // Navigate explicitly to the wallet. Relying only on the auth-state
-      // listener to re-route left first-time tradies stuck on the spinner when
-      // the token-refresh event didn't re-fire the redirect. The JWT now
-      // carries the personal tenant_id, so the provisioning gate lets us in.
-      context.go(Routes.licencesList);
+
+      // Verify the JWT refresh actually embedded the tenant_id. If the refresh
+      // token was stale (Refresh token is not valid — EQ-CARDS-D) the silent
+      // catch in autoProvision() leaves tenant_id absent, causing the router to
+      // bounce straight back here. Detect that and sign out so the next sign-in
+      // starts with a fresh session and the hook embeds tenant_id correctly.
+      final tenantId = Supabase.instance.client.auth.currentSession
+          ?.user.appMetadata['tenant_id'];
+      if (tenantId != null) {
+        context.go(Routes.licencesList);
+      } else {
+        await ref.read(authRepositoryProvider).signOut();
+        if (mounted) {
+          context.go(Routes.email);
+          // Show a brief snackbar so the user understands why they're back at
+          // sign-in rather than silently looping.
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Wallet created — sign in again to open it.',
+              ),
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
+      }
     } catch (_) {
       if (mounted) {
         setState(() {
