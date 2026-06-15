@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/error/user_messages.dart';
 import '../../../../core/router/routes.dart';
 import '../../../../core/theme/eq_colours.dart';
 import '../../../../core/theme/eq_spacing.dart';
@@ -66,7 +67,9 @@ class _ClaimByPhoneScreenState extends ConsumerState<ClaimByPhoneScreen> {
       if (!mounted) return;
       setState(() {
         _phase = _Phase.error;
-        _errorMessage = 'Something went wrong. Please try again.';
+        // Surfaces the rate-limit ("too many attempts") and network messages;
+        // falls back to a generic message for anything else.
+        _errorMessage = userMessageForError(e);
       });
     }
   }

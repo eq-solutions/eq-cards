@@ -46,6 +46,14 @@ class ServerFailure extends Failure {
   final String message;
 }
 
+/// Too many requests — the caller is being rate-limited (HTTP 429), e.g. the
+/// invite-lookup per-IP / per-slug throttle on the Shell gateway.
+/// [retryAfterSeconds] is the server-advised cool-off, when known.
+class RateLimitedFailure extends Failure {
+  const RateLimitedFailure(this.retryAfterSeconds);
+  final int? retryAfterSeconds;
+}
+
 /// Catch-all for unexpected errors. Sentry receives the underlying [error]
 /// in release builds.
 class UnknownFailure extends Failure {

@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/supabase/supabase_client_provider.dart';
 import '../../../core/supabase/supabase_error_handler.dart';
+import 'invite_lookup_api.dart';
 import 'models/worker.dart';
 
 export 'models/worker.dart';
@@ -37,8 +38,9 @@ class InvitePreview {
 /// admin-only. These RPCs are SECURITY DEFINER and safe to call from the
 /// worker's authenticated (or even anon) client.
 class WorkerSelfRepository {
-  WorkerSelfRepository(this._client);
+  WorkerSelfRepository(this._client, this._inviteLookupApi);
   final SupabaseClient _client;
+  final InviteLookupApi _inviteLookupApi;
 
   Never _throw(Object e) => throw mapSupabaseError(e);
 
@@ -80,14 +82,15 @@ class WorkerSelfRepository {
   ///
   /// Called by [ClaimByPhoneScreen] when a worker scans the tenant QR code
   /// (which has no per-worker token) and enters their mobile to look up their
-  /// invite. Callable without auth — SECURITY DEFINER, anon-accessible.
+  /// invite. Anon — no session yet.
+  ///
+  /// Routed through the Shell `cards-api` gateway (not the direct anon RPC) so
+  /// the call sits behind a per-attacker (IP) rate limit; the per-slug DB
+  /// throttle (migration 0034) still applies underneath. This path is
+  /// independent of the CARDS_DATA_TRANSPORT flag — onboarding always uses it.
   Future<String?> lookupInviteByPhone(String phone, String orgSlug) async {
     try {
-      final result = await _client.rpc<dynamic>(
-        'eq_cards_lookup_invite_by_phone',
-        params: {'p_phone': phone, 'p_slug': orgSlug},
-      );
-      return result as String?;
+      return await _inviteLookupApi.lookupInviteByPhone(phone, orgSlug);
     } catch (e) {
       _throw(e);
     }
@@ -107,5 +110,8 @@ class WorkerSelfRepository {
 }
 
 final workerSelfRepositoryProvider = Provider<WorkerSelfRepository>(
-  (ref) => WorkerSelfRepository(ref.watch(supabaseClientProvider)),
+  (ref) => WorkerSelfRepository(
+    ref.watch(supabaseClientProvider),
+    ref.watch(inviteLookupApiProvider),
+  ),
 );

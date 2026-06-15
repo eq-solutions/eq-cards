@@ -20,6 +20,16 @@ String userMessageForError(Object error) {
   if (error is ValidationFailure) {
     return error.message;
   }
+  if (error is RateLimitedFailure) {
+    final s = error.retryAfterSeconds;
+    if (s != null && s > 0) {
+      final mins = (s / 60).ceil();
+      return mins <= 1
+          ? 'Too many attempts. Try again in about a minute.'
+          : 'Too many attempts. Try again in about $mins minutes.';
+    }
+    return 'Too many attempts. Please wait a moment and try again.';
+  }
   if (error is ServerFailure) {
     final msg = error.message.toLowerCase();
     if (msg.contains('jwt') ||
