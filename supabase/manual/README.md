@@ -17,4 +17,4 @@ Apply them by hand, deliberately, after review.
 
 | File | Target project | What | Status |
 |------|----------------|------|--------|
-| `custom_access_token_hook.sql` | eq-canonical (`jvknxcmbtrfnxfrwfimn`) | Injects `app_metadata.tenant_id` into OTP/OAuth JWTs so they can use the `cards-api` gateway | **PROPOSED — not applied.** Precondition (A) for the gateway transport. See `docs/cards-canonical-api-rewire.md`. |
+| `custom_access_token_hook.sql` | eq-canonical (`jvknxcmbtrfnxfrwfimn`) | Injects `app_metadata.tenant_id` + `eq_role` + `is_platform_admin` into OTP/OAuth JWTs so they can use the `cards-api` gateway | **LIVE — deployed & enabled** (verified against live 2026-06-15). File reconciled to the deployed definition. Exception handler resolved (2026-06-15): kept fail-open, added `RAISE WARNING` for observability — applied live. See `docs/cards-canonical-api-rewire.md`. |
