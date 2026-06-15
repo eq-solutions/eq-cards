@@ -176,6 +176,7 @@ String _message(Failure f, {required bool isPhone}) => switch (f) {
       NotAuthenticatedFailure() => 'Session expired. Please sign in again.',
       NotFoundFailure() => 'Account not found.',
       ValidationFailure(:final message) => message,
+      RateLimitedFailure() => 'Too many attempts. Please wait a moment and try again.',
       UnknownFailure() => 'Something went wrong. Please try again.',
     };
 
