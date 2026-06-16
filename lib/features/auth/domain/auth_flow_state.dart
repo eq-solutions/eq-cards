@@ -39,7 +39,7 @@ class AuthFlowTokenUsed extends AuthFlowState {
   const AuthFlowTokenUsed();
 }
 
-/// Emitted by [AuthFlowNotifier.provisionTenant] on successful workspace
+/// Emitted by `AuthFlowNotifier.provisionTenant` on successful workspace
 /// creation. The OTP screen listens for this state and opens Shell at
 /// `core.eq.solutions/:tenantSlug#sh=<accessToken>` in an external browser.
 /// Shell exchanges the token for a session cookie so the admin lands already

@@ -1,8 +1,8 @@
 /// Holds the tenant provisioning context when an org admin is creating a new
-/// workspace via the /provision?token=<uuid> flow.
+/// workspace via the /provision?token={uuid} flow.
 ///
-/// Set by [ProvisionTenantScreen] before navigating to OTP entry; cleared by
-/// [OtpScreen] on back/reset or after a successful provision.
+/// Set by `ProvisionTenantScreen` before navigating to OTP entry; cleared by
+/// `OtpScreen` on back/reset or after a successful provision.
 class ProvisionContext {
   const ProvisionContext({
     required this.provisionToken,

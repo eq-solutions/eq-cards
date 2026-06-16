@@ -8,10 +8,10 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/error/user_messages.dart';
 import '../../../../core/router/routes.dart';
-import '../../../../core/utils/clipboard_utils.dart';
 import '../../../../core/theme/eq_colours.dart';
 import '../../../../core/theme/eq_spacing.dart';
 import '../../../../core/theme/eq_typography.dart';
+import '../../../../core/utils/clipboard_utils.dart';
 import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_button.dart';
 import '../../../../core/widgets/eq_card.dart';
@@ -329,7 +329,7 @@ class _DetailRow extends StatelessWidget {
               style: EqTypography.bodyM.copyWith(fontWeight: FontWeight.w500),
             ),
           ),
-          if (trailing != null) trailing!,
+          ?trailing,
           if (onTap != null)
             const Padding(
               padding: EdgeInsets.only(left: EqSpacing.sm),

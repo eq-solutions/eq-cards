@@ -12,12 +12,12 @@ import '../../../../core/theme/eq_typography.dart';
 import '../../../auth/data/aus_phone.dart';
 import '../../data/worker_self_repository.dart';
 
-/// Shown when a worker lands on /claim?tenant=<slug> without a token —
+/// Shown when a worker lands on /claim?tenant={slug} without a token —
 /// i.e. they scanned the tenant QR code rather than an individual invite link.
 ///
 /// The worker enters their mobile number, the screen calls
 /// [WorkerSelfRepository.lookupInviteByPhone] to find their unclaimed invite,
-/// then redirects to /claim?token=<uuid> so the normal claim flow takes over.
+/// then redirects to /claim?token={uuid} so the normal claim flow takes over.
 class ClaimByPhoneScreen extends ConsumerStatefulWidget {
   const ClaimByPhoneScreen({super.key, required this.tenantSlug});
 

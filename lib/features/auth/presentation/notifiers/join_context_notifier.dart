@@ -8,12 +8,13 @@ part 'join_context_notifier.g.dart';
 /// QR / join-code sign-up flow.
 ///
 /// Null means the user is on the normal sign-in path. Set by
-/// [JoinTenantScreen] before navigating to OTP; cleared on back/reset.
+/// `JoinTenantScreen` before navigating to OTP; cleared on back/reset.
 @riverpod
 class JoinContextNotifier extends _$JoinContextNotifier {
   @override
   JoinContext? build() => null;
 
+  // ignore: use_setters_to_change_properties -- 'setContext' is more explicit than a property setter on a notifier
   void setContext(JoinContext ctx) => state = ctx;
 
   void clear() => state = null;

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -710,7 +709,7 @@ class _WalletItem {
 
 /// V9 wallet tile — photo thumbnail (or icon chip) + title + meta + expiry badge.
 /// On iOS web, shows an "Add to Apple Wallet" button for items with a
-/// [credentialId].
+/// `credentialId`.
 class _WalletTile extends StatefulWidget {
   const _WalletTile({required this.item});
 
@@ -721,7 +720,7 @@ class _WalletTile extends StatefulWidget {
 }
 
 class _WalletTileState extends State<_WalletTile> {
-  Widget _iconChip(IconData icon) => Container(
+  Widget _iconChip(IconData icon) => ColoredBox(
         color: EqColours.ice,
         child: Center(child: Icon(icon, size: 18, color: EqColours.deep)),
       );

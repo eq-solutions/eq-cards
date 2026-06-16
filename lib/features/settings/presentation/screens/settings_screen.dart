@@ -14,7 +14,6 @@ import '../../../../core/theme/eq_typography.dart';
 import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_card.dart';
 import '../../../auth/auth.dart';
-import '../../../licences/data/models/licence.dart';
 import '../../../licences/presentation/notifiers/licences_list_notifier.dart';
 import '../../../profile/presentation/notifiers/profile_notifier.dart';
 import '../../../workers/data/worker_self_repository.dart';
@@ -782,7 +781,7 @@ class _SignOutRow extends StatelessWidget {
 }
 
 /// QR code card shown in Settings for managers and supervisors.
-/// Displays a scannable QR pointing to /join?tenant=<slug> so workers
+/// Displays a scannable QR pointing to /join?tenant={slug} so workers
 /// can onboard by scanning at induction.
 class _WorkerJoinQrCard extends StatelessWidget {
   @override

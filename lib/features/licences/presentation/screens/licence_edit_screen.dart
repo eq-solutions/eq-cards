@@ -20,7 +20,6 @@ import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_button.dart';
 import '../../../../core/widgets/eq_text_field.dart';
 import '../../data/licence_repository.dart';
-import '../../data/models/licence.dart';
 import '../../data/models/licence_type.dart';
 import '../../data/ocr_service.dart';
 import '../helpers/licence_crop.dart';

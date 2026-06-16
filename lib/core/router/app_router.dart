@@ -5,7 +5,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../features/auth/auth.dart';
 import '../../features/auth/presentation/screens/not_provisioned_screen.dart';
-import '../../features/auth/presentation/screens/provision_tenant_screen.dart';
 import '../../features/certificates/certificates.dart';
 import '../../features/legal/presentation/screens/legal_document_screen.dart';
 import '../../features/licences/licences.dart';
@@ -348,7 +347,7 @@ String? _redirect(
     return Routes.email;
   }
 
-  final signedOutDestination = Routes.email;
+  const signedOutDestination = Routes.email;
 
   if (loc == Routes.splash || loc == Routes.home) {
     if (!isSignedIn) return Routes.email;

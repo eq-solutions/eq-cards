@@ -331,7 +331,7 @@ class _Consent extends StatelessWidget {
                 Text(
                   'By activating, you agree to share your wallet with '
                   '${preview.orgName}. Your profile data will be stored '
-                  'in ${preview.orgName}\'s EQ Cards workspace. '
+                  "in ${preview.orgName}'s EQ Cards workspace. "
                   'You can revoke access at any time from Settings.',
                   style: EqTypography.label,
                   textAlign: TextAlign.center,
