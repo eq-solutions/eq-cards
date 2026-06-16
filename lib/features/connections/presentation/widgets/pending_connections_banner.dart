@@ -115,7 +115,8 @@ class _ConnectionRow extends ConsumerWidget {
                   const SizedBox(height: 2),
                   Text(
                     'wants to connect — so they can add you to jobs without '
-                    'you re-entering your tickets',
+                    're-entering your tickets. If you accept, they can see '
+                    'all your licences and certificates.',
                     style: EqTypography.label.copyWith(color: EqColours.g500),
                   ),
                 ],
