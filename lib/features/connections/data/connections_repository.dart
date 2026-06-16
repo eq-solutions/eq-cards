@@ -9,11 +9,18 @@ export 'pending_connection.dart';
 
 part 'connections_repository.g.dart';
 
-/// Repository for the worker's org-membership connections.
+/// Repository for the worker's incoming employer connection requests.
 ///
-/// Queries `public.org_memberships` (RLS: worker can SELECT/UPDATE their own
-/// pending rows). The join to `public.organisations` resolves the display name
-/// and logo URL so the banner never needs a second round-trip.
+/// Backed by the canonical `org_access_requests` RPCs (the privacy-safe
+/// employer-connect pathway), NOT raw `org_memberships`:
+///   * list    → `eq_cards_list_incoming_requests()`
+///   * accept  → `eq_cards_respond_to_access_request(id, true)` — writes the
+///     org_membership AND the shell_control identity rows the JWT hook +
+///     workspace switcher read, so Field SSO is provisioned on approve.
+///   * decline → `eq_cards_respond_to_access_request(id, false)`
+///
+/// `id` is the access-request id (not a membership id). The RPCs resolve the
+/// caller via `auth.uid()` and match by phone, so no user_id is passed.
 class ConnectionsRepository {
   ConnectionsRepository(this._client);
 
@@ -23,27 +30,24 @@ class ConnectionsRepository {
   // Queries
   // ------------------------------------------------------------------
 
-  /// Returns all pending org-membership invitations for the current user.
+  /// Returns all pending employer access requests addressed to the current
+  /// worker. Empty when signed out.
   Future<List<PendingConnection>> fetchPending() async {
     try {
-      final uid = _client.auth.currentUser?.id;
-      if (uid == null) return const [];
+      if (_client.auth.currentUser?.id == null) return const [];
 
-      final rows = await _client
-          .from('org_memberships')
-          .select('id, org_id, invited_at, organisations(name, logo_url)')
-          .eq('user_id', uid)
-          .eq('status', 'pending');
+      final rows =
+          await _client.rpc<List<dynamic>>('eq_cards_list_incoming_requests');
 
-      return (rows as List<dynamic>).map((dynamic raw) {
+      return rows.map((dynamic raw) {
         final r = raw as Map<String, dynamic>;
-        final org = r['organisations'] as Map<String, dynamic>? ?? {};
         return PendingConnection(
-          id: r['id'] as String,
+          id: r['request_id'] as String,
           orgId: r['org_id'] as String,
-          orgName: (org['name'] as String?) ?? 'Unknown organisation',
-          orgLogoUrl: org['logo_url'] as String?,
-          invitedAt: DateTime.parse(r['invited_at'] as String),
+          orgName: (r['org_name'] as String?) ?? 'Unknown organisation',
+          // The RPC does not return a logo; the banner falls back to initials.
+          orgLogoUrl: null,
+          invitedAt: DateTime.parse(r['requested_at'] as String),
         );
       }).toList();
     } catch (e) {
@@ -51,38 +55,34 @@ class ConnectionsRepository {
     }
   }
 
-  /// Accepts a pending membership invitation — sets status to 'active'.
-  Future<void> accept(String membershipId) async {
+  /// Approves the request. The RPC provisions the org_membership AND the
+  /// shell_control identity (so Field SSO works); we then refresh the session
+  /// so the new workspace is immediately visible in the switcher.
+  Future<void> accept(String requestId) async {
     try {
-      final uid = _client.auth.currentUser?.id;
-      if (uid == null) return;
-
-      await _client
-          .from('org_memberships')
-          .update({
-            'status': 'active',
-            'accepted_at': DateTime.now().toIso8601String(),
-          })
-          .eq('id', membershipId)
-          .eq('user_id', uid)
-          .eq('status', 'pending');
+      await _client.rpc<dynamic>(
+        'eq_cards_respond_to_access_request',
+        params: {'p_request_id': requestId, 'p_approve': true},
+      );
+      // Non-fatal — the membership is committed; the JWT refreshes on next
+      // token expiry even if this throws (offline, transient).
+      try {
+        await _client.auth.refreshSession();
+      } catch (_) {
+        // Non-fatal — JWT refreshes on next token expiry.
+      }
     } catch (e) {
       throw mapSupabaseError(e);
     }
   }
 
-  /// Declines a pending membership invitation — sets status to 'declined'.
-  Future<void> decline(String membershipId) async {
+  /// Declines the request.
+  Future<void> decline(String requestId) async {
     try {
-      final uid = _client.auth.currentUser?.id;
-      if (uid == null) return;
-
-      await _client
-          .from('org_memberships')
-          .update({'status': 'declined'})
-          .eq('id', membershipId)
-          .eq('user_id', uid)
-          .eq('status', 'pending');
+      await _client.rpc<dynamic>(
+        'eq_cards_respond_to_access_request',
+        params: {'p_request_id': requestId, 'p_approve': false},
+      );
     } catch (e) {
       throw mapSupabaseError(e);
     }
