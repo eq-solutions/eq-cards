@@ -56,7 +56,7 @@ BEGIN
       -- never proven do not qualify.
       IF v_raw_phone IS NOT NULL AND v_raw_phone <> ''
          AND v_confirmed IS NOT NULL THEN
-        v_phone := public.normalise_au_phone(v_raw_phone);
+        v_phone := shell_control.normalise_au_phone(v_raw_phone);
 
         -- Only when normalisation actually changed the value (the drift case).
         IF v_phone IS DISTINCT FROM v_raw_phone THEN
