@@ -1,19 +1,25 @@
--- Migration 0035: phone-fallback in custom_access_token_hook
+-- Migration 0035: HARDENED phone-fallback in custom_access_token_hook
 --
--- Problem: GoTrue stores OTP-verified phones without the leading '+' (e.g.
--- "61432944014") while shell_control.users stores them as E.164 ("+61432944014").
--- An admin back-fill creates shell_control.users with E.164; if the worker's
--- GoTrue session was minted against a bare-digit phone, the hook can't match
--- by UUID and injects no tenant_id → worker JWT is tenant-less → bounce.
+-- Supersedes the naive blind-phone-match first draft. A blind fallback is a
+-- privilege-escalation vector: GoTrue lets "+61432944014" and "61432944014"
+-- coexist as two auth.users rows (uniqueness is on the exact string), so a
+-- phone-format collision could match the WRONG shell_control row and inject
+-- another person's tenant_id / eq_role / is_platform_admin.
 --
--- Fix: if the UUID lookup returns nothing, normalize the phone from auth.users
--- via the existing normalise_au_phone() function and retry against
--- shell_control.users.phone. Safe because GoTrue enforces phone uniqueness —
--- one phone can only belong to one person.
+-- Hardened rules:
+--   1. Fallback fires ONLY when auth.users.phone_confirmed_at IS NOT NULL —
+--      the phone was actually proven via OTP, not admin-inserted in bare form.
+--   2. It fires ONLY when normalisation changes the raw value (the exact
+--      format-drift case this exists to repair) AND exactly ONE active
+--      shell_control row carries that E.164 phone. Ambiguous (0 or >1) → no
+--      match, fail safe.
+--   3. is_platform_admin is UUID-bound ONLY. A phone-matched row NEVER elevates
+--      — forced false on the fallback path regardless of the row's value.
 --
--- The fallback is intentionally narrow: it only fires when normalization
--- actually changes the value (v_phone <> v_raw_phone), so already-E.164
--- phones that genuinely have no shell entry don't get a spurious match.
+-- This repairs the existing duplicated accounts (bare-digit auth.users with no
+-- shell row) without opening the escalation hole. The proper root-cause fix —
+-- auto-routing new workers so a second auth.users is never created — is tracked
+-- separately; this is the safety net for rows that already drifted.
 
 CREATE OR REPLACE FUNCTION public.custom_access_token_hook(event jsonb)
 RETURNS jsonb
@@ -23,44 +29,52 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_user      shell_control.users%rowtype;
-  v_claims    jsonb;
-  v_raw_phone text;
-  v_phone     text;
+  v_user         shell_control.users%rowtype;
+  v_claims       jsonb;
+  v_raw_phone    text;
+  v_phone        text;
+  v_confirmed    timestamptz;
+  v_match_count  int;
+  v_via_fallback boolean := false;
 BEGIN
   BEGIN
-    -- Primary: look up by UUID (correct path for all properly-provisioned users).
+    -- Primary: UUID lookup (correct path for every properly-provisioned user).
     SELECT u.*
       INTO v_user
     FROM shell_control.users u
     WHERE u.id = (event->>'user_id')::uuid
     LIMIT 1;
 
-    -- Phone fallback: GoTrue can store phones without the leading '+' while
-    -- shell_control always stores E.164. Normalize and retry by phone.
+    -- Hardened phone fallback — only for the format-drift repair case.
     IF v_user.id IS NULL THEN
-      SELECT au.phone
-        INTO v_raw_phone
+      SELECT au.phone, au.phone_confirmed_at
+        INTO v_raw_phone, v_confirmed
       FROM auth.users au
       WHERE au.id = (event->>'user_id')::uuid;
 
-      IF v_raw_phone IS NOT NULL AND v_raw_phone <> '' THEN
+      -- Require an OTP-confirmed phone. Admin-inserted bare phones that were
+      -- never proven do not qualify.
+      IF v_raw_phone IS NOT NULL AND v_raw_phone <> ''
+         AND v_confirmed IS NOT NULL THEN
         v_phone := public.normalise_au_phone(v_raw_phone);
 
-        -- Only attempt the fallback when normalization actually changed the value.
-        -- This avoids matching non-AU or already-E.164 phones that simply have
-        -- no shell entry.
+        -- Only when normalisation actually changed the value (the drift case).
         IF v_phone IS DISTINCT FROM v_raw_phone THEN
-          SELECT u.*
-            INTO v_user
+          -- Demand an UNAMBIGUOUS single active match. 0 or >1 → fail safe.
+          SELECT count(*)
+            INTO v_match_count
           FROM shell_control.users u
-          WHERE u.phone  = v_phone
-            AND u.active = true
-          LIMIT 1;
+          WHERE u.phone = v_phone AND u.active = true;
 
-          IF v_user.id IS NOT NULL THEN
+          IF v_match_count = 1 THEN
+            SELECT u.*
+              INTO v_user
+            FROM shell_control.users u
+            WHERE u.phone = v_phone AND u.active = true
+            LIMIT 1;
+            v_via_fallback := true;
             RAISE WARNING
-              'custom_access_token_hook: phone-fallback auth=% → shell=% phone=%',
+              'custom_access_token_hook: phone-fallback auth=% -> shell=% phone=%',
               event->>'user_id', v_user.id, v_phone;
           END IF;
         END IF;
@@ -83,9 +97,10 @@ BEGIN
         v_claims, '{app_metadata,eq_role}',
         to_jsonb(v_user.role::text), true
       );
+      -- Platform-admin is UUID-bound only. Never elevate on a phone match.
       v_claims := jsonb_set(
         v_claims, '{app_metadata,is_platform_admin}',
-        to_jsonb(v_user.is_platform_admin), true
+        to_jsonb(CASE WHEN v_via_fallback THEN false ELSE v_user.is_platform_admin END), true
       );
     END IF;
 
