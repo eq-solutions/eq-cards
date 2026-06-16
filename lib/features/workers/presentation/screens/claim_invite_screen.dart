@@ -259,7 +259,13 @@ class _NotSignedIn extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.badge_outlined, size: 72, color: EqColours.sky),
+          Image.asset(
+            'assets/icon/launcher.png',
+            width: 80,
+            height: 80,
+            errorBuilder: (_, __, ___) =>
+                const Icon(Icons.badge_outlined, size: 80, color: EqColours.sky),
+          ),
           const SizedBox(height: EqSpacing.md),
           Text("You've been invited", style: EqTypography.headingL),
           const SizedBox(height: EqSpacing.sm),
@@ -306,7 +312,13 @@ class _Consent extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.badge_outlined, size: 72, color: EqColours.sky),
+          Image.asset(
+            'assets/icon/launcher.png',
+            width: 80,
+            height: 80,
+            errorBuilder: (_, __, ___) =>
+                const Icon(Icons.badge_outlined, size: 80, color: EqColours.sky),
+          ),
           const SizedBox(height: EqSpacing.md),
           Text('Activate your account', style: EqTypography.headingL),
           const SizedBox(height: EqSpacing.sm),

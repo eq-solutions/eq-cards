@@ -178,8 +178,8 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
                   // ── Brand ────────────────────────────────────────────────
                   Image.asset(
                     'assets/icon/launcher.png',
-                    width: 56,
-                    height: 56,
+                    width: 80,
+                    height: 80,
                     errorBuilder: (_, _, _) => const SizedBox.shrink(),
                   ),
                   const SizedBox(height: EqSpacing.lg),
