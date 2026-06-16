@@ -14,14 +14,14 @@ import '../../domain/join_context.dart';
 import '../notifiers/auth_flow_notifier.dart';
 import '../notifiers/join_context_notifier.dart';
 
-/// Shown when a worker navigates to /join?tenant=<slug> — either by scanning
+/// Shown when a worker navigates to /join?tenant={slug} — either by scanning
 /// a QR code or by tapping "Join with a join code" on the sign-in screen and
 /// entering the slug in the bottom sheet.
 ///
 /// The worker enters their mobile number, the screen stores a [JoinContext],
 /// sends the phone OTP, then navigates to /auth/otp. The OTP screen reads the
 /// [JoinContext] and routes verification through [AuthFlowNotifier.joinTenant]
-/// instead of the normal [verifyPhoneOtp] path.
+/// instead of the normal `verifyPhoneOtp` path.
 class JoinTenantScreen extends ConsumerStatefulWidget {
   const JoinTenantScreen({
     super.key,

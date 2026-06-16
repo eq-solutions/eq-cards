@@ -2,8 +2,8 @@
 /// join code — as opposed to the normal sign-in flow where tenant assignment
 /// comes from the shell-login-phone-otp exchange.
 ///
-/// Set before OTP entry; read in [OtpScreen._submit] to route the verification
-/// through [AuthFlowNotifier.joinTenant] instead of [verifyPhoneOtp].
+/// Set before OTP entry; read in `OtpScreen._submit` to route the verification
+/// through `AuthFlowNotifier.joinTenant` instead of `verifyPhoneOtp`.
 class JoinContext {
   const JoinContext({
     required this.tenantSlug,

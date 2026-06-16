@@ -12,15 +12,14 @@ export '../../data/models/licence.dart';
 part 'licences_list_notifier.g.dart';
 
 /// Tracks whether the licences list was most recently served from the local
-/// cache rather than a live Supabase fetch. Consumed by [OfflineBanner].
+/// cache rather than a live Supabase fetch. Consumed by `OfflineBanner`.
 @riverpod
 class LicencesFromCache extends _$LicencesFromCache {
   @override
   bool build() => false;
 
-  void setValue({required bool fromCache}) =>
-      // ignore: use_setters_to_change_properties -- named param avoids bool
-      state = fromCache;
+  // ignore: use_setters_to_change_properties -- named param avoids bool trap
+  void setValue({required bool fromCache}) => state = fromCache;
 }
 
 @riverpod

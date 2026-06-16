@@ -114,7 +114,8 @@ class _ConnectionRow extends ConsumerWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'wants to view your compliance profile',
+                    'wants to connect — so they can add you to jobs without '
+                    'you re-entering your tickets',
                     style: EqTypography.label.copyWith(color: EqColours.g500),
                   ),
                 ],
@@ -128,7 +129,33 @@ class _ConnectionRow extends ConsumerWidget {
             Expanded(
               child: EqButton(
                 label: 'Accept',
-                onPressed: () => notifier.accept(connection.id),
+                onPressed: () async {
+                  // Capture before the await so we never use context across
+                  // the async gap.
+                  final messenger = ScaffoldMessenger.of(context);
+                  try {
+                    await notifier.accept(connection.id);
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          '${connection.orgName} can now see your licences and '
+                          "expiries. They can't edit or delete them — you can "
+                          'disconnect anytime.',
+                        ),
+                        duration: const Duration(seconds: 6),
+                        behavior: SnackBarBehavior.floating,
+                        backgroundColor: EqColours.deep,
+                      ),
+                    );
+                  } catch (_) {
+                    messenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('Could not connect. Please try again.'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                },
                 fullWidth: true,
               ),
             ),

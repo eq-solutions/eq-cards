@@ -14,7 +14,7 @@ import '../../domain/provision_context.dart';
 import '../notifiers/auth_flow_notifier.dart';
 import '../notifiers/provision_context_notifier.dart';
 
-/// Shown when an org admin navigates to /provision?token=<uuid>&name=<orgName>.
+/// Shown when an org admin navigates to /provision?token={uuid}&name={orgName}.
 ///
 /// The admin enters their mobile number, EQ Cards sends a phone OTP, and OTP
 /// verification routes through [AuthFlowNotifier.provisionTenant] which

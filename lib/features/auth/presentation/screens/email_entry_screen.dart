@@ -65,7 +65,7 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
 
   void _showJoinCodeSheet(BuildContext context) {
     _joinCodeController.clear();
-    showModalBottomSheet<void>(
+    unawaited(showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: EqColours.white,
@@ -133,7 +133,7 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
           ),
         );
       },
-    );
+    ));
   }
 
   void _submitJoinCode(BuildContext sheetContext) {
@@ -144,7 +144,7 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
     // Workers entering a company code always have a pre-existing invite —
     // /claim?tenant= finds it by phone; /join?tenant= would create a blank
     // account and bypass their pre-loaded credentials.
-    context.push('${Routes.claim}?tenant=$code');
+    unawaited(context.push('${Routes.claim}?tenant=$code'));
   }
 
   @override
@@ -178,8 +178,8 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
                   // ── Brand ────────────────────────────────────────────────
                   Image.asset(
                     'assets/icon/launcher.png',
-                    width: 56,
-                    height: 56,
+                    width: 80,
+                    height: 80,
                     errorBuilder: (_, _, _) => const SizedBox.shrink(),
                   ),
                   const SizedBox(height: EqSpacing.lg),
@@ -353,13 +353,12 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
 }
 
 class _LoadingSpinner extends StatelessWidget {
-  const _LoadingSpinner({this.color = Colors.white});
-  final Color color;
+  const _LoadingSpinner();
 
   @override
   Widget build(BuildContext context) => SizedBox(
         width: 20,
         height: 20,
-        child: CircularProgressIndicator(color: color, strokeWidth: 2),
+        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
       );
 }

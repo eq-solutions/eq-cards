@@ -6,7 +6,7 @@ import '../theme/eq_typography.dart';
 /// Full-width amber banner shown when the device is offline AND the wallet
 /// data was served from the local cache rather than from Supabase.
 ///
-/// Placed at the very top of [LicencesListScreen] so it is always visible
+/// Placed at the very top of the licences list screen so it is always visible
 /// regardless of list scroll position.
 ///
 /// On native builds the widget collapses to a zero-height [SizedBox] because

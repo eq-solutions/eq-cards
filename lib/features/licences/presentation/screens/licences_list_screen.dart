@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -189,8 +188,14 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
 
                   if (items.isEmpty) {
                     return ListView(
+                      padding: const EdgeInsets.all(EqSpacing.md),
                       children: [
                         const CompleteProfileBanner(),
+                        // A worker connecting an EMPTY wallet (the exact Track-2
+                        // persona) must see incoming company requests here —
+                        // otherwise the banner only renders once they have a
+                        // licence, which they may never add first.
+                        const PendingConnectionsBanner(),
                         _EmptyState(
                           onScan: () => unawaited(_captureFlow(context, ref)),
                           onManual: () => context.go(Routes.licenceCreate),
@@ -710,7 +715,7 @@ class _WalletItem {
 
 /// V9 wallet tile — photo thumbnail (or icon chip) + title + meta + expiry badge.
 /// On iOS web, shows an "Add to Apple Wallet" button for items with a
-/// [credentialId].
+/// `credentialId`.
 class _WalletTile extends StatefulWidget {
   const _WalletTile({required this.item});
 
@@ -721,7 +726,7 @@ class _WalletTile extends StatefulWidget {
 }
 
 class _WalletTileState extends State<_WalletTile> {
-  Widget _iconChip(IconData icon) => Container(
+  Widget _iconChip(IconData icon) => ColoredBox(
         color: EqColours.ice,
         child: Center(child: Icon(icon, size: 18, color: EqColours.deep)),
       );

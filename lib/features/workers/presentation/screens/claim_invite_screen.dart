@@ -259,7 +259,13 @@ class _NotSignedIn extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.badge_outlined, size: 72, color: EqColours.sky),
+          Image.asset(
+            'assets/icon/launcher.png',
+            width: 80,
+            height: 80,
+            errorBuilder: (_, _, _) =>
+                const Icon(Icons.badge_outlined, size: 80, color: EqColours.sky),
+          ),
           const SizedBox(height: EqSpacing.md),
           Text("You've been invited", style: EqTypography.headingL),
           const SizedBox(height: EqSpacing.sm),
@@ -306,7 +312,13 @@ class _Consent extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.badge_outlined, size: 72, color: EqColours.sky),
+          Image.asset(
+            'assets/icon/launcher.png',
+            width: 80,
+            height: 80,
+            errorBuilder: (_, _, _) =>
+                const Icon(Icons.badge_outlined, size: 80, color: EqColours.sky),
+          ),
           const SizedBox(height: EqSpacing.md),
           Text('Activate your account', style: EqTypography.headingL),
           const SizedBox(height: EqSpacing.sm),
@@ -331,7 +343,7 @@ class _Consent extends StatelessWidget {
                 Text(
                   'By activating, you agree to share your wallet with '
                   '${preview.orgName}. Your profile data will be stored '
-                  'in ${preview.orgName}\'s EQ Cards workspace. '
+                  "in ${preview.orgName}'s EQ Cards workspace. "
                   'You can revoke access at any time from Settings.',
                   style: EqTypography.label,
                   textAlign: TextAlign.center,

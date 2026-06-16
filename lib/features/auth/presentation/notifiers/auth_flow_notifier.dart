@@ -92,7 +92,7 @@ class AuthFlowNotifier extends _$AuthFlowNotifier {
   /// create a new tenant workspace for [provisionToken].
   ///
   /// On success, signs out of Cards (the admin's session lives in Shell) and
-  /// emits [AuthFlowProvisionComplete] with the new [tenantSlug]. The OTP
+  /// emits [AuthFlowProvisionComplete] with the new `tenantSlug`. The OTP
   /// screen listens for this state and opens Shell in an external browser.
   Future<void> provisionTenant(
     String e164Phone,

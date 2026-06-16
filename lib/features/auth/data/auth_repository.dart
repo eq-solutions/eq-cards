@@ -336,7 +336,7 @@ class AuthRepository {
   /// The provision token is a one-time UUID issued by a platform admin via
   /// shell-create-provision-token. On success the Shell creates all required
   /// DB rows (tenants, users, org_memberships etc.) and returns the new
-  /// [tenantSlug] and [accessToken] (echoed back so Shell can auto-login the
+  /// `tenantSlug` and `accessToken` (echoed back so Shell can auto-login the
   /// admin via shell-handoff-provision — no second OTP required).
   ///
   /// Returns a record `(tenantSlug, accessToken)`. Either value may be null on

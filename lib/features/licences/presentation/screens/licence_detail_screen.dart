@@ -21,7 +21,6 @@ import '../../../../core/widgets/eq_button.dart';
 import '../../../../core/widgets/eq_card.dart';
 import '../../../../core/widgets/item_nav_bar.dart';
 import '../../data/licence_repository.dart';
-import '../../data/models/licence.dart';
 import '../notifiers/licence_types_provider.dart';
 import '../notifiers/licences_list_notifier.dart';
 import '../widgets/expiry_badge.dart';
