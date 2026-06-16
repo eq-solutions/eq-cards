@@ -263,7 +263,7 @@ class _NotSignedIn extends StatelessWidget {
             'assets/icon/launcher.png',
             width: 80,
             height: 80,
-            errorBuilder: (_, __, ___) =>
+            errorBuilder: (_, _, _) =>
                 const Icon(Icons.badge_outlined, size: 80, color: EqColours.sky),
           ),
           const SizedBox(height: EqSpacing.md),
@@ -316,7 +316,7 @@ class _Consent extends StatelessWidget {
             'assets/icon/launcher.png',
             width: 80,
             height: 80,
-            errorBuilder: (_, __, ___) =>
+            errorBuilder: (_, _, _) =>
                 const Icon(Icons.badge_outlined, size: 80, color: EqColours.sky),
           ),
           const SizedBox(height: EqSpacing.md),
