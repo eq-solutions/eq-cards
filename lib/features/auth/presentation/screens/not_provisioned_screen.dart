@@ -54,7 +54,7 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
       final tenantId = Supabase.instance.client.auth.currentSession
           ?.user.appMetadata['tenant_id'];
       if (tenantId != null) {
-        context.go(Routes.licencesList);
+        context.go(Routes.card);
       } else {
         await ref.read(authRepositoryProvider).signOut();
         if (mounted) {
@@ -84,7 +84,10 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
   void _joinWithCode() {
     final code = _codeController.text.trim().toLowerCase();
     if (code.isEmpty) return;
-    context.go('${Routes.join}?tenant=$code');
+    // /claim?tenant= finds the worker's existing invite by phone (ClaimByPhoneScreen).
+    // /join?tenant= is open enrollment — creates a blank account and bypasses
+    // pre-loaded invite credentials. Never use /join for employer-code entry.
+    context.go('${Routes.claim}?tenant=$code');
   }
 
   @override

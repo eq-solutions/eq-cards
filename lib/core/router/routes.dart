@@ -1,6 +1,9 @@
 abstract class Routes {
   static const splash = '/';
 
+  // Home — digital worker ID card (default shell tab).
+  static const card = '/card';
+
   // Shell iframe entry point — loaded by CardsIframe.tsx with ?shell=1.
   // If already signed in, the router redirects to licencesList.
   // If not signed in, redirected to email sign-in.
@@ -13,7 +16,6 @@ abstract class Routes {
   // Shown when a user has a valid Supabase session but no tenant provisioning.
   static const notProvisioned = '/auth/not-provisioned';
 
-  static const home = '/home';
   static const profile = '/profile';
   static const profileEdit = '/profile/edit';
   static const licencesList = '/licences';

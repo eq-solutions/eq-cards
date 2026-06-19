@@ -139,7 +139,7 @@ class _ClaimInviteScreenState extends ConsumerState<ClaimInviteScreen> {
       // Auto-navigate fallback after 8s so the screen never gets stuck.
       // Primary path: worker taps "Open my wallet" below.
       await Future<void>.delayed(const Duration(seconds: 8));
-      if (mounted && _phase == _Phase.success) context.go(Routes.licencesList);
+      if (mounted && _phase == _Phase.success) context.go(Routes.card);
     } catch (e, st) {
       // Known invite states are expected outcomes — surface a clear message,
       // don't page anyone. Anything else is a real failure in the claim path
@@ -204,7 +204,7 @@ class _ClaimInviteScreenState extends ConsumerState<ClaimInviteScreen> {
             _Phase.success => _Success(
                 orgName: _preview?.orgName,
                 onGoToWallet: () {
-                  if (mounted) context.go(Routes.licencesList);
+                  if (mounted) context.go(Routes.card);
                 },
               ),
             _Phase.error => _Error(

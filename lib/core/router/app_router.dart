@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../features/auth/auth.dart';
 import '../../features/auth/presentation/screens/not_provisioned_screen.dart';
+import '../../features/card/presentation/screens/card_screen.dart';
 import '../../features/certificates/certificates.dart';
 import '../../features/legal/presentation/screens/legal_document_screen.dart';
 import '../../features/licences/licences.dart';
@@ -160,11 +161,25 @@ GoRouter appRouter(Ref ref) {
           return ShareLicenceScreen(licenceId: licenceId);
         },
       ),
+      // Settings — accessible from Profile; pushed full-screen outside the shell.
+      GoRoute(
+        path: Routes.settings,
+        builder: (context, state) => const SettingsScreen(),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navShell) =>
             HomeShellScreen(navigationShell: navShell),
         branches: [
-          // Tab 0 — Licences (default tab)
+          // Tab 0 — Card (home)
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.card,
+                builder: (context, state) => const CardScreen(),
+              ),
+            ],
+          ),
+          // Tab 1 — Licences & certificates (combined wallet)
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -205,11 +220,8 @@ GoRouter appRouter(Ref ref) {
                   ),
                 ],
               ),
-            ],
-          ),
-          // Tab 1 — Certificates
-          StatefulShellBranch(
-            routes: [
+              // Certificate routes share the Licences branch so the bottom
+              // nav stays visible and the tab highlight stays on "Licences".
               GoRoute(
                 path: Routes.certificatesList,
                 builder: (context, state) => const CertificatesListScreen(),
@@ -240,7 +252,7 @@ GoRouter appRouter(Ref ref) {
               ),
             ],
           ),
-          // Tab 2 — Profile
+          // Tab 2 — Profile (includes workspaces + sign out)
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -252,15 +264,6 @@ GoRouter appRouter(Ref ref) {
                     builder: (context, state) => const ProfileEditScreen(),
                   ),
                 ],
-              ),
-            ],
-          ),
-          // Tab 2 — Settings
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: Routes.settings,
-                builder: (context, state) => const SettingsScreen(),
               ),
             ],
           ),
@@ -335,7 +338,7 @@ String? _redirect(
     // redirect loop (/auth/not-provisioned <=> /licences). Handle it here so
     // the auth-route rule can safely exempt not-provisioned.
     if (tenantId != null && loc == Routes.notProvisioned) {
-      return Routes.licencesList;
+      return Routes.card;
     }
   }
   // Signed-out users on the notProvisioned route go back to sign-in.
@@ -349,22 +352,26 @@ String? _redirect(
 
   const signedOutDestination = Routes.email;
 
-  if (loc == Routes.splash || loc == Routes.home) {
+  if (loc == Routes.splash) {
     if (!isSignedIn) return Routes.email;
     // Signed-in users at the root always have a workspace by this point — the
     // provisioning gate above redirects tenant-less users away. Go straight to
     // the wallet. The onboarding wizard is no longer a forced step (it was
     // cancelled — payroll PII out of scope); the soft "complete your profile"
     // banner inside the wallet handles the nudge instead. No profile wait.
-    return Routes.licencesList;
+    return Routes.card;
   }
 
   // not-provisioned is exempt: a tenant-less user belongs there, and the gate
   // above already moves a provisioned user off it. Bouncing it here would loop.
+  // OTP screen is exempt: the shell exchange runs AFTER GoTrue emits the auth
+  // event; bouncing here drops the user off OTP before _resolveAndLand() can
+  // navigate deterministically. OTP handles its own post-verify routing.
   if (isSignedIn &&
       isAuthRoute &&
-      loc != Routes.notProvisioned) {
-    return Routes.licencesList;
+      loc != Routes.notProvisioned &&
+      loc != Routes.otp) {
+    return Routes.card;
   }
   if (!isSignedIn && !isAuthRoute && !isLegalRoute && !isShareRoute && !isClaimRoute && !isJoinRoute && !isProvisionRoute) {
     return signedOutDestination;
