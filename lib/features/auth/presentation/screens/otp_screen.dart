@@ -140,7 +140,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     )));
 
     if (tenant != null) {
-      context.go(Routes.licencesList);
+      context.go(Routes.card);
     } else if (hasPending) {
       context.go('${Routes.claim}?token=$pending');
     } else {

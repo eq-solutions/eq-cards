@@ -54,7 +54,7 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
       final tenantId = Supabase.instance.client.auth.currentSession
           ?.user.appMetadata['tenant_id'];
       if (tenantId != null) {
-        context.go(Routes.licencesList);
+        context.go(Routes.card);
       } else {
         await ref.read(authRepositoryProvider).signOut();
         if (mounted) {

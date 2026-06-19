@@ -1,6 +1,9 @@
 abstract class Routes {
   static const splash = '/';
 
+  // Home — digital worker ID card (default shell tab).
+  static const card = '/card';
+
   // Shell iframe entry point — loaded by CardsIframe.tsx with ?shell=1.
   // If already signed in, the router redirects to licencesList.
   // If not signed in, redirected to email sign-in.

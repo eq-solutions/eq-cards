@@ -45,24 +45,19 @@ class HomeShellScreen extends ConsumerWidget {
         indicatorColor: EqColours.surface,
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.badge_outlined),
-            selectedIcon: Icon(Icons.badge, color: EqColours.deep),
-            label: 'Wallet',
+            icon: Icon(Icons.credit_card_outlined),
+            selectedIcon: Icon(Icons.credit_card, color: EqColours.deep),
+            label: 'Card',
           ),
           NavigationDestination(
-            icon: Icon(Icons.workspace_premium_outlined),
-            selectedIcon: Icon(Icons.workspace_premium, color: EqColours.deep),
-            label: 'Certs',
+            icon: Icon(Icons.shield_outlined),
+            selectedIcon: Icon(Icons.shield, color: EqColours.deep),
+            label: 'Licences',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),
             selectedIcon: Icon(Icons.person, color: EqColours.deep),
             label: 'Profile',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings, color: EqColours.deep),
-            label: 'Settings',
           ),
         ],
       ),
