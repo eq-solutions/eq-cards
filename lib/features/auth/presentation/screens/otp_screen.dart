@@ -144,7 +144,25 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     } else if (hasPending) {
       context.go('${Routes.claim}?token=$pending');
     } else {
-      context.go(Routes.notProvisioned);
+      // No tenant and no pending claim token. Check if this phone matches any
+      // pending invite so we can skip the not-provisioned intermediary screen.
+      String? inviteToken;
+      try {
+        final result = await Supabase.instance.client
+            .rpc<dynamic>('eq_cards_find_pending_invite')
+            .timeout(const Duration(seconds: 8));
+        if (result is String && result.isNotEmpty) {
+          inviteToken = result;
+        }
+      } catch (_) {
+        // Non-fatal — fall through to notProvisioned.
+      }
+      if (!mounted) return;
+      if (inviteToken != null) {
+        context.go('${Routes.claim}?token=$inviteToken');
+      } else {
+        context.go(Routes.notProvisioned);
+      }
     }
   }
 

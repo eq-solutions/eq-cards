@@ -84,7 +84,10 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
   void _joinWithCode() {
     final code = _codeController.text.trim().toLowerCase();
     if (code.isEmpty) return;
-    context.go('${Routes.join}?tenant=$code');
+    // /claim?tenant= finds the worker's existing invite by phone (ClaimByPhoneScreen).
+    // /join?tenant= is open enrollment — creates a blank account and bypasses
+    // pre-loaded invite credentials. Never use /join for employer-code entry.
+    context.go('${Routes.claim}?tenant=$code');
   }
 
   @override

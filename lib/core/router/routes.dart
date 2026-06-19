@@ -13,7 +13,6 @@ abstract class Routes {
   // Shown when a user has a valid Supabase session but no tenant provisioning.
   static const notProvisioned = '/auth/not-provisioned';
 
-  static const home = '/home';
   static const profile = '/profile';
   static const profileEdit = '/profile/edit';
   static const licencesList = '/licences';
