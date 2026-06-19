@@ -15,13 +15,13 @@ import '../../../../core/theme/eq_typography.dart';
 import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_button.dart';
 import '../../../../core/widgets/eq_card.dart';
+import '../../../auth/auth.dart';
+import '../../../settings/data/workspace_repository.dart';
+import '../../../workers/data/models/worker.dart';
 import '../../data/models/profile.dart';
 import '../notifiers/profile_notifier.dart';
 import '../widgets/copy_induction_block.dart';
 import '../widgets/profile_field_row.dart';
-import '../../../auth/auth.dart';
-import '../../../settings/data/workspace_repository.dart';
-import '../../../workers/data/models/worker.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});

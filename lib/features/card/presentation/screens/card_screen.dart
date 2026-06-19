@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,7 +12,6 @@ import '../../../../core/theme/eq_spacing.dart';
 import '../../../../core/theme/eq_typography.dart';
 import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_card.dart';
-import '../../../licences/data/models/licence.dart';
 import '../../../licences/presentation/notifiers/licence_types_provider.dart';
 import '../../../licences/presentation/notifiers/licences_list_notifier.dart';
 import '../../../profile/presentation/notifiers/profile_notifier.dart';
@@ -123,7 +124,7 @@ class CardScreen extends ConsumerWidget {
                         label: typeMap[l.licenceType] ?? l.licenceType,
                         onTap: () {
                           if (l.id != null) {
-                            context.push(Routes.licenceDetailFor(l.id!));
+                            unawaited(context.push(Routes.licenceDetailFor(l.id!)));
                           }
                         },
                       ),

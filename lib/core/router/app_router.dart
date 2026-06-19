@@ -364,14 +364,13 @@ String? _redirect(
 
   // not-provisioned is exempt: a tenant-less user belongs there, and the gate
   // above already moves a provisioned user off it. Bouncing it here would loop.
-  // isPhoneExchangeInProgress is exempt: the shell exchange runs AFTER GoTrue
-  // emits the auth event; bouncing here drops the user off the OTP screen before
-  // the exchange finishes, causing a flash through /licences then back to
-  // not-provisioned. Let the exchange complete and _resolveAndLand() navigate.
+  // OTP screen is exempt: the shell exchange runs AFTER GoTrue emits the auth
+  // event; bouncing here drops the user off OTP before _resolveAndLand() can
+  // navigate deterministically. OTP handles its own post-verify routing.
   if (isSignedIn &&
       isAuthRoute &&
       loc != Routes.notProvisioned &&
-      !isPhoneExchangeInProgress) {
+      loc != Routes.otp) {
     return Routes.card;
   }
   if (!isSignedIn && !isAuthRoute && !isLegalRoute && !isShareRoute && !isClaimRoute && !isJoinRoute && !isProvisionRoute) {
