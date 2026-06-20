@@ -20,34 +20,24 @@ class EmailEntryScreen extends ConsumerStatefulWidget {
   ConsumerState<EmailEntryScreen> createState() => _EmailEntryScreenState();
 }
 
-class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
-  final _emailController = TextEditingController();
+class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
+  bool _useEmail = false;
   final _phoneController = TextEditingController();
-  final _emailFormKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
   final _phoneFormKey = GlobalKey<FormState>();
-  final _joinCodeController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    // Clear error when the user switches tabs.
-    _tabController.addListener(() {
-      if (_tabController.indexIsChanging) {
-        ref.read(authFlowNotifierProvider.notifier).reset();
-      }
-    });
-  }
+  final _emailFormKey = GlobalKey<FormState>();
 
   @override
   void dispose() {
-    _tabController.dispose();
-    _emailController.dispose();
     _phoneController.dispose();
-    _joinCodeController.dispose();
+    _emailController.dispose();
     super.dispose();
+  }
+
+  Future<void> _submitPhone() async {
+    if (!_phoneFormKey.currentState!.validate()) return;
+    final phone = normaliseAusMobile(_phoneController.text.trim())!;
+    await ref.read(authFlowNotifierProvider.notifier).sendPhoneOtp(phone);
   }
 
   Future<void> _submitEmail() async {
@@ -57,94 +47,9 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
         .sendOtp(_emailController.text.trim());
   }
 
-  Future<void> _submitPhone() async {
-    if (!_phoneFormKey.currentState!.validate()) return;
-    final phone = normaliseAusMobile(_phoneController.text.trim())!;
-    await ref.read(authFlowNotifierProvider.notifier).sendPhoneOtp(phone);
-  }
-
-  void _showJoinCodeSheet(BuildContext context) {
-    _joinCodeController.clear();
-    unawaited(showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: EqColours.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.fromLTRB(
-            EqSpacing.xl,
-            EqSpacing.lg,
-            EqSpacing.xl,
-            EqSpacing.xl + MediaQuery.of(ctx).viewInsets.bottom,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: EqColours.border,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: EqSpacing.lg),
-              Text(
-                'Enter your company code',
-                style: EqTypography.headingM.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: EqColours.ink,
-                ),
-              ),
-              const SizedBox(height: EqSpacing.xs),
-              Text(
-                'Your manager can give you this code.',
-                style: EqTypography.bodyM.copyWith(color: EqColours.grey),
-              ),
-              const SizedBox(height: EqSpacing.lg),
-              TextField(
-                controller: _joinCodeController,
-                autofocus: true,
-                autocorrect: false,
-                textCapitalization: TextCapitalization.none,
-                textInputAction: TextInputAction.go,
-                decoration: const InputDecoration(
-                  labelText: 'Company code',
-                  hintText: 'e.g. sks',
-                ),
-                onSubmitted: (_) => _submitJoinCode(ctx),
-              ),
-              const SizedBox(height: EqSpacing.lg),
-              FilledButton(
-                onPressed: () => _submitJoinCode(ctx),
-                style: FilledButton.styleFrom(
-                  backgroundColor: EqColours.sky,
-                  minimumSize: const Size.fromHeight(48),
-                ),
-                child: const Text('Join'),
-              ),
-            ],
-          ),
-        );
-      },
-    ));
-  }
-
-  void _submitJoinCode(BuildContext sheetContext) {
-    final code = _joinCodeController.text.trim().toLowerCase();
-    if (code.isEmpty) return;
-    Navigator.of(sheetContext).pop();
-    // Send to the claim (invite-lookup) flow, not open enrollment.
-    // Workers entering a company code always have a pre-existing invite —
-    // /claim?tenant= finds it by phone; /join?tenant= would create a blank
-    // account and bypass their pre-loaded credentials.
-    unawaited(context.push('${Routes.claim}?tenant=$code'));
+  void _toggleMode() {
+    setState(() => _useEmail = !_useEmail);
+    ref.read(authFlowNotifierProvider.notifier).reset();
   }
 
   @override
@@ -192,107 +97,63 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
                   ),
                   const SizedBox(height: EqSpacing.xs),
                   Text(
-                    'Use your mobile number, or the email linked to your account.',
+                    _useEmail
+                        ? "We'll send a code to your email address."
+                        : "We'll send a code to your mobile number.",
                     style: EqTypography.bodyM.copyWith(color: EqColours.grey),
                   ),
 
                   const SizedBox(height: EqSpacing.xl),
 
-                  // ── Tab bar ──────────────────────────────────────────────
-                  Container(
-                    decoration: const BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(color: EqColours.border),
+                  // ── Input ────────────────────────────────────────────────
+                  if (!_useEmail)
+                    Form(
+                      key: _phoneFormKey,
+                      child: TextFormField(
+                        controller: _phoneController,
+                        keyboardType: TextInputType.phone,
+                        autocorrect: false,
+                        autofocus: true,
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => unawaited(_submitPhone()),
+                        decoration: const InputDecoration(
+                          labelText: 'Mobile number',
+                          hintText: '0412 345 678',
+                        ),
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) {
+                            return 'Enter your mobile number';
+                          }
+                          final phone = normaliseAusMobile(v.trim());
+                          if (phone == null || !isValidAusMobile(phone)) {
+                            return 'Enter a valid Australian mobile number';
+                          }
+                          return null;
+                        },
+                      ),
+                    )
+                  else
+                    Form(
+                      key: _emailFormKey,
+                      child: TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        autocorrect: false,
+                        autofocus: true,
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => unawaited(_submitEmail()),
+                        decoration: const InputDecoration(
+                          labelText: 'Email address',
+                          hintText: 'you@example.com',
+                        ),
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) {
+                            return 'Enter your email address';
+                          }
+                          return validateEmail(v);
+                        },
                       ),
                     ),
-                    child: TabBar(
-                      controller: _tabController,
-                      labelColor: EqColours.deep,
-                      unselectedLabelColor: EqColours.grey,
-                      labelStyle: EqTypography.bodyL.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                      unselectedLabelStyle: EqTypography.bodyL,
-                      indicatorColor: EqColours.sky,
-                      indicatorWeight: 2,
-                      dividerColor: Colors.transparent,
-                      tabs: const [
-                        Tab(text: 'Mobile'),
-                        Tab(text: 'Email'),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: EqSpacing.lg),
-
-                  // ── Tab content ──────────────────────────────────────────
-                  // Fixed height so validation errors don't shift the CTA.
-                  SizedBox(
-                    height: 120,
-                    child: TabBarView(
-                      controller: _tabController,
-                      children: [
-                        // Mobile tab (index 0 — primary sign-in path for workers)
-                        Form(
-                          key: _phoneFormKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              TextFormField(
-                                controller: _phoneController,
-                                keyboardType: TextInputType.phone,
-                                autocorrect: false,
-                                textInputAction: TextInputAction.done,
-                                onFieldSubmitted: (_) => _submitPhone(),
-                                decoration: const InputDecoration(
-                                  labelText: 'Mobile number',
-                                  hintText: '0412 345 678',
-                                ),
-                                validator: (v) {
-                                  if (v == null || v.trim().isEmpty) {
-                                    return 'Enter your mobile number';
-                                  }
-                                  final phone = normaliseAusMobile(v.trim());
-                                  if (phone == null ||
-                                      !isValidAusMobile(phone)) {
-                                    return 'Enter a valid Australian mobile number';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Email tab (index 1)
-                        Form(
-                          key: _emailFormKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              TextFormField(
-                                controller: _emailController,
-                                keyboardType: TextInputType.emailAddress,
-                                autocorrect: false,
-                                textInputAction: TextInputAction.done,
-                                onFieldSubmitted: (_) => _submitEmail(),
-                                decoration: const InputDecoration(
-                                  labelText: 'Email address',
-                                  hintText: 'you@example.com',
-                                ),
-                                validator: (v) {
-                                  if (v == null || v.trim().isEmpty) {
-                                    return 'Enter your email address';
-                                  }
-                                  return validateEmail(v);
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
 
                   // ── Error ────────────────────────────────────────────────
                   if (error != null) ...[
@@ -306,17 +167,13 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
                   ] else
                     const SizedBox(height: EqSpacing.sm),
 
-                  // ── Send code button ─────────────────────────────────────
+                  // ── Send code ────────────────────────────────────────────
                   FilledButton(
                     onPressed: isLoading
                         ? null
-                        : () {
-                            if (_tabController.index == 0) {
-                              unawaited(_submitPhone());
-                            } else {
-                              unawaited(_submitEmail());
-                            }
-                          },
+                        : () => unawaited(
+                              _useEmail ? _submitEmail() : _submitPhone(),
+                            ),
                     style: FilledButton.styleFrom(
                       backgroundColor: EqColours.sky,
                       minimumSize: const Size.fromHeight(48),
@@ -328,15 +185,16 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen>
 
                   const SizedBox(height: EqSpacing.lg),
 
-                  // ── Join with a join code ────────────────────────────────
+                  // ── Mode toggle ──────────────────────────────────────────
                   Center(
                     child: TextButton(
-                      onPressed: () => _showJoinCodeSheet(context),
+                      onPressed: _toggleMode,
                       child: Text(
-                        'Join with a join code',
-                        style: EqTypography.bodyM.copyWith(
-                          color: EqColours.sky,
-                        ),
+                        _useEmail
+                            ? 'Use mobile instead'
+                            : 'Use email instead',
+                        style:
+                            EqTypography.bodyM.copyWith(color: EqColours.sky),
                       ),
                     ),
                   ),
@@ -356,7 +214,7 @@ class _LoadingSpinner extends StatelessWidget {
   const _LoadingSpinner();
 
   @override
-  Widget build(BuildContext context) => SizedBox(
+  Widget build(BuildContext context) => const SizedBox(
         width: 20,
         height: 20,
         child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
