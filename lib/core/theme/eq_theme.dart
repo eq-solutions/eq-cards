@@ -20,6 +20,11 @@ abstract class EqTheme {
       onSurface: EqColours.ink,
       onError: EqColours.white,
     ),
+    cardTheme: const CardThemeData(
+      elevation: 0,
+      shadowColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+    ),
     textTheme: const TextTheme(
       displayLarge: EqTypography.headingXL,
       headlineLarge: EqTypography.headingL,
