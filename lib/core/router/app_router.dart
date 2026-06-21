@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -353,7 +355,17 @@ String? _redirect(
   const signedOutDestination = Routes.email;
 
   if (loc == Routes.splash) {
-    if (!isSignedIn) return Routes.email;
+    if (!isSignedIn) {
+      // If there's an expired session (access token stale, refresh token may
+      // still be valid), stay on splash while _SplashScreen triggers an
+      // explicit refreshSession(). The router re-evaluates when
+      // onAuthStateChange fires TokenRefreshed (→ /card) or signedOut
+      // (→ /email). Without this, the router bounces to /email before the
+      // async startup refresh completes — visible as a sign-in flash on every
+      // cold open for iOS PWA users whose JWT expired while the app was closed.
+      if (Supabase.instance.client.auth.currentSession != null) return null;
+      return Routes.email;
+    }
     // Signed-in users at the root always have a workspace by this point — the
     // provisioning gate above redirects tenant-less users away. Go straight to
     // the wallet. The onboarding wizard is no longer a forced step (it was
@@ -384,8 +396,41 @@ class _AuthRouterNotifier extends ChangeNotifier {
   void bump() => notifyListeners();
 }
 
-class _SplashScreen extends StatelessWidget {
+class _SplashScreen extends StatefulWidget {
   const _SplashScreen();
+
+  @override
+  State<_SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<_SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_ensureSession());
+  }
+
+  // If the stored session has an expired access token, trigger an explicit
+  // refresh immediately. supabase-flutter starts its own internal refresh
+  // timer, but on iOS PWA cold-start that timer may not fire before the
+  // router's first redirect evaluation — causing a sign-in screen flash even
+  // when the user has a valid refresh token. Calling refreshSession() here
+  // races ahead of the timer: on success TokenRefreshed fires → router goes
+  // to /card; on failure (expired or revoked refresh token) signOut fires →
+  // router goes to /email.
+  Future<void> _ensureSession() async {
+    final auth = Supabase.instance.client.auth;
+    final session = auth.currentSession;
+    if (session == null || !session.isExpired) return;
+    try {
+      await auth.refreshSession().timeout(const Duration(seconds: 15));
+    } catch (_) {
+      try {
+        await auth.signOut();
+      } catch (_) {}
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
