@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/router/routes.dart';
+import '../../../../core/shell/complete_profile_banner.dart';
 import '../../../../core/theme/eq_colours.dart';
 import '../../../../core/theme/eq_spacing.dart';
 import '../../../../core/theme/eq_typography.dart';
@@ -91,6 +92,7 @@ class CardScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const CompleteProfileBanner(),
               _IdCard(
                 initials: initials,
                 displayName: displayName,
@@ -102,6 +104,12 @@ class CardScreen extends ConsumerWidget {
                 onQrTap: () => _showQrStub(context),
               ),
               const SizedBox(height: EqSpacing.md),
+              if (licences.isEmpty) ...[
+                _EmptyWalletNudge(
+                  onTap: () => context.go(Routes.licencesList),
+                ),
+                const SizedBox(height: EqSpacing.md),
+              ],
               if (licences.isNotEmpty || expiredCount > 0) ...[
                 _HealthCard(
                   validCount: validCount,
@@ -652,6 +660,46 @@ class _AlertTile extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _EmptyWalletNudge extends StatelessWidget {
+  const _EmptyWalletNudge({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return EqCard(
+      onTap: onTap,
+      child: Row(
+        children: [
+          const Icon(Icons.add_circle_outline, color: EqColours.sky, size: 28),
+          const SizedBox(width: EqSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Add your licences',
+                  style: EqTypography.bodyL.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: EqColours.ink,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'White card, tickets, certificates — all in one place.',
+                  style: EqTypography.bodyM.copyWith(color: EqColours.grey),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: EqSpacing.sm),
+          const Icon(Icons.chevron_right, color: EqColours.sky),
+        ],
       ),
     );
   }

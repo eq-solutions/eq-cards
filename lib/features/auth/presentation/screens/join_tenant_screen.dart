@@ -91,7 +91,11 @@ class _JoinTenantScreenState extends ConsumerState<JoinTenantScreen> {
           onPressed: () {
             ref.read(authFlowNotifierProvider.notifier).reset();
             ref.read(joinContextNotifierProvider.notifier).clear();
-            context.pop();
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(Routes.email);
+            }
           },
         ),
       ),
