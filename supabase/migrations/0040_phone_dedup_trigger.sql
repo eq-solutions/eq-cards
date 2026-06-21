@@ -13,6 +13,8 @@
 --   row with its matching E.164 shell entry before the JWT hook fires.
 --   After the trigger, UUID lookup in custom_access_token_hook works directly →
 --   phone fallback not needed → eq_cards_auto_provision returns early (correct tenant).
+--
+-- This file is idempotent — safe to re-apply on deploy.
 
 -- ─── Part 1: Data repair ────────────────────────────────────────────────────
 
@@ -85,7 +87,7 @@ ON CONFLICT (user_id, tenant_id) DO NOTHING;
 
 -- ─── Part 2: Structural trigger ────────────────────────────────────────────
 
--- Trigger function: called AFTER INSERT on auth.users.
+-- Trigger function in public schema (consistent with custom_access_token_hook).
 --
 -- When GoTrue inserts a bare AU mobile (e.g. 61431294493), this trigger:
 --   1. Normalises to E.164 (+61431294493) via shell_control.normalise_au_phone
@@ -101,7 +103,7 @@ ON CONFLICT (user_id, tenant_id) DO NOTHING;
 --
 -- Security: is_platform_admin NEVER copied. TOTP/PIN not copied.
 
-CREATE OR REPLACE FUNCTION auth.handle_phone_dedup()
+CREATE OR REPLACE FUNCTION public.handle_phone_dedup()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -153,7 +155,7 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  -- For orphan sources: capture email before clearing, then transfer both unique fields
+  -- Orphan path: capture email before clearing, then transfer both unique fields
   IF v_is_orphan THEN
     SELECT email INTO v_source_email FROM shell_control.users WHERE id = v_source_id;
     UPDATE shell_control.users SET phone = NULL, email = NULL WHERE id = v_source_id;
@@ -188,14 +190,15 @@ BEGIN
   ON CONFLICT (user_id, tenant_id) DO NOTHING;
 
   RAISE WARNING
-    'auth.handle_phone_dedup: merged shell=% -> new_uuid=% phone=% orphan=%',
+    'handle_phone_dedup: merged shell=% -> new_uuid=% phone=% orphan=%',
     v_source_id, NEW.id, v_normalised, v_is_orphan;
 
   RETURN NEW;
 END;
 $$;
 
+DROP TRIGGER IF EXISTS on_auth_users_insert_dedup ON auth.users;
 CREATE TRIGGER on_auth_users_insert_dedup
   AFTER INSERT ON auth.users
   FOR EACH ROW
-  EXECUTE FUNCTION auth.handle_phone_dedup();
+  EXECUTE FUNCTION public.handle_phone_dedup();
