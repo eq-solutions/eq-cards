@@ -184,12 +184,6 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
                           controller: _codeController,
                           decoration: const InputDecoration(
                             hintText: 'Enter join code',
-                            border: OutlineInputBorder(),
-                            isDense: true,
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 14,
-                            ),
                           ),
                           autocorrect: false,
                           textCapitalization: TextCapitalization.none,
