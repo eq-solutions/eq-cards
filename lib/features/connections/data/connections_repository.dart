@@ -185,13 +185,13 @@ class ConnectionsRepository {
 }
 
 /// Discoverable orgs — used by ConnectToCompanyScreen.
-final discoverableOrgsProvider =
+final AutoDisposeFutureProvider<List<DiscoverableOrg>> discoverableOrgsProvider =
     FutureProvider.autoDispose<List<DiscoverableOrg>>((ref) async {
   return ref.watch(connectionsRepositoryProvider).listDiscoverableOrgs();
 });
 
 /// The worker's own outgoing applications — used in Profile.
-final outgoingRequestsProvider =
+final AutoDisposeFutureProvider<List<OutgoingRequest>> outgoingRequestsProvider =
     FutureProvider.autoDispose<List<OutgoingRequest>>((ref) async {
   return ref.watch(connectionsRepositoryProvider).fetchOutgoing();
 });

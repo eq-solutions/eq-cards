@@ -28,9 +28,11 @@ import '../../../certificates/data/models/certificate.dart';
 import '../../../certificates/presentation/cert_capture_flow.dart'
     show certCaptureFlow;
 import '../../../certificates/presentation/notifiers/certificates_list_notifier.dart';
+import '../../../connections/presentation/notifiers/connections_notifier.dart';
 import '../../../connections/presentation/widgets/pending_connections_banner.dart';
 import '../../../profile/presentation/screens/profile_fill_from_licence_screen.dart'
     show DlProfileFill;
+import '../../../settings/data/workspace_repository.dart';
 import '../../data/ocr_service.dart';
 import '../helpers/licence_crop.dart';
 import '../helpers/licences_list_helpers.dart';
@@ -214,6 +216,7 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
                     children: [
                       const CompleteProfileBanner(),
                       const PendingConnectionsBanner(),
+                      const _ConnectNudgeBanner(),
                       _SearchAndFilterBar(
                         query: _query,
                         controller: _searchCtrl,
@@ -1130,6 +1133,70 @@ class _StatTile extends StatelessWidget {
           const SizedBox(height: EqSpacing.xs),
           Text(label, style: EqTypography.label),
         ],
+      ),
+    );
+  }
+}
+
+/// Nudge banner shown on the wallet when a worker has licences but no employer
+/// connection. Disappears automatically once they connect to any org.
+class _ConnectNudgeBanner extends ConsumerWidget {
+  const _ConnectNudgeBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tenants = ref.watch(myTenantsProvider).value;
+    if (tenants == null) return const SizedBox.shrink();
+    if (!tenants.every((t) => t.isPersonal)) return const SizedBox.shrink();
+    // If the employer has already sent an invite, that banner handles it.
+    final pending = ref.watch(pendingConnectionsNotifierProvider).value;
+    if (pending != null && pending.isNotEmpty) return const SizedBox.shrink();
+    return GestureDetector(
+      onTap: () => context.push(Routes.connect),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: EqSpacing.md),
+        padding: const EdgeInsets.all(EqSpacing.md),
+        decoration: BoxDecoration(
+          color: EqColours.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border(
+            left: const BorderSide(color: EqColours.deep, width: 4),
+            top: BorderSide(color: EqColours.outlineSoft),
+            right: BorderSide(color: EqColours.outlineSoft),
+            bottom: BorderSide(color: EqColours.outlineSoft),
+          ),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.business_center_outlined,
+              color: EqColours.deep,
+              size: 20,
+            ),
+            const SizedBox(width: EqSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Connect to your employer',
+                    style: EqTypography.bodyL.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Share your credentials with your company',
+                    style: EqTypography.label.copyWith(
+                      color: EqColours.g500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: EqColours.grey),
+          ],
+        ),
       ),
     );
   }
