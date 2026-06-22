@@ -193,11 +193,8 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
                       padding: const EdgeInsets.all(EqSpacing.md),
                       children: [
                         const CompleteProfileBanner(),
-                        // A worker connecting an EMPTY wallet (the exact Track-2
-                        // persona) must see incoming company requests here —
-                        // otherwise the banner only renders once they have a
-                        // licence, which they may never add first.
                         const PendingConnectionsBanner(),
+                        const _ConnectNudgeBanner(),
                         _EmptyState(
                           onScan: () => unawaited(_captureFlow(context, ref)),
                           onManual: () => context.go(Routes.licenceCreate),
