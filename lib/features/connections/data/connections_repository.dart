@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -8,6 +9,40 @@ import 'pending_connection.dart';
 export 'pending_connection.dart';
 
 part 'connections_repository.g.dart';
+
+/// An employer organisation that accepts self-signup applications from workers.
+class DiscoverableOrg {
+  const DiscoverableOrg({
+    required this.id,
+    required this.name,
+    required this.slug,
+  });
+
+  final String id;
+  final String name;
+  final String slug;
+}
+
+/// A worker's own outgoing application to an employer.
+class OutgoingRequest {
+  const OutgoingRequest({
+    required this.id,
+    required this.orgId,
+    required this.orgName,
+    required this.sharingScope,
+    required this.status,
+    required this.submittedAt,
+    this.respondedAt,
+  });
+
+  final String id;
+  final String orgId;
+  final String orgName;
+  final String sharingScope;
+  final String status;
+  final DateTime submittedAt;
+  final DateTime? respondedAt;
+}
 
 /// Repository for the worker's incoming employer connection requests.
 ///
@@ -87,7 +122,79 @@ class ConnectionsRepository {
       throw mapSupabaseError(e);
     }
   }
+
+  // ------------------------------------------------------------------
+  // Self-signup / outgoing flow
+  // ------------------------------------------------------------------
+
+  /// Organisations that accept self-signup applications from workers.
+  Future<List<DiscoverableOrg>> listDiscoverableOrgs() async {
+    try {
+      final rows =
+          await _client.rpc<List<dynamic>>('eq_cards_list_discoverable_orgs');
+      return rows.map((dynamic raw) {
+        final r = raw as Map<String, dynamic>;
+        return DiscoverableOrg(
+          id: r['org_id'] as String,
+          name: (r['org_name'] as String?) ?? 'Unknown',
+          slug: (r['org_slug'] as String?) ?? '',
+        );
+      }).toList();
+    } catch (e) {
+      throw mapSupabaseError(e);
+    }
+  }
+
+  /// Submits a self-signup application to [orgId] with the given [sharingScope]
+  /// ('basic' or 'full'). Returns the new request id.
+  Future<String> submitRequest(String orgId, String sharingScope) async {
+    try {
+      final id = await _client.rpc<dynamic>(
+        'eq_cards_submit_access_request',
+        params: {'p_org_id': orgId, 'p_sharing_scope': sharingScope},
+      );
+      return id as String;
+    } catch (e) {
+      throw mapSupabaseError(e);
+    }
+  }
+
+  /// The worker's own outgoing applications and their statuses.
+  Future<List<OutgoingRequest>> fetchOutgoing() async {
+    try {
+      final rows =
+          await _client.rpc<List<dynamic>>('eq_cards_list_my_outgoing_requests');
+      return rows.map((dynamic raw) {
+        final r = raw as Map<String, dynamic>;
+        return OutgoingRequest(
+          id: r['request_id'] as String,
+          orgId: r['org_id'] as String,
+          orgName: (r['org_name'] as String?) ?? 'Unknown',
+          sharingScope: (r['sharing_scope'] as String?) ?? 'full',
+          status: (r['status'] as String?) ?? 'pending',
+          submittedAt: DateTime.parse(r['submitted_at'] as String),
+          respondedAt: r['responded_at'] != null
+              ? DateTime.parse(r['responded_at'] as String)
+              : null,
+        );
+      }).toList();
+    } catch (e) {
+      throw mapSupabaseError(e);
+    }
+  }
 }
+
+/// Discoverable orgs — used by ConnectToCompanyScreen.
+final discoverableOrgsProvider =
+    FutureProvider.autoDispose<List<DiscoverableOrg>>((ref) async {
+  return ref.watch(connectionsRepositoryProvider).listDiscoverableOrgs();
+});
+
+/// The worker's own outgoing applications — used in Profile.
+final outgoingRequestsProvider =
+    FutureProvider.autoDispose<List<OutgoingRequest>>((ref) async {
+  return ref.watch(connectionsRepositoryProvider).fetchOutgoing();
+});
 
 @riverpod
 ConnectionsRepository connectionsRepository(Ref ref) =>

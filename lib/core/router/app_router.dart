@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../features/auth/auth.dart';
 import '../../features/auth/presentation/screens/not_provisioned_screen.dart';
+import '../../features/connections/presentation/screens/connect_to_company_screen.dart';
 import '../../features/card/presentation/screens/card_screen.dart';
 import '../../features/certificates/certificates.dart';
 import '../../features/legal/presentation/screens/legal_document_screen.dart';
@@ -153,6 +154,11 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: Routes.workerHrRecord,
         builder: (context, state) => const WorkerHrRecordScreen(),
+      ),
+      // Self-signup company discovery — worker finds employers and submits an application.
+      GoRoute(
+        path: Routes.connect,
+        builder: (context, state) => const ConnectToCompanyScreen(),
       ),
       // D2: public licence-verification page — no auth required.
       // Reached by scanning a QR code from a tradie's EQ Cards wallet.
