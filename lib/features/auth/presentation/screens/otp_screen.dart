@@ -361,6 +361,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                         letterSpacing: 8,
                         color: EqColours.ink,
                       ),
+                      onChanged: (v) {
+                        if (v.length == 6) unawaited(_submit());
+                      },
                       onFieldSubmitted: (_) => unawaited(_submit()),
                       decoration: const InputDecoration(
                         labelText: 'Sign-in code',
