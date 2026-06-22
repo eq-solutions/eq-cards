@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/supabase/supabase_client_provider.dart';
 
@@ -40,6 +41,13 @@ class ShellSessionRefresh extends _$ShellSessionRefresh {
     _timer = Timer(delay, _tick);
   }
 
+  bool _isRefreshTokenFailure(AuthException e) {
+    final msg = e.message.toLowerCase();
+    return msg.contains('refresh token') ||
+        msg.contains('token not found') ||
+        e.code == 'refresh_token_not_found';
+  }
+
   Future<void> _tick() async {
     final client = ref.read(supabaseClientProvider);
     // Skip when there is no session — firing with no session throws
@@ -56,6 +64,15 @@ class ShellSessionRefresh extends _$ShellSessionRefresh {
     try {
       await client.auth.refreshSession();
     } catch (e, stack) {
+      // Refresh-token failures are permanent — retrying is pointless and the
+      // exceptions are expected lifecycle, not bugs. Sign out cleanly so
+      // GoRouter's auth redirect takes the user to the login screen.
+      if (e is AuthException && _isRefreshTokenFailure(e)) {
+        try {
+          await client.auth.signOut();
+        } catch (_) {}
+        return;
+      }
       unawaited(Sentry.captureException(e, stackTrace: stack));
       next = _retryDelay;
     }

@@ -169,6 +169,9 @@ String _message(Failure f, {required bool isPhone}) => switch (f) {
       ServerFailure(code: 401) => isPhone
         ? 'Incorrect code — check your messages and try again.'
         : 'Incorrect code — check your email and try again.',
+      // 403 from Supabase auth = JWT expired / token invalid. Treat the same as
+      // a missing session so the user gets a clear "sign in again" prompt.
+      ServerFailure(code: 403) => 'Session expired. Please sign in again.',
       // Any other server error: show generic copy, never the raw server text (it
       // can carry internal detail). The raw message is captured for diagnostics in
       // _reportOpaque.
@@ -185,7 +188,7 @@ String _message(Failure f, {required bool isPhone}) => switch (f) {
 /// separately by [_message]; the two never share text.
 void _reportOpaque(Failure f) {
   if (f case ServerFailure(:final code, :final message)
-      when code != 429 && code != 401) {
+      when code != 429 && code != 401 && code != 403) {
     unawaited(
       Sentry.captureMessage(
         'Auth flow: unmapped server error ($code): $message',
