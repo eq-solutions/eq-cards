@@ -25,26 +25,22 @@
   -->
   <script>
     (function () {
-      function hasLiveSession() {
+      // Any Supabase auth key = a prior session exists. Flutter handles expiry
+      // and refresh — we just need to get returning users into the app, not
+      // show them a marketing page every time their access token rotates.
+      function hasSession() {
         try {
           for (var i = 0; i < localStorage.length; i++) {
             var k = localStorage.key(i);
-            if (!k) continue;
-            if (!/auth.?token/i.test(k) && !/sb-.*-auth-token/i.test(k)) continue;
-            var raw = localStorage.getItem(k);
-            if (!raw) continue;
-            // shared_preferences_web may JSON-encode the stored string.
-            var val = raw;
-            try { var p = JSON.parse(raw); if (typeof p === 'string') val = p; } catch (e) {}
-            if (!/access_token/.test(val)) continue;
-            var m = val.match(/"expires_at"\s*:\s*(\d+)/);
-            if (m) { if (parseInt(m[1], 10) * 1000 > Date.now()) return true; }
-            else { return true; }
+            if (k && (/sb-.+-auth-token/i.test(k) || /auth.?token/i.test(k))) {
+              var v = localStorage.getItem(k);
+              if (v && v.length > 20) return true;
+            }
           }
         } catch (e) {}
         return false;
       }
-      if (hasLiveSession()) { location.replace('/splash'); }
+      if (hasSession()) { location.replace('/splash'); }
     })();
   </script>
 

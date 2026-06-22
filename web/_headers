@@ -44,6 +44,8 @@
 # main.dart.js is NOT content-addressed (same filename across builds), so
 # immutable would cause browsers to serve a stale build indefinitely. Use
 # no-cache so every load revalidates against the CDN (304 if unchanged).
+/
+  Cache-Control: public, max-age=0, must-revalidate
 /main.dart.js
   Cache-Control: public, no-cache, must-revalidate
 /flutter_service_worker.js
