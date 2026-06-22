@@ -7,9 +7,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../features/auth/auth.dart';
 import '../../features/auth/presentation/screens/not_provisioned_screen.dart';
-import '../../features/connections/presentation/screens/connect_to_company_screen.dart';
 import '../../features/card/presentation/screens/card_screen.dart';
 import '../../features/certificates/certificates.dart';
+import '../../features/connections/presentation/screens/connect_to_company_screen.dart';
 import '../../features/legal/presentation/screens/legal_document_screen.dart';
 import '../../features/licences/licences.dart';
 import '../../features/profile/profile.dart';

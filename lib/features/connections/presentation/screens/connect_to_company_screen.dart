@@ -231,8 +231,8 @@ class _ScopeRow extends StatelessWidget {
           children: [
             Radio<String>(
               value: value,
-              groupValue: groupValue,
-              onChanged: onChanged,
+              groupValue: groupValue, // ignore: deprecated_member_use
+              onChanged: onChanged, // ignore: deprecated_member_use
               activeColor: EqColours.sky,
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
