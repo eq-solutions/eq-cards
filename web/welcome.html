@@ -22,7 +22,25 @@
     and the key/encoding has shifted across package versions, so we scan all
     keys for an auth-token blob and check it hasn't expired rather than
     hardcoding one key. Expired/absent → stay on the marketing page.
+
+    SW update: if a new service worker is waiting after a deploy, call
+    update() so it activates. Flutter's generated SW calls skipWaiting() in
+    its install handler, so the new SW takes control immediately and fires
+    controllerchange — we reload then to pick up the fresh content.
   -->
+  <script>
+    (function () {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.addEventListener('controllerchange', function () {
+          window.location.reload();
+        });
+        navigator.serviceWorker.getRegistrations().then(function (regs) {
+          regs.forEach(function (r) { r.update(); });
+        });
+      }
+    })();
+  </script>
+
   <script>
     (function () {
       // Any Supabase auth key = a prior session exists. Flutter handles expiry

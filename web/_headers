@@ -45,7 +45,7 @@
 # immutable would cause browsers to serve a stale build indefinitely. Use
 # no-cache so every load revalidates against the CDN (304 if unchanged).
 /
-  Cache-Control: public, max-age=0, must-revalidate
+  Cache-Control: no-store
 /main.dart.js
   Cache-Control: public, no-cache, must-revalidate
 /flutter_service_worker.js
