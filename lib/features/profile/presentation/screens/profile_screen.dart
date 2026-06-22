@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/error/user_messages.dart';
 import '../../../../core/router/routes.dart';
@@ -536,6 +537,20 @@ class _WorkspaceRow extends StatelessWidget {
                 visualDensity: VisualDensity.compact,
                 tooltip: 'Disconnect',
                 icon: const Icon(Icons.link_off, color: EqColours.grey),
+              ),
+            if (!tenant.isPersonal)
+              IconButton(
+                onPressed: () => unawaited(launchUrl(
+                  Uri.parse('https://core.eq.solutions/${tenant.slug}'),
+                  mode: LaunchMode.externalApplication,
+                )),
+                visualDensity: VisualDensity.compact,
+                tooltip: 'Open employer portal',
+                icon: const Icon(
+                  Icons.open_in_new,
+                  color: EqColours.grey,
+                  size: 18,
+                ),
               ),
           ],
         ],
