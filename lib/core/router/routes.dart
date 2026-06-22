@@ -66,6 +66,10 @@ abstract class Routes {
   // Public route — no auth required.
   static const provision = '/provision';
 
+  // Connect — worker discovers companies and submits a self-signup application.
+  // Requires auth (personal wallet must be set up first).
+  static const connect = '/connect';
+
   // Worker self-service — APP 12 access to own employment record.
   static const workerHrRecord = '/settings/hr-record';
 }

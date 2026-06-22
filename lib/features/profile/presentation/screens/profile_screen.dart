@@ -295,6 +295,20 @@ class _Body extends StatelessWidget {
             const SizedBox(height: EqSpacing.md),
           ],
 
+          // ── Companies ──────────────────────────────────────────────────
+          _SectionLabel('Companies'),
+          const SizedBox(height: EqSpacing.sm),
+          EqCard(
+            padding: EdgeInsets.zero,
+            child: _SettingsRow(
+              icon: Icons.business_center_outlined,
+              label: 'Connect to a company',
+              subtitle: 'Apply to share your credentials with an employer',
+              onTap: () => context.push(Routes.connect),
+            ),
+          ),
+          const SizedBox(height: EqSpacing.md),
+
           // ── Account rows ───────────────────────────────────────────────
           _SectionLabel('Account'),
           const SizedBox(height: EqSpacing.sm),
