@@ -7,18 +7,10 @@
 # served as files because Netlify checks the literal path before applying
 # the rewrite — only paths that don't match a real file fall through here.
 #
-# Smart front door: the bare root serves the static marketing page
-# (welcome.html), which detects an existing EQ session client-side and bounces
-# returning/core users straight to /splash — so only cold visitors see the
-# pitch. This exact-match rule MUST come before the SPA catch-all (first match
-# wins). Every other path still falls through to the Flutter app, so deep links
-# (/claim, /join, /email, …) and the live pilot are unaffected.
+# GoRouter owns the root. The splash route (/) redirects unauthenticated
+# users to /auth/email (phone entry) and authenticated users to /card.
+# No static front door needed — Flutter handles both cases.
 # NOTE: _redirects is the authoritative source — the deploy zips build/web only,
 # so the repo-root netlify.toml is not shipped. Keep this rule here.
 
-# 200! (forced): the bare "/" maps to index.html as the directory index, and
-# Netlify lets an existing file shadow a non-forced rewrite — so without the
-# "!" this rule is silently ignored and "/" serves the Flutter app. The force
-# flag applies the rewrite to welcome.html anyway.
-/             /welcome.html   200!
 /*            /index.html     200
