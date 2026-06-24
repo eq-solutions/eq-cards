@@ -53,6 +53,7 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
   final _metadataControllers = <String, TextEditingController>{};
 
   String? _typeCode;
+  final _customType = TextEditingController();
   DateTime? _issueDate;
   DateTime? _expiryDate;
   bool _neverExpires = false;
@@ -66,6 +67,14 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
 
   bool get _isEdit => widget.licenceId != null;
 
+  String? get _effectiveTypeCode {
+    if (_typeCode == '__other__') {
+      final custom = _customType.text.trim();
+      return custom.isEmpty ? null : custom;
+    }
+    return _typeCode;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -77,6 +86,7 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
     _number.dispose();
     _authority.dispose();
     _notes.dispose();
+    _customType.dispose();
     for (final c in _metadataControllers.values) {
       c.dispose();
     }
@@ -243,8 +253,10 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     // Issue date is optional — many licences (e.g. driver licences) don't
     // print one. Only type and expiry are hard requirements.
-    if (_typeCode == null) {
-      setState(() => _error = 'Please select the licence type.');
+    if (_effectiveTypeCode == null) {
+      setState(() => _error = _typeCode == '__other__'
+          ? 'Please name this licence type.'
+          : 'Please select the licence type.');
       return;
     }
     if (!_neverExpires && _expiryDate == null) {
@@ -281,7 +293,7 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
       final draft = Licence(
         id: _existing?.id,
         userId: userId,
-        licenceType: _typeCode!,
+        licenceType: _effectiveTypeCode!,
         licenceNumber: _number.text.trim(),
         issueDate: _issueDate, // nullable — not all licences print an issue date
         expiryDate: effectiveExpiry,
@@ -422,11 +434,47 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
               asyncTypes.when(
                 loading: () => const LinearProgressIndicator(),
                 error: (e, _) => Text('Could not load types: $e'),
-                data: (types) => _TypeDropdown(
-                  types: types,
-                  value: _typeCode,
-                  onChanged: (v) => setState(() => _typeCode = v),
-                ),
+                data: (types) {
+                  // When editing a licence whose type isn't in the standard
+                  // list, promote it to "Other" and pre-fill the label.
+                  final knownCodes = types.map((t) => t.code).toSet();
+                  if (_typeCode != null &&
+                      _typeCode != '__other__' &&
+                      !knownCodes.contains(_typeCode)) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) {
+                        setState(() {
+                          _customType.text = _typeCode!;
+                          _typeCode = '__other__';
+                        });
+                      }
+                    });
+                  }
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _TypeDropdown(
+                        types: types,
+                        value: _typeCode,
+                        onChanged: (v) => setState(() {
+                          _typeCode = v;
+                          if (v != '__other__') _customType.clear();
+                        }),
+                      ),
+                      if (_typeCode == '__other__') ...[
+                        const SizedBox(height: EqSpacing.sm),
+                        EqTextField(
+                          controller: _customType,
+                          label: 'Describe this licence',
+                          autofocus: true,
+                          validator: (v) => (v?.trim().isEmpty ?? true)
+                              ? 'Please name this licence type'
+                              : null,
+                        ),
+                      ],
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: EqSpacing.md),
               EqTextField(
@@ -568,6 +616,8 @@ class _TypeDropdown extends StatelessWidget {
   final String? value;
   final ValueChanged<String?> onChanged;
 
+  static const _otherCode = '__other__';
+
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
@@ -581,9 +631,15 @@ class _TypeDropdown extends StatelessWidget {
           borderSide: BorderSide.none,
         ),
       ),
-      items: types
-          .map((t) => DropdownMenuItem(value: t.code, child: Text(t.label)))
-          .toList(),
+      items: [
+        ...types.map(
+          (t) => DropdownMenuItem(value: t.code, child: Text(t.label)),
+        ),
+        const DropdownMenuItem(
+          value: _otherCode,
+          child: Text('Other / not listed'),
+        ),
+      ],
       onChanged: onChanged,
       validator: (v) => v == null ? 'Please select a licence type' : null,
     );
