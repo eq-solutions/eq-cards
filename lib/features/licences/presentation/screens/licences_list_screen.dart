@@ -121,11 +121,23 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
         title: 'Wallet',
         withBranding: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            tooltip: 'Add to wallet',
-            onPressed: () => _showAddSheet(context, ref),
-          ),
+          if (!kIsWeb) ...[
+            IconButton(
+              icon: const Icon(Icons.camera_alt_outlined),
+              tooltip: 'Scan a licence',
+              onPressed: () => unawaited(_captureFlow(context, ref)),
+            ),
+            IconButton(
+              icon: const Icon(Icons.add),
+              tooltip: 'More options',
+              onPressed: () => _showAddSheet(context, ref),
+            ),
+          ] else
+            IconButton(
+              icon: const Icon(Icons.add),
+              tooltip: 'Add to wallet',
+              onPressed: () => _showAddSheet(context, ref),
+            ),
         ],
       ),
       body: Column(
