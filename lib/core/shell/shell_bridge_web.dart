@@ -1,3 +1,9 @@
+// Web implementation of the Shell→Cards token bridge. dart:html lives here
+// behind a conditional import so flutter test (VM target) doesn't blow up
+// trying to resolve it — the conditional import keeps dart:html off the VM target.
+//
+// dart:html is the established web-interop library in this codebase; its legacy
+// API surfaces deprecated members. All expected on this web-only file.
 // ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use
 import 'dart:async';
 import 'dart:html' as html;
