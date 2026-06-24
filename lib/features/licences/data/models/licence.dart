@@ -36,6 +36,10 @@ abstract class Licence with _$Licence {
     /// When true the credential is permanently valid regardless of [expiryDate].
     @Default(false) bool neverExpires,
 
+    /// When true this licence is hidden from employer views (Shell staff query,
+    /// admin digest). Workers still receive their own expiry reminders.
+    @Default(false) @JsonKey(name: 'is_private') bool isPrivate,
+
     /// Storage path in the `licence-photos` bucket — NOT a public URL.
     /// Format: `{userId}/{licenceId}/front.jpg`.
     @JsonKey(name: 'photo_front_url') String? photoFrontPath,

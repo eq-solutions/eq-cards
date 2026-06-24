@@ -57,6 +57,7 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
   DateTime? _issueDate;
   DateTime? _expiryDate;
   bool _neverExpires = false;
+  bool _isPrivate = false;
   Uint8List? _pendingFront;
   Uint8List? _pendingBack;
   Licence? _existing;
@@ -107,6 +108,7 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
           _issueDate = existing.issueDate;
           _expiryDate = existing.neverExpires ? null : existing.expiryDate;
           _neverExpires = existing.neverExpires;
+          _isPrivate = existing.isPrivate;
           _selectedState = existing.state;
           _authority.text = existing.issuingAuthority ?? '';
           _notes.text = existing.notes ?? '';
@@ -298,6 +300,7 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
         issueDate: _issueDate, // nullable — not all licences print an issue date
         expiryDate: effectiveExpiry,
         neverExpires: _neverExpires,
+        isPrivate: _isPrivate,
         state: _selectedState,
         issuingAuthority: _textOrNull(_authority.text),
         notes: _textOrNull(_notes.text),
@@ -561,6 +564,32 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
               ),
               const SizedBox(height: EqSpacing.md),
               EqTextField(controller: _notes, label: 'Notes'),
+              const SizedBox(height: EqSpacing.md),
+              Container(
+                decoration: BoxDecoration(
+                  color: EqColours.surface,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: SwitchListTile(
+                  value: _isPrivate,
+                  onChanged: (v) => setState(() => _isPrivate = v),
+                  title: Text(
+                    'Private — not shared with employers',
+                    style: EqTypography.bodyM,
+                  ),
+                  subtitle: Text(
+                    'Only you can see this in your wallet',
+                    style: EqTypography.label
+                        .copyWith(color: EqColours.grey),
+                  ),
+                  activeThumbColor: EqColours.deep,
+                  activeTrackColor: EqColours.ice,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: EqSpacing.md,
+                    vertical: EqSpacing.xs,
+                  ),
+                ),
+              ),
               const SizedBox(height: EqSpacing.lg),
               _PhotoSlot(
                 label: 'Front photo',

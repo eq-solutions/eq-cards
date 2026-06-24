@@ -7,7 +7,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../features/auth/auth.dart';
 import '../../features/auth/presentation/screens/not_provisioned_screen.dart';
-import '../../features/card/presentation/screens/card_screen.dart';
 import '../../features/certificates/certificates.dart';
 import '../../features/connections/presentation/screens/connect_to_company_screen.dart';
 import '../../features/legal/presentation/screens/legal_document_screen.dart';
@@ -174,20 +173,17 @@ GoRouter appRouter(Ref ref) {
         path: Routes.settings,
         builder: (context, state) => const SettingsScreen(),
       ),
+      // /card is a legacy route — redirect to the wallet (Licences tab).
+      // Existing deep-links in SMS/email still work after the 3→2 tab merge.
+      GoRoute(
+        path: Routes.card,
+        redirect: (_, _) => Routes.licencesList,
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navShell) =>
             HomeShellScreen(navigationShell: navShell),
         branches: [
-          // Tab 0 — Card (home)
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: Routes.card,
-                builder: (context, state) => const CardScreen(),
-              ),
-            ],
-          ),
-          // Tab 1 — Licences & certificates (combined wallet)
+          // Tab 0 — Wallet (licences & certificates combined)
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -346,7 +342,7 @@ String? _redirect(
     // redirect loop (/auth/not-provisioned <=> /licences). Handle it here so
     // the auth-route rule can safely exempt not-provisioned.
     if (tenantId != null && loc == Routes.notProvisioned) {
-      return Routes.card;
+      return Routes.licencesList;
     }
   }
   // Signed-out users on the notProvisioned route go back to sign-in.
