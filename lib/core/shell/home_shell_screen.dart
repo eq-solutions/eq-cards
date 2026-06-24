@@ -45,9 +45,8 @@ class HomeShellScreen extends ConsumerWidget {
         indicatorColor: EqColours.surface,
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.account_balance_wallet_outlined),
-            selectedIcon:
-                Icon(Icons.account_balance_wallet, color: EqColours.deep),
+            icon: Icon(Icons.wallet_outlined),
+            selectedIcon: Icon(Icons.wallet, color: EqColours.deep),
             label: 'Wallet',
           ),
           NavigationDestination(
