@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -21,6 +22,7 @@ import '../../features/workers/presentation/screens/claim_by_phone_screen.dart';
 import '../../features/workers/presentation/screens/claim_invite_screen.dart';
 import '../../features/workers/presentation/screens/worker_hr_record_screen.dart';
 import '../shell/home_shell_screen.dart';
+import '../shell/shell_bridge.dart';
 import '../theme/eq_colours.dart';
 import '../theme/eq_spacing.dart';
 import '../theme/eq_typography.dart';
@@ -349,8 +351,12 @@ String? _redirect(
   if (!isSignedIn && loc == Routes.notProvisioned) {
     return Routes.email;
   }
-  // Signed-out users landing on the Shell handoff route go to sign-in.
+  // Signed-out users on the Shell handoff route go to sign-in, UNLESS the
+  // iframe was loaded by Shell with ?shell=1. In that case, let _SplashScreen
+  // request a token from the parent frame via shell_bridge — redirecting here
+  // would kill the postMessage flow before it starts.
   if (!isSignedIn && loc == Routes.handoff) {
+    if (state.uri.queryParameters['shell'] == '1') return null;
     return Routes.email;
   }
 
@@ -409,7 +415,35 @@ class _SplashScreenState extends State<_SplashScreen> {
   @override
   void initState() {
     super.initState();
-    unawaited(_ensureSession());
+    // When loaded by Shell iframe with ?shell=1 and no session, request a
+    // token hash from the parent frame. Shell returns a GoTrue magic-link
+    // hashed_token; verifyOTP creates a real auth.sessions row (with
+    // refresh_token) so future refreshSession() calls work correctly.
+    // On any failure, falls back to _ensureSession() → router sends to /email.
+    if (kIsWeb && Uri.base.queryParameters['shell'] == '1' &&
+        Supabase.instance.client.auth.currentSession == null) {
+      unawaited(_handleShellHandoff());
+    } else {
+      unawaited(_ensureSession());
+    }
+  }
+
+  Future<void> _handleShellHandoff() async {
+    final tokenHash = await requestAndReceiveShellToken();
+    if (!mounted) return;
+    if (tokenHash == null) {
+      unawaited(_ensureSession());
+      return;
+    }
+    try {
+      await Supabase.instance.client.auth.verifyOTP(
+        tokenHash: tokenHash,
+        type: OtpType.magiclink,
+      );
+      // onAuthStateChange fires signedIn → GoRouter re-evaluates → /card
+    } catch (_) {
+      if (mounted) unawaited(_ensureSession());
+    }
   }
 
   // If the stored session has an expired access token, trigger an explicit
