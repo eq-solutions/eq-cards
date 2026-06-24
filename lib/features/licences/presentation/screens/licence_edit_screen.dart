@@ -453,7 +453,7 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _TypeDropdown(
+                      _TypeSearchField(
                         types: types,
                         value: _typeCode,
                         onChanged: (v) => setState(() {
@@ -605,8 +605,8 @@ class _MetaField {
   final String label;
 }
 
-class _TypeDropdown extends StatelessWidget {
-  const _TypeDropdown({
+class _TypeSearchField extends StatelessWidget {
+  const _TypeSearchField({
     required this.types,
     required this.value,
     required this.onChanged,
@@ -616,32 +616,180 @@ class _TypeDropdown extends StatelessWidget {
   final String? value;
   final ValueChanged<String?> onChanged;
 
-  static const _otherCode = '__other__';
+  String _selectedLabel() {
+    if (value == '__other__') return 'Other / not listed';
+    if (value == null) return '';
+    try {
+      return types.firstWhere((t) => t.code == value).label;
+    } catch (_) {
+      return value!;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return DropdownButtonFormField<String>(
-      initialValue: value,
-      decoration: InputDecoration(
-        labelText: 'Licence type',
-        filled: true,
-        fillColor: EqColours.surface,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(6),
-          borderSide: BorderSide.none,
+    final label = _selectedLabel();
+    return GestureDetector(
+      onTap: () async {
+        final picked = await showModalBottomSheet<String>(
+          context: context,
+          isScrollControlled: true,
+          useSafeArea: true,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+          ),
+          builder: (_) => _TypeSearchSheet(types: types),
+        );
+        if (picked != null) onChanged(picked);
+      },
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: 'Licence type',
+          filled: true,
+          fillColor: EqColours.surface,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(6),
+            borderSide: BorderSide.none,
+          ),
+          suffixIcon: const Icon(Icons.search, size: 20),
+        ),
+        isEmpty: value == null,
+        child: Text(
+          value == null ? '' : label,
+          style: EqTypography.bodyL,
         ),
       ),
-      items: [
-        ...types.map(
-          (t) => DropdownMenuItem(value: t.code, child: Text(t.label)),
-        ),
-        const DropdownMenuItem(
-          value: _otherCode,
-          child: Text('Other / not listed'),
-        ),
-      ],
-      onChanged: onChanged,
-      validator: (v) => v == null ? 'Please select a licence type' : null,
+    );
+  }
+}
+
+class _TypeSearchSheet extends StatefulWidget {
+  const _TypeSearchSheet({required this.types});
+  final List<LicenceType> types;
+
+  @override
+  State<_TypeSearchSheet> createState() => _TypeSearchSheetState();
+}
+
+class _TypeSearchSheetState extends State<_TypeSearchSheet> {
+  final _query = TextEditingController();
+  late List<LicenceType> _filtered;
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = widget.types;
+    _query.addListener(_filter);
+  }
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
+  }
+
+  void _filter() {
+    final q = _query.text.trim().toLowerCase();
+    setState(() {
+      _filtered = q.isEmpty
+          ? widget.types
+          : widget.types
+              .where((t) => t.label.toLowerCase().contains(q))
+              .toList();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: EqSpacing.sm),
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: EqColours.ice,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              EqSpacing.md,
+              EqSpacing.md,
+              EqSpacing.md,
+              EqSpacing.sm,
+            ),
+            child: TextField(
+              controller: _query,
+              autofocus: true,
+              style: EqTypography.bodyL,
+              decoration: InputDecoration(
+                hintText: 'Search…',
+                prefixIcon:
+                    const Icon(Icons.search, size: 20, color: Colors.grey),
+                filled: true,
+                fillColor: EqColours.surface,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: EqSpacing.md,
+                  vertical: EqSpacing.sm,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(6),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.45,
+            ),
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                if (_filtered.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(EqSpacing.md),
+                    child: Text(
+                      'No matches',
+                      style: EqTypography.bodyM
+                          .copyWith(color: EqColours.ink.withValues(alpha: 0.4)),
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                else
+                  ..._filtered.map(
+                    (t) => ListTile(
+                      title: Text(t.label, style: EqTypography.bodyL),
+                      dense: true,
+                      onTap: () => Navigator.of(context).pop(t.code),
+                    ),
+                  ),
+                const Divider(height: 1),
+                ListTile(
+                  dense: true,
+                  title: Text(
+                    'Other / not listed',
+                    style: EqTypography.bodyL.copyWith(
+                      color: EqColours.ink.withValues(alpha: 0.55),
+                    ),
+                  ),
+                  trailing: const Icon(Icons.edit_outlined, size: 16),
+                  onTap: () => Navigator.of(context).pop('__other__'),
+                ),
+                const SizedBox(height: EqSpacing.sm),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
