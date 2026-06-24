@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use
 import 'dart:async';
 import 'dart:html' as html;
 
@@ -24,9 +25,8 @@ Future<String?> requestAndReceiveShellToken() async {
         .firstWhere((e) {
           final data = e.data;
           if (data is! Map) return false;
-          final map = data as Map;
-          return map['type'] == 'SHELL_TOKEN_RESPONSE' &&
-              map['token_hash'] != null;
+          return data['type'] == 'SHELL_TOKEN_RESPONSE' &&
+              data['token_hash'] != null;
         })
         .timeout(const Duration(seconds: 10));
 
