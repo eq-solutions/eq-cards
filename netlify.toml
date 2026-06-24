@@ -24,6 +24,12 @@
   status = 200
   force  = true  # "/" is shadowed by index.html (dir index) without force
 
+# Backwards-compat: old invite links used /claim/<token> path format.
+[[redirects]]
+  from   = "/claim/:token"
+  to     = "/claim?token=:token"
+  status = 302
+
 [[redirects]]
   from   = "/*"
   to     = "/index.html"

@@ -13,4 +13,9 @@
 # NOTE: _redirects is the authoritative source — the deploy zips build/web only,
 # so the repo-root netlify.toml is not shipped. Keep this rule here.
 
+# Backwards-compat: old invite links used /claim/<token> path format.
+# GoRouter only handles /claim?token=<token> (query param). Redirect at the
+# edge so existing links in SMS/email inboxes continue to work.
+/claim/:token  /claim?token=:token  302
+
 /*            /index.html     200
