@@ -20,6 +20,7 @@ import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_button.dart';
 import '../../../../core/widgets/eq_card.dart';
 import '../../../../core/widgets/item_nav_bar.dart';
+import '../../../profile/profile.dart';
 import '../../data/licence_repository.dart';
 import '../notifiers/licence_types_provider.dart';
 import '../notifiers/licences_list_notifier.dart';
@@ -52,7 +53,8 @@ class LicenceDetailScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.download_outlined),
             onPressed: () {
-              asyncLicence.whenData((l) => _handleDownloadPhotos(context, l));
+              asyncLicence
+                  .whenData((l) => _handleDownloadPhotos(context, ref, l));
             },
             tooltip: 'Download photos',
           ),
@@ -159,6 +161,7 @@ class LicenceDetailScreen extends ConsumerWidget {
   /// straight away; with none, says so.
   Future<void> _handleDownloadPhotos(
     BuildContext context,
+    WidgetRef ref,
     Licence licence,
   ) async {
     final urls = <String, String>{
@@ -182,10 +185,23 @@ class LicenceDetailScreen extends ConsumerWidget {
       slot = picked;
     }
 
+    // The holder's name leads the download filename so a folder of saved
+    // photos clusters by person — the surface that matters when handling many
+    // at once. Best-effort: never block the download if the profile isn't
+    // loaded yet.
+    String? holderName;
+    try {
+      holderName = (await ref.read(profileNotifierProvider.future))?.fullName;
+    } catch (_) {
+      holderName = null;
+    }
+    if (!context.mounted) return;
+
     final filename = photoDownloadFilename(
       licenceType: licence.licenceType,
       licenceNumber: licence.licenceNumber,
       slot: slot,
+      holderName: holderName,
     );
     _showDownloadSnack(context, 'Downloading $filename…');
     try {
