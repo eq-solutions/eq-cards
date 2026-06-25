@@ -27,16 +27,27 @@ Future<void> downloadImageFromUrl({
 }
 
 /// Builds a safe, descriptive download filename like
-/// `white-card-12345-front.jpg` from a licence's fields and a photo [slot]
-/// (`front` or `back`). Falls back to `licence-photo.jpg` if every part is
-/// empty after slugging.
+/// `mark-jones-white-card-12345-front.jpg` from the holder's name, a licence's
+/// fields and a photo [slot] (`front` or `back`).
+///
+/// The optional [holderName] leads the stem so a folder of many saved photos
+/// clusters by person — the surface that matters when handling them in bulk.
+/// It's slugged and length-capped so an unusually long legal name can't push
+/// the filename past filesystem limits. When omitted (or empty after slugging)
+/// the name is simply dropped, preserving the old `white-card-12345-front.jpg`
+/// shape.
+///
+/// Falls back to `licence-photo.jpg` if every part is empty after slugging.
 String photoDownloadFilename({
   required String licenceType,
   required String licenceNumber,
   required String slot,
+  String? holderName,
 }) {
-  final stem = [licenceType, licenceNumber, slot]
-      .map(_slug)
+  final name = _slug(holderName ?? '');
+  final cappedName = (name.length > 40 ? name.substring(0, 40) : name)
+      .replaceAll(RegExp(r'-+$'), '');
+  final stem = [cappedName, _slug(licenceType), _slug(licenceNumber), _slug(slot)]
       .where((s) => s.isNotEmpty)
       .join('-');
   return '${stem.isEmpty ? 'licence-photo' : stem}.jpg';
