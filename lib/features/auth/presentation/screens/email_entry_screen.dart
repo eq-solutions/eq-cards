@@ -138,6 +138,12 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
                   ),
 
                   const SizedBox(height: EqSpacing.lg),
+                  Text(
+                    'New to EQ? Your employer sends you an invite link — use that to get started. This sign-in is for existing accounts only.',
+                    style: EqTypography.label.copyWith(color: EqColours.grey),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: EqSpacing.lg),
                 ],
               ),
             ),
