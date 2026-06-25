@@ -108,8 +108,31 @@
       person_profiles: 'identified_only'
     });
   </script>
+  <!-- EQ boot loader — bars spinner shown during Flutter engine init. Mirrors the
+       @eq-solutions/ui <Spinner variant="bars">; brand colours are inlined because the
+       Flutter boot shell has no design-token CSS. Removed on the first painted frame. -->
+  <style>
+    #eq-boot-loader { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: #ffffff; }
+    #eq-boot-loader .eq-spinner { display: inline-flex; align-items: flex-end; gap: 4px; height: 40px; }
+    #eq-boot-loader .eq-spinner span { width: 5px; height: 100%; border-radius: 9999px; background: #3DA8D8; transform-origin: bottom; animation: eq-boot-bars 0.9s ease-in-out infinite; }
+    #eq-boot-loader .eq-spinner span:nth-child(2) { background: #2986B4; animation-delay: 0.18s; }
+    #eq-boot-loader .eq-spinner span:nth-child(3) { animation-delay: 0.36s; }
+    #eq-boot-loader .eq-spinner span:nth-child(4) { background: #2986B4; animation-delay: 0.135s; }
+    #eq-boot-loader .eq-spinner span:nth-child(5) { animation-delay: 0.27s; }
+    @keyframes eq-boot-bars { 0%, 100% { transform: scaleY(0.35); } 50% { transform: scaleY(1); } }
+    @media (prefers-reduced-motion: reduce) { #eq-boot-loader .eq-spinner span { animation: none; transform: scaleY(1); } }
+  </style>
 </head>
 <body>
+  <div id="eq-boot-loader" role="status" aria-label="Loading">
+    <span class="eq-spinner" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></span>
+  </div>
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      var el = document.getElementById('eq-boot-loader');
+      if (el && el.parentNode) el.parentNode.removeChild(el);
+    });
+  </script>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader
