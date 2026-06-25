@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/error/user_messages.dart';
 import '../../../../core/router/routes.dart';
@@ -18,6 +19,9 @@ import '../../data/worker_self_repository.dart';
 /// The worker enters their mobile number, the screen calls
 /// [WorkerSelfRepository.lookupInviteByPhone] to find their unclaimed invite,
 /// then redirects to /claim?token={uuid} so the normal claim flow takes over.
+///
+/// If the user is already authenticated (they just verified their mobile via
+/// OTP), we pre-fill and auto-submit so they never have to enter it twice.
 class ClaimByPhoneScreen extends ConsumerStatefulWidget {
   const ClaimByPhoneScreen({super.key, required this.tenantSlug});
 
@@ -34,6 +38,25 @@ class _ClaimByPhoneScreenState extends ConsumerState<ClaimByPhoneScreen> {
   final _formKey = GlobalKey<FormState>();
   _Phase _phase = _Phase.idle;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-fill from the current Supabase session so the user doesn't have to
+    // enter their mobile number again after just verifying it via OTP.
+    final sessionPhone =
+        Supabase.instance.client.auth.currentSession?.user.phone;
+    if (sessionPhone != null && sessionPhone.isNotEmpty) {
+      final normalised = normaliseAusMobile(sessionPhone);
+      if (normalised != null) {
+        _phoneController.text = normalised;
+        // Auto-submit after the first frame so the form key is wired up.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) unawaited(_lookup());
+        });
+      }
+    }
+  }
 
   @override
   void dispose() {
