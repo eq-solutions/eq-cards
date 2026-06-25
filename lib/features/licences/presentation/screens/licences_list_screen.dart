@@ -388,9 +388,11 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
               '${typeMap[l.licenceType] ?? l.licenceType} ${l.licenceNumber}'
                   .toLowerCase(),
           photoUrl: l.photoFrontSignedUrl,
-          // credentialId enables the Apple Wallet button. Licences map to
-          // worker_credentials on eq-canonical after the claim flow runs.
           credentialId: l.id,
+          isPrivate: l.isPrivate,
+          onTogglePrivate: () => ref
+              .read(licencesListNotifierProvider.notifier)
+              .togglePrivacy(l),
         ),
       for (final c in certs)
         _WalletItem(
@@ -787,7 +789,7 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
 /// A single entry in the unified wallet — either a licence or a certificate,
 /// normalised to a common shape so they render in one list.
 class _WalletItem {
-  const _WalletItem({
+  _WalletItem({
     required this.icon,
     required this.title,
     required this.meta,
@@ -797,6 +799,8 @@ class _WalletItem {
     this.photoUrl,
     this.neverExpires = false,
     this.credentialId,
+    this.isPrivate,
+    this.onTogglePrivate,
   });
 
   final IconData icon;
@@ -815,6 +819,11 @@ class _WalletItem {
   /// UUID of the `worker_credentials` row. When non-null and the user is on
   /// iOS, an "Add to Apple Wallet" button is shown on the tile.
   final String? credentialId;
+  /// Whether this licence is marked private. Null = no privacy toggle for
+  /// this item type (e.g. certificates that don't support the flag yet).
+  final bool? isPrivate;
+  /// Called when the user taps the privacy lock icon. Null = no toggle shown.
+  final Future<void> Function()? onTogglePrivate;
 
   bool get isExpired =>
       !neverExpires && expiry != null && DateTime.now().isAfter(expiry!);
@@ -840,6 +849,24 @@ class _WalletTile extends StatefulWidget {
 }
 
 class _WalletTileState extends State<_WalletTile> {
+  bool _toggling = false;
+  bool? _optimisticPrivate;
+
+  Future<void> _handlePrivacyToggle() async {
+    if (_toggling || widget.item.onTogglePrivate == null) return;
+    setState(() {
+      _toggling = true;
+      _optimisticPrivate = !(widget.item.isPrivate ?? false);
+    });
+    try {
+      await widget.item.onTogglePrivate!();
+    } catch (_) {
+      // Revert optimistic flip on error.
+    } finally {
+      if (mounted) setState(() { _toggling = false; _optimisticPrivate = null; });
+    }
+  }
+
   Widget _iconChip(IconData icon) => ColoredBox(
         color: EqColours.ice,
         child: Center(child: Icon(icon, size: 18, color: EqColours.deep)),
@@ -927,6 +954,34 @@ class _WalletTileState extends State<_WalletTile> {
                     style:
                         EqTypography.label.copyWith(color: EqColours.grey),
                   ),
+                if (widget.item.onTogglePrivate != null) ...[
+                  const SizedBox(width: EqSpacing.sm),
+                  GestureDetector(
+                    onTap: _handlePrivacyToggle,
+                    behavior: HitTestBehavior.opaque,
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: _toggling
+                          ? SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 1.5,
+                                color: EqColours.g500,
+                              ),
+                            )
+                          : Icon(
+                              (_optimisticPrivate ?? widget.item.isPrivate ?? false)
+                                  ? Icons.lock_rounded
+                                  : Icons.lock_open_rounded,
+                              size: 18,
+                              color: (_optimisticPrivate ?? widget.item.isPrivate ?? false)
+                                  ? EqColours.ink
+                                  : EqColours.g500,
+                            ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ],

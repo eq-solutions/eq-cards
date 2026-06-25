@@ -32,6 +32,25 @@ class LicencesListNotifier extends _$LicencesListNotifier {
     state = await AsyncValue.guard(_fetchWithCache);
   }
 
+  Future<void> togglePrivacy(Licence licence) async {
+    final current = state.value;
+    // Optimistic: flip in memory immediately so the UI updates without a spinner.
+    if (current != null) {
+      state = AsyncData(current
+          .map((l) => l.id == licence.id
+              ? l.copyWith(isPrivate: !l.isPrivate)
+              : l)
+          .toList());
+    }
+    final repo = ref.read(licenceRepositoryProvider);
+    try {
+      await repo.upsert(licence.copyWith(isPrivate: !licence.isPrivate));
+    } catch (_) {
+      if (current != null) state = AsyncData(current);
+      rethrow;
+    }
+  }
+
   Future<void> deleteLicence(String id) async {
     final repo = ref.read(licenceRepositoryProvider);
     state = const AsyncLoading();
