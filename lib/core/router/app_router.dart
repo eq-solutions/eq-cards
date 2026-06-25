@@ -284,12 +284,15 @@ String? _redirect(
   GoRouterState state,
   AuthFlowState flowState,
 ) {
-  // Treat an expired session the same as no session. Without this, an
-  // offline user whose token expired (and `tokenRefreshed` never fired)
-  // stays on signed-in routes while every Supabase call returns 401 —
-  // confusing data-loading errors with no path to re-auth.
+  // Treat any present session as signed-in, including expired access tokens.
+  // GoTrue-dart 2.x auto-refreshes the access token before the first
+  // Supabase call, so routing forward with an expired JWT is safe. If
+  // refresh fails (stale refresh token, offline), GoTrue fires signedOut →
+  // onAuthStateChange bumps the router → user is sent to /email then.
+  // This eliminates the startup spinner for iOS PWA users whose 15-min
+  // access token expired while the app was closed.
   final session = Supabase.instance.client.auth.currentSession;
-  final isSignedIn = session != null && !session.isExpired;
+  final isSignedIn = session != null;
   final loc = state.matchedLocation;
   final isAuthRoute = loc.startsWith('/auth/');
   // Legal documents are reachable without sign-in so users can review the
@@ -364,14 +367,6 @@ String? _redirect(
 
   if (loc == Routes.splash) {
     if (!isSignedIn) {
-      // If there's an expired session (access token stale, refresh token may
-      // still be valid), stay on splash while _SplashScreen triggers an
-      // explicit refreshSession(). The router re-evaluates when
-      // onAuthStateChange fires TokenRefreshed (→ /card) or signedOut
-      // (→ /email). Without this, the router bounces to /email before the
-      // async startup refresh completes — visible as a sign-in flash on every
-      // cold open for iOS PWA users whose JWT expired while the app was closed.
-      if (Supabase.instance.client.auth.currentSession != null) return null;
       return Routes.email;
     }
     // Signed-in users at the root always have a workspace by this point — the
