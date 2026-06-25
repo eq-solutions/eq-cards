@@ -53,25 +53,29 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   @override
   void initState() {
     super.initState();
-    // Wait for the provider's future before hydrating. `valueOrNull` in
-    // initState would race the async build() of `ProfileNotifier` and silently
-    // fail to hydrate on cold-load (deep link, browser refresh, tests).
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      try {
-        final profile = await ref.read(profileNotifierProvider.future);
-        if (!mounted || _hydrated) return;
-        if (profile != null) {
-          setState(() {
-            _hydrate(profile);
-            _hydrated = true;
+    // Hydrate as soon as profile data is available. listenManual with
+    // fireImmediately=true handles both: data already cached (fires at once)
+    // and data arriving later (SSO session establishing after initState).
+    // addPostFrameCallback ensures ref is in a stable post-build state.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.listenManual(
+        profileNotifierProvider,
+        (_, next) {
+          if (_hydrated || !mounted) return;
+          next.whenData((profile) {
+            if (profile == null) {
+              _hydrated = true;
+              return;
+            }
+            setState(() {
+              _hydrate(profile);
+              _hydrated = true;
+            });
           });
-        } else {
-          _hydrated = true;
-        }
-      } catch (_) {
-        // Provider error — leave the form empty so the user can still type.
-        _hydrated = true;
-      }
+          if (next.hasError) _hydrated = true;
+        },
+        fireImmediately: true,
+      );
     });
   }
 

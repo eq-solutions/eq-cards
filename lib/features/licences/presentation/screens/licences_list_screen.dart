@@ -237,20 +237,24 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
                   );
 
                   final licencesList = licences ?? const <Licence>[];
+                  final certsList = certs ?? const <Certificate>[];
                   final validCount = licencesList
-                      .where((l) =>
-                          !l.isExpired && !l.isExpiringWithin(days: 30))
+                      .where((l) => !l.isExpired && !l.isExpiringWithin(days: 30))
+                      .length
+                    + certsList
+                      .where((c) => !c.isExpired && !c.isExpiringWithin(days: 30))
                       .length;
                   final expiringCount = licencesList
                       .where((l) => l.isExpiringWithin(days: 30))
-                      .length;
-                  final expiredCount =
-                      licencesList.where((l) => l.isExpired).length;
-                  final urgentLicences = <Licence>[
-                    ...licencesList.where((l) => l.isExpired),
-                    ...licencesList.where((l) =>
-                        !l.isExpired && l.isExpiringWithin(days: 30)),
-                  ];
+                      .length
+                    + certsList.where((c) => c.isExpiringWithin(days: 30)).length;
+                  final expiredCount = licencesList.where((l) => l.isExpired).length
+                    + certsList.where((c) => c.isExpired).length;
+                  // Urgent items from the unified list — includes both licences
+                  // and certificates so CPR and other certs appear here.
+                  final urgentItems = items
+                      .where((item) => item.isExpired || item.isExpiringSoon)
+                      .toList();
 
                   // Show the once-ever tap-to-copy hint on the next frame if
                   // the wallet has anything in it. Post-frame so we don't
@@ -299,7 +303,7 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
                     children: [
                       idCard,
                       const SizedBox(height: EqSpacing.md),
-                      if (licencesList.isNotEmpty) ...[
+                      if (items.isNotEmpty) ...[
                         _WalletHealthCard(
                           validCount: validCount,
                           expiringCount: expiringCount,
@@ -307,27 +311,17 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
                         ),
                         const SizedBox(height: EqSpacing.md),
                       ],
-                      if (urgentLicences.isNotEmpty) ...[
+                      if (urgentItems.isNotEmpty) ...[
                         Padding(
                           padding: const EdgeInsets.only(
                               left: EqSpacing.xs, bottom: EqSpacing.sm),
                           child: Text('Needs attention',
                               style: EqTypography.label),
                         ),
-                        ...urgentLicences.take(4).map((l) => Padding(
+                        ...urgentItems.take(4).map((item) => Padding(
                               padding: const EdgeInsets.only(
                                   bottom: EqSpacing.sm),
-                              child: _WalletAlertTile(
-                                licence: l,
-                                label:
-                                    typeMap[l.licenceType] ?? l.licenceType,
-                                onTap: () {
-                                  if (l.id != null) {
-                                    unawaited(context.push(
-                                        Routes.licenceDetailFor(l.id!)));
-                                  }
-                                },
-                              ),
+                              child: _WalletTile(item: item),
                             )),
                         const SizedBox(height: EqSpacing.sm),
                       ],
@@ -1923,99 +1917,6 @@ class _HealthCell extends StatelessWidget {
   }
 }
 
-// ── Needs-attention alert tile ────────────────────────────────────────────────
-
-class _WalletAlertTile extends StatelessWidget {
-  const _WalletAlertTile({
-    required this.licence,
-    required this.label,
-    required this.onTap,
-  });
-
-  final Licence licence;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final isExpired = licence.isExpired;
-    final bgColor = isExpired
-        ? EqColours.error.withValues(alpha: 0.08)
-        : EqColours.warning.withValues(alpha: 0.08);
-    final borderColor = isExpired
-        ? EqColours.error.withValues(alpha: 0.25)
-        : EqColours.warning.withValues(alpha: 0.25);
-    final accentColor = isExpired ? EqColours.error : EqColours.warning;
-    final days = licence.daysUntilExpiry;
-
-    final subtitle = isExpired
-        ? 'Expired — renew to stay site-ready'
-        : 'Expires in $days day${days == 1 ? '' : 's'}';
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(EqSpacing.md),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: borderColor),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                isExpired ? Icons.warning_amber_rounded : Icons.schedule,
-                size: 18,
-                color: accentColor,
-              ),
-            ),
-            const SizedBox(width: EqSpacing.sm),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: EqTypography.bodyM.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: accentColor,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(subtitle, style: EqTypography.label),
-                ],
-              ),
-            ),
-            const SizedBox(width: EqSpacing.sm),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: accentColor,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                isExpired ? 'Renew' : 'View',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 /// Error state for the licences list — shows a friendly message plus an
 /// action that fits the cause. For a NotAuthenticatedFailure (in-session
