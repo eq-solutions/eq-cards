@@ -854,9 +854,35 @@ class _WalletTileState extends State<_WalletTile> {
 
   Future<void> _handlePrivacyToggle() async {
     if (_toggling || widget.item.onTogglePrivate == null) return;
+
+    final currentlyPrivate = widget.item.isPrivate ?? false;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(currentlyPrivate ? 'Make visible to employers?' : 'Hide this licence?'),
+        content: Text(
+          currentlyPrivate
+              ? 'Employers will be able to see it in compliance views and expiry reports.'
+              : "It won't appear in employer views or expiry reports. Only you can see it.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(currentlyPrivate ? 'Make visible' : 'Hide it'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
     setState(() {
       _toggling = true;
-      _optimisticPrivate = !(widget.item.isPrivate ?? false);
+      _optimisticPrivate = !currentlyPrivate;
     });
     try {
       await widget.item.onTogglePrivate!();

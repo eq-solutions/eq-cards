@@ -157,6 +157,7 @@ Map<String, dynamic> licenceToUpsertPayload(Licence l) {
   if (l.photoBackPath != null) payload['photo_back_url'] = l.photoBackPath;
   if (l.notes != null) payload['notes'] = l.notes;
   payload['never_expires'] = l.neverExpires;
+  payload['is_private'] = l.isPrivate;
   return payload;
 }
 
