@@ -432,7 +432,14 @@ class _SplashScreenState extends State<_SplashScreen> {
     final tokenHash = await requestAndReceiveShellToken();
     if (!mounted) return;
     if (tokenHash == null) {
-      unawaited(_ensureSession());
+      // Shell handshake timed out or Shell reported an error. Try refreshing
+      // any stored session first; if there's nothing to refresh (first open,
+      // or stale refresh token), send the user to the email sign-in screen so
+      // they're not stuck on the spinner indefinitely.
+      await _ensureSession();
+      if (mounted && Supabase.instance.client.auth.currentSession == null) {
+        context.go(Routes.email);
+      }
       return;
     }
     try {
