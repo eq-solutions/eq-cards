@@ -186,7 +186,7 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
   Future<void> _pickDate({required bool forExpiry}) async {
     final now = DateTime.now();
     final initial = (forExpiry ? _expiryDate : _issueDate) ?? now;
-    final first = forExpiry ? now : DateTime(now.year - 30);
+    final first = DateTime(now.year - 30);
     final last = forExpiry ? DateTime(now.year + 30) : now;
     final picked = await showDatePicker(
       context: context,
