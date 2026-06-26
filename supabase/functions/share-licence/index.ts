@@ -4,6 +4,12 @@
 // of a licence so a third party can verify a tradie's card by scanning a QR
 // code. Licence IDs are UUIDs (128-bit random) so enumeration is infeasible.
 //
+// SECURITY (finding C3, 2026-06-26 — NOT YET DEPLOYED): this endpoint now honours
+// the `is_private` flag (migration 0046). A worker who marks a licence private is
+// excluded from the public share surface (returns licence_not_found / 404). Without
+// this filter, the privacy toggle the product built was silently ignored here.
+// Deploy step (explicit): `supabase functions deploy share-licence`.
+//
 // Secrets:
 //   SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY — auto-injected by Supabase.
 //   Service role bypasses RLS so we can read any non-deleted licence.
@@ -76,7 +82,7 @@ Deno.serve(async (req) => {
   const licenceResp = await fetch(
     `${supabaseUrl}/rest/v1/licences` +
       `?id=eq.${licenceId}&deleted_at=is.null` +
-      `&select=licence_type,licence_number,state,issuing_authority,expiry_date,user_id` +
+      `&select=licence_type,licence_number,state,issuing_authority,expiry_date,user_id,is_private` +
       `&limit=1`,
     { headers },
   );
@@ -92,12 +98,20 @@ Deno.serve(async (req) => {
     issuing_authority: string | null;
     expiry_date: string;
     user_id: string;
+    is_private: boolean | null;
   }>;
 
   if (!licenceRows.length) {
     return jsonResponse({ error: 'licence_not_found' }, 404);
   }
   const licence = licenceRows[0];
+
+  // Honour the worker's privacy toggle (migration 0046). A licence marked private
+  // must not be exposed via the public share link — return 404, not 403, so the
+  // endpoint doesn't confirm the licence exists. (null = legacy/not-private.)
+  if (licence.is_private === true) {
+    return jsonResponse({ error: 'licence_not_found' }, 404);
+  }
 
   // Query 2 — holder's display name from profiles.
   const profileResp = await fetch(
