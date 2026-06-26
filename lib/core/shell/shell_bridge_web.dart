@@ -24,7 +24,7 @@ Future<String?> requestAndReceiveShellToken() async {
   }
 
   // Request the token from Shell.
-  html.window.parent!.postMessage({'type': 'REQUEST_SHELL_TOKEN'}, '*');
+  html.window.parent!.postMessage({'type': 'REQUEST_SHELL_TOKEN'}, 'https://core.eq.solutions');
 
   try {
     final event = await html.window.onMessage

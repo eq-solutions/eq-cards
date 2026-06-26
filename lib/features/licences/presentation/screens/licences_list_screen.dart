@@ -43,6 +43,7 @@ import '../helpers/licences_list_helpers.dart';
 import '../notifiers/licence_types_provider.dart';
 import '../notifiers/licences_list_notifier.dart';
 import '../widgets/expiry_badge.dart';
+import '../../../consent/consent_gate.dart';
 import 'licence_crop_screen.dart';
 import 'licence_edit_screen.dart';
 
@@ -161,10 +162,11 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
         (asyncLicences.isLoading || asyncCerts.isLoading);
     final licencesFailed = asyncLicences.hasError && licences == null;
 
-    return Scaffold(
-      appBar: EqAppBar(
-        title: 'Wallet',
-        withBranding: true,
+    return ConsentGate(
+      child: Scaffold(
+        appBar: EqAppBar(
+          title: 'Wallet',
+          withBranding: true,
         actions: [
           if (!kIsWeb) ...[
             IconButton(
@@ -363,6 +365,7 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
