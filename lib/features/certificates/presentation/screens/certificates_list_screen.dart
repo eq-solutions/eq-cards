@@ -63,7 +63,7 @@ class _CertificatesListScreenState
               leading: const Icon(Icons.picture_as_pdf_outlined),
               title: const Text('Upload a PDF or document'),
               subtitle: const Text(
-                'Attach a PDF, image, or photo from your device',
+                'Attach a PDF, image, or photo from your device — on iPhone, tap Browse to find PDFs',
               ),
               onTap: () {
                 Navigator.of(sheetContext).pop();
@@ -73,7 +73,7 @@ class _CertificatesListScreenState
             ListTile(
               leading: const Icon(Icons.document_scanner_outlined),
               title: Text(
-                kIsWeb ? 'Scan a certificate photo' : 'Scan a certificate',
+                kIsWeb ? 'Scan a document photo' : 'Scan a document',
               ),
               subtitle: const Text(
                 'First aid, working at heights, white card — OCR reads the expiry',
@@ -96,12 +96,12 @@ class _CertificatesListScreenState
 
     return Scaffold(
       appBar: EqAppBar(
-        title: 'Certificates',
+        title: 'Documents',
         withBranding: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            tooltip: 'Add certificate',
+            tooltip: 'Add document',
             onPressed: () => _showAddSheet(context),
           ),
         ],
@@ -229,7 +229,7 @@ class _EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: EqSpacing.md),
           Text(
-            'No certificates yet',
+            'No documents yet',
             style: EqTypography.headingL,
             textAlign: TextAlign.center,
           ),
@@ -250,7 +250,7 @@ class _EmptyState extends StatelessWidget {
           TextButton(
             onPressed: onScan,
             child: Text(
-              kIsWeb ? 'Scan a certificate photo instead' : 'Scan a certificate instead',
+              kIsWeb ? 'Scan a document photo instead' : 'Scan a document instead',
               style: EqTypography.bodyM.copyWith(color: EqColours.deep),
             ),
           ),

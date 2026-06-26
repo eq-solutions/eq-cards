@@ -228,7 +228,7 @@ class _CertificateAddScreenState extends ConsumerState<CertificateAddScreen> {
         if (_existing == null) {
           setState(() {
             _saving = false;
-            _error = 'Certificate data not loaded. Please go back and try again.';
+            _error = 'Document data not loaded. Please go back and try again.';
           });
           return;
         }
@@ -264,7 +264,7 @@ class _CertificateAddScreenState extends ConsumerState<CertificateAddScreen> {
       unawaited(Sentry.captureException(e, stackTrace: stack));
       setState(() {
         _saving = false;
-        _error = 'Could not save certificate. Try again.';
+        _error = 'Could not save document. Try again.';
       });
     }
   }
@@ -273,7 +273,7 @@ class _CertificateAddScreenState extends ConsumerState<CertificateAddScreen> {
   Widget build(BuildContext context) {
     if (_loading) {
       return Scaffold(
-        appBar: EqAppBar(title: _isEdit ? 'Edit certificate' : 'Add certificate'),
+        appBar: EqAppBar(title: _isEdit ? 'Edit document' : 'Add document'),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -282,7 +282,7 @@ class _CertificateAddScreenState extends ConsumerState<CertificateAddScreen> {
 
     return Scaffold(
       appBar: EqAppBar(
-        title: _isEdit ? 'Edit certificate' : 'Add certificate',
+        title: _isEdit ? 'Edit document' : 'Add document',
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(EqSpacing.lg),
@@ -476,6 +476,10 @@ class _FilePicker extends StatelessWidget {
                     'PDF, JPG, or PNG${required ? ' — required' : ''}',
                     style:
                         EqTypography.label.copyWith(color: EqColours.grey),
+                  ),
+                  Text(
+                    'On iPhone: tap Browse to find PDFs in Files',
+                    style: EqTypography.label.copyWith(color: EqColours.grey),
                   ),
                 ],
               ),
