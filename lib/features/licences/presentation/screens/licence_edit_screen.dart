@@ -22,9 +22,11 @@ import '../../../../core/widgets/eq_text_field.dart';
 import '../../data/licence_repository.dart';
 import '../../data/models/licence_type.dart';
 import '../../data/ocr_service.dart';
+import '../../data/sensitive_licence_types.dart';
 import '../helpers/licence_crop.dart';
 import '../notifiers/licence_types_provider.dart';
 import '../notifiers/licences_list_notifier.dart';
+import '../widgets/sensitive_consent_sheet.dart';
 import 'licence_crop_screen.dart';
 import 'licence_detail_screen.dart';
 
@@ -136,7 +138,15 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
       if (ocr?.licenceTypeCandidate != null) {
         _typeCode = ocr!.licenceTypeCandidate;
       } else if (pre?.typeCode != null) {
-        _typeCode = pre!.typeCode;
+        final prefillCode = pre!.typeCode!;
+        if (sensitiveCategoryFor(prefillCode) != null) {
+          // Defer consent check — initState is synchronous, context not ready.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _checkConsentAndApplyType(prefillCode);
+          });
+        } else {
+          _typeCode = prefillCode;
+        }
       }
       if (ocr?.stateCandidate != null) {
         _selectedState = ocr!.stateCandidate;
@@ -206,6 +216,36 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
         }
       });
     }
+  }
+
+  /// Checks APP 3.3 sensitive-info consent before applying a type code.
+  /// If the type is not sensitive, or consent was already recorded, the code
+  /// is applied immediately. If consent is needed and the user declines, the
+  /// type is not changed.
+  Future<void> _checkConsentAndApplyType(String? code) async {
+    if (code == null || code == '__other__') {
+      setState(() {
+        _typeCode = code;
+        if (code != '__other__') _customType.clear();
+      });
+      return;
+    }
+    final category = sensitiveCategoryFor(code);
+    if (category != null) {
+      final consents = await ref.read(sensitiveConsentProvider.future);
+      if (!consents.containsKey(category.name)) {
+        if (!mounted) return;
+        final consented = await SensitiveConsentSheet.show(context, category);
+        if (consented != true) return;
+        if (!mounted) return;
+        await recordSensitiveConsent(ref, category);
+      }
+    }
+    if (!mounted) return;
+    setState(() {
+      _typeCode = code;
+      _customType.clear();
+    });
   }
 
   Future<void> _pickPhoto({required bool front}) async {
@@ -462,10 +502,7 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
                       _TypeSearchField(
                         types: types,
                         value: _typeCode,
-                        onChanged: (v) => setState(() {
-                          _typeCode = v;
-                          if (v != '__other__') _customType.clear();
-                        }),
+                        onChanged: _checkConsentAndApplyType,
                       ),
                       if (_typeCode == '__other__') ...[
                         const SizedBox(height: EqSpacing.sm),
