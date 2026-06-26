@@ -112,7 +112,7 @@ class _ConsentOverlayState extends State<_ConsentOverlay> {
                   children: [
                     const TextSpan(
                       text: 'EQ Cards stores your credentials so employers '
-                          'can verify them. By using your wallet you agree to '
+                          'can view them. By using your wallet you agree to '
                           'our ',
                     ),
                     WidgetSpan(

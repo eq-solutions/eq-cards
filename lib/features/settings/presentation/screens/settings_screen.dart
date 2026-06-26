@@ -425,7 +425,7 @@ class SettingsScreen extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('Sign out?'),
         content: const Text(
-          "You'll need to verify your email again next time.",
+          "You'll need to sign in with your phone number again next time.",
         ),
         actions: [
           TextButton(
@@ -475,7 +475,7 @@ class _BiometricRow extends StatelessWidget {
                 Text('Biometric unlock', style: EqTypography.bodyL),
                 const SizedBox(height: EqSpacing.xs),
                 Text(
-                  'Re-prompt on cold launch and after 5 min in background. Gating wired in v1.1.',
+                  'Re-prompt on cold launch and after 5 min in background.',
                   style: EqTypography.label,
                 ),
               ],
