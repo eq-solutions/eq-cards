@@ -114,7 +114,7 @@
   <style>
     #eq-boot-loader { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: #ffffff; }
     #eq-boot-loader .eq-spinner { display: inline-flex; align-items: flex-end; gap: 4px; height: 40px; }
-    #eq-boot-loader .eq-spinner span { width: 5px; height: 100%; border-radius: 9999px; background: #3DA8D8; transform-origin: bottom; animation: eq-boot-bars 0.9s ease-in-out infinite; }
+    #eq-boot-loader .eq-spinner span { width: 5px; height: 100%; border-radius: 9999px; background: #3DA8D8; transform-origin: bottom; will-change: transform; animation: eq-boot-bars 0.9s ease-in-out infinite; }
     #eq-boot-loader .eq-spinner span:nth-child(2) { background: #2986B4; animation-delay: 0.18s; }
     #eq-boot-loader .eq-spinner span:nth-child(3) { animation-delay: 0.36s; }
     #eq-boot-loader .eq-spinner span:nth-child(4) { background: #2986B4; animation-delay: 0.135s; }
