@@ -113,6 +113,36 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
                     ),
                   ),
 
+                  // ── Twilio notice (APP 5) ────────────────────────────────
+                  const SizedBox(height: EqSpacing.sm),
+                  Text.rich(
+                    TextSpan(
+                      style:
+                          EqTypography.label.copyWith(color: EqColours.grey),
+                      children: [
+                        const TextSpan(
+                          text: 'Your number is sent to Twilio (USA) to '
+                              'deliver your sign-in code. ',
+                        ),
+                        WidgetSpan(
+                          alignment: PlaceholderAlignment.baseline,
+                          baseline: TextBaseline.alphabetic,
+                          child: GestureDetector(
+                            onTap: () => context.push(Routes.privacyPolicy),
+                            child: Text(
+                              'Privacy Policy',
+                              style: EqTypography.label.copyWith(
+                                color: EqColours.sky,
+                                decoration: TextDecoration.underline,
+                                decorationColor: EqColours.sky,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                   // ── Error ────────────────────────────────────────────────
                   if (error != null) ...[
                     const SizedBox(height: EqSpacing.sm),
