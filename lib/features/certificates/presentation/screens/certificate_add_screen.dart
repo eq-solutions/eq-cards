@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -132,12 +133,12 @@ class _CertificateAddScreenState extends ConsumerState<CertificateAddScreen> {
       if (result == null || result.files.isEmpty) return; // user cancelled
       final file = result.files.first;
       if (file.bytes == null) {
-        // Some browsers return a file entry without bytes even with
-        // withData:true — show an actionable error rather than silently
-        // dropping the selection.
+        // iOS: cloud-only files (iCloud Drive but not downloaded) return an
+        // entry without bytes. User needs to download the file first.
+        // Web: some browsers return entries without bytes for large files.
         setState(
           () => _error =
-              'Could not read the file. Try a different format or browser.',
+              'Could not read the file. On iPhone, make sure the file is downloaded to your device (no cloud icon), then try again.',
         );
         return;
       }
@@ -191,7 +192,15 @@ class _CertificateAddScreenState extends ConsumerState<CertificateAddScreen> {
 
     try {
       final repo = ref.read(certificateRepositoryProvider);
-      final uid = Supabase.instance.client.auth.currentUser!.id;
+      final authUser = Supabase.instance.client.auth.currentUser;
+      if (authUser == null) {
+        setState(() {
+          _saving = false;
+          _error = 'Your session has expired. Please sign in again.';
+        });
+        return;
+      }
+      final uid = authUser.id;
       // Client-side UUID for the storage path. On insert the DB row uses this
       // as a predictable path prefix; on edit we use the existing row's id.
       final certId = _existing?.id ?? const Uuid().v4();
@@ -251,7 +260,8 @@ class _CertificateAddScreenState extends ConsumerState<CertificateAddScreen> {
         ref.read(certificatesListNotifierProvider.notifier).refresh(),
       );
       context.pop();
-    } catch (e) {
+    } catch (e, stack) {
+      unawaited(Sentry.captureException(e, stackTrace: stack));
       setState(() {
         _saving = false;
         _error = 'Could not save certificate. Try again.';
