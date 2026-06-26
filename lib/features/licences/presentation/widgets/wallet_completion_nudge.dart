@@ -83,7 +83,7 @@ class _SuggestionChip extends StatelessWidget {
           children: [
             Text(
               suggestion.label,
-              style: EqTypography.bodyS.copyWith(
+              style: EqTypography.label.copyWith(
                 color: EqColours.deep,
                 fontWeight: FontWeight.w500,
               ),
@@ -152,7 +152,7 @@ class _EmptySuggestionTile extends StatelessWidget {
           children: [
             Text(
               suggestion.label,
-              style: EqTypography.bodyS.copyWith(
+              style: EqTypography.label.copyWith(
                 color: EqColours.ink,
                 fontWeight: FontWeight.w500,
               ),

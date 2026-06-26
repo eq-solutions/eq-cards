@@ -105,7 +105,7 @@ class _ConsentOverlayState extends State<_ConsentOverlay> {
             children: [
               Text.rich(
                 TextSpan(
-                  style: EqTypography.bodyS.copyWith(
+                  style: EqTypography.bodyM.copyWith(
                     color: const Color(0xFF555555),
                     height: 1.55,
                   ),
@@ -122,7 +122,7 @@ class _ConsentOverlayState extends State<_ConsentOverlay> {
                         onTap: () => context.push(Routes.privacyPolicy),
                         child: Text(
                           'Privacy Policy',
-                          style: EqTypography.bodyS.copyWith(
+                          style: EqTypography.bodyM.copyWith(
                             color: EqColours.sky,
                             height: 1.55,
                           ),
