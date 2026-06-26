@@ -80,81 +80,84 @@ class _ConsentOverlayState extends State<_ConsentOverlay> {
 
   @override
   Widget build(BuildContext context) {
-    return Positioned.fill(
-      child: ColoredBox(
-        color: EqColours.ink.withValues(alpha: 0.93),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: EqSpacing.lg),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'EQ Cards',
-                  style: EqTypography.headingL.copyWith(
-                    color: EqColours.sky,
+    return Positioned(
+      bottom: 0,
+      left: 0,
+      right: 0,
+      child: SafeArea(
+        top: false,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            border: const Border(
+              top: BorderSide(color: Color(0x1A000000)),
+            ),
+          ),
+          padding: const EdgeInsets.fromLTRB(
+            EqSpacing.md,
+            EqSpacing.md,
+            EqSpacing.md,
+            EqSpacing.lg,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text.rich(
+                TextSpan(
+                  style: EqTypography.bodyS.copyWith(
+                    color: const Color(0xFF555555),
+                    height: 1.55,
                   ),
-                ),
-                const SizedBox(height: EqSpacing.lg),
-                Text(
-                  'Before you open your wallet',
-                  style: EqTypography.headingM.copyWith(
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: EqSpacing.md),
-                Text(
-                  'EQ Cards stores your professional credentials — licences, '
-                  'qualifications, and identity documents — so your employer '
-                  'can verify them when required.\n\n'
-                  'By continuing, you consent to EQ Solutions collecting and '
-                  'storing this information in accordance with the Australian '
-                  'Privacy Act 1988. Your data is encrypted, hosted in '
-                  'Australia, and shared only with employers you connect to.',
-                  style: EqTypography.bodyM.copyWith(
-                    color: Colors.white.withValues(alpha: 0.80),
-                    height: 1.65,
-                  ),
-                ),
-                const SizedBox(height: EqSpacing.sm),
-                GestureDetector(
-                  onTap: () => context.push(Routes.privacyPolicy),
-                  child: Text(
-                    'Read our Privacy Policy →',
-                    style: EqTypography.bodyS.copyWith(color: EqColours.sky),
-                  ),
-                ),
-                const SizedBox(height: EqSpacing.xl),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: _saving ? null : _agree,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: EqColours.sky,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor:
-                          EqColours.sky.withValues(alpha: 0.5),
-                      padding:
-                          const EdgeInsets.symmetric(vertical: EqSpacing.md),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                  children: [
+                    const TextSpan(
+                      text: 'EQ Cards stores your credentials so employers '
+                          'can verify them. By using your wallet you agree to '
+                          'our ',
+                    ),
+                    WidgetSpan(
+                      alignment: PlaceholderAlignment.baseline,
+                      baseline: TextBaseline.alphabetic,
+                      child: GestureDetector(
+                        onTap: () => context.push(Routes.privacyPolicy),
+                        child: Text(
+                          'Privacy Policy',
+                          style: EqTypography.bodyS.copyWith(
+                            color: EqColours.sky,
+                            height: 1.55,
+                          ),
+                        ),
                       ),
                     ),
-                    child: _saving
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text('I agree and continue'),
+                    const TextSpan(text: '.'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: EqSpacing.sm),
+              FilledButton(
+                onPressed: _saving ? null : _agree,
+                style: FilledButton.styleFrom(
+                  backgroundColor: EqColours.sky,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: EqColours.sky.withValues(alpha: 0.5),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: EqSpacing.sm + 1),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-              ],
-            ),
+                child: _saving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('I agree'),
+              ),
+            ],
           ),
         ),
       ),
