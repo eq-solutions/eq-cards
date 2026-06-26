@@ -16,6 +16,8 @@ import '../../../../core/validators/input_validators.dart';
 import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_button.dart';
 import '../../../../core/widgets/eq_text_field.dart';
+import '../../../../core/privacy/collection_notice_prefs.dart';
+import '../../../../core/widgets/collection_notice_banner.dart';
 import '../../data/models/profile.dart';
 import '../notifiers/profile_notifier.dart';
 
@@ -42,6 +44,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   DateTime? _dateOfBirth;
   bool _saving = false;
   bool _hydrated = false;
+  bool _showProfileNotice = false;
   String? _error;
 
   /// The profile as it was when the screen loaded. Used at save time to
@@ -57,7 +60,9 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     // fireImmediately=true handles both: data already cached (fires at once)
     // and data arriving later (SSO session establishing after initState).
     // addPostFrameCallback ensures ref is in a stable post-build state.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final noticeSeen = await CollectionNoticePrefs.isProfileSeen();
+      if (mounted && !noticeSeen) setState(() => _showProfileNotice = true);
       ref.listenManual(
         profileNotifierProvider,
         (_, next) {
@@ -249,6 +254,16 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
             child: ListView(
             padding: const EdgeInsets.all(EqSpacing.md),
             children: [
+              if (_showProfileNotice)
+                CollectionNoticeBanner(
+                  message:
+                      'Your profile is stored in Australia (Supabase Sydney). '
+                      'Only you can see it unless you choose to share.',
+                  onDismiss: () {
+                    setState(() => _showProfileNotice = false);
+                    CollectionNoticePrefs.setProfileSeen();
+                  },
+                ),
               _SectionHeader('You'),
               EqTextField(controller: _fullName, label: 'Full name'),
               const SizedBox(height: EqSpacing.md),

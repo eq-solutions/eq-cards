@@ -22,6 +22,8 @@ import '../../../../core/widgets/eq_text_field.dart';
 import '../../data/licence_repository.dart';
 import '../../data/models/licence_type.dart';
 import '../../data/ocr_service.dart';
+import '../../../../core/privacy/collection_notice_prefs.dart';
+import '../../../../core/widgets/collection_notice_banner.dart';
 import '../../data/sensitive_licence_types.dart';
 import '../helpers/licence_crop.dart';
 import '../notifiers/licence_types_provider.dart';
@@ -67,6 +69,7 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
 
   bool _saving = false;
   bool _loading = true;
+  bool _showPhotoUploadNotice = false;
   String? _error;
 
   bool get _isEdit => widget.licenceId != null;
@@ -163,7 +166,12 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
       _issueDate = ocr?.issueDateCandidate;
       _expiryDate = ocr?.expiryDateCandidate;
       _pendingFront = pre?.photoBytes;
-      setState(() => _loading = false);
+      final photoNoticeSeen =
+          await CollectionNoticePrefs.isPhotoUploadSeen();
+      setState(() {
+        _loading = false;
+        _showPhotoUploadNotice = !photoNoticeSeen;
+      });
     }
   }
 
@@ -443,6 +451,16 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
           child: ListView(
             padding: const EdgeInsets.all(EqSpacing.md),
             children: [
+              if (!_isEdit && _showPhotoUploadNotice)
+                CollectionNoticeBanner(
+                  message:
+                      'Uploading a photo sends it to Anthropic (USA) to read '
+                      'the text fields. Anthropic does not keep the photo.',
+                  onDismiss: () {
+                    setState(() => _showPhotoUploadNotice = false);
+                    CollectionNoticePrefs.setPhotoUploadSeen();
+                  },
+                ),
               // OCR-prefill verify banner — when fields were populated from
               // a Claude Vision response, prompt the user to double-check
               // before saving. Without this users assume OCR is correct
