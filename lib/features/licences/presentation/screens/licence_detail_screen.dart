@@ -106,6 +106,21 @@ class LicenceDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _showShareSheet(BuildContext context, Licence licence) async {
+    // A private licence is hidden from the employer AND excluded from public QR
+    // sharing — the share-licence endpoint 404s it server-side. Don't present a
+    // share that resolves to "not found": explain the state and point to where
+    // it can be changed.
+    if (licence.isPrivate) {
+      unawaited(
+        AnalyticsService.track(
+          'qr_share_blocked_private',
+          {'licence_id': licence.id ?? ''},
+        ),
+      );
+      await _showPrivateShareBlockedSheet(context);
+      return;
+    }
+
     final url = 'https://cards.eq.solutions/share?licence_id=${licence.id}';
     unawaited(
       AnalyticsService.track('qr_generated', {'licence_id': licence.id ?? ''}),
@@ -147,6 +162,58 @@ class LicenceDetailScreen extends ConsumerWidget {
                   value: url,
                   label: 'Share link',
                 ),
+                fullWidth: true,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Shown when the user taps Share on a licence they've marked private.
+  /// Private licences are excluded from QR sharing (and 404 server-side), so
+  /// rather than a dead QR we explain why and offer a path to change it.
+  Future<void> _showPrivateShareBlockedSheet(BuildContext context) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: EqColours.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(EqSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.lock_outline, color: EqColours.deep),
+                  const SizedBox(width: EqSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      'This licence is private',
+                      style: EqTypography.headingM,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: EqSpacing.sm),
+              Text(
+                "You've marked this licence private, so it's hidden from your "
+                "employer and can't be shared by QR. Make it public from the "
+                'edit screen to share a verification link.',
+                style: EqTypography.bodyM.copyWith(color: EqColours.grey),
+              ),
+              const SizedBox(height: EqSpacing.lg),
+              EqButton(
+                label: 'Edit licence',
+                onPressed: () {
+                  Navigator.of(sheetContext).pop();
+                  context.go(Routes.licenceEditFor(licenceId));
+                },
                 fullWidth: true,
               ),
             ],

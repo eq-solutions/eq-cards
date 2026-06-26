@@ -36,8 +36,9 @@ It does **not** cover:
 We collect only what's needed to operate the wallet.
 
 ### 3.1 Account information
-- Email address — used as the unique sign-in identifier
-- One-time codes sent to that email (consumed at sign-in, not stored)
+- **Mobile phone number** — the primary sign-in identifier. A one-time code is sent to it by **SMS** (delivered via Twilio — see §6).
+- Email address — used for notifications and as an alternative sign-in identifier, where you provide one.
+- One-time codes (SMS or email) — consumed at sign-in, not stored.
 
 ### 3.2 Profile information
 - Full name
@@ -106,7 +107,7 @@ You enter your information into the app, or upload photos via the camera or file
 When you upload a licence photo, we send the photo to **Anthropic's Claude Vision API** to extract the structured fields (licence number, dates, authority, etc.). The photo is processed and the result returned; Anthropic does not retain the photo for training (per their commercial API terms). See §6 for overseas-disclosure detail.
 
 ### 5.3 Automatic collection
-Analytics and crash reports are collected automatically by SDKs running in the app. You can disable analytics in Settings → Privacy (planned for v1.1).
+Analytics and crash reports are collected automatically by SDKs running in the app. You can disable analytics and crash reporting at any time in **Settings → Privacy**; once disabled, no further events are sent to the relevant processor.
 
 ### 5.4 What we do not do
 - We do not buy data from third parties.
@@ -121,11 +122,14 @@ We use third-party processors. Each is bound by their own contractual obligation
 
 | Service | Data | Location | Transferred outside Australia? |
 |---|---|---|---|
-| **Supabase** (database, storage, auth, transactional email for sign-in OTPs) | Profile, licences, photos, audit log, email + OTP | Sydney (Australia) — `ap-southeast-2` region for app data; Supabase Auth's transactional mailer routes the OTP email via their infrastructure | No — primary data in AU; the OTP-delivery mail server hop is operated by Supabase |
+| **Supabase** (database, storage, auth, transactional email for email sign-in codes) | Profile, licences, photos, audit log, email + OTP | Sydney (Australia) — `ap-southeast-2` region for app data; Supabase Auth's transactional mailer routes any email OTP via their infrastructure | No — primary data in AU; the email OTP-delivery mail-server hop is operated by Supabase |
+| **Twilio** (SMS delivery for sign-in one-time codes) | Your **mobile phone number** and the one-time code | United States | **Yes** — your mobile number is sent to Twilio (USA) each time you request an SMS sign-in code |
 | **Anthropic Claude Vision** (OCR) | Licence photo bytes (transient) | United States | Yes — photo sent for OCR processing, not retained |
-| **PostHog** (analytics) | Event names, properties, anonymous device ID, signed-in user UUID | Frankfurt, Germany (EU region) | Yes |
-| **Sentry** (crash reporting) | Stack traces, occasional URL/screen context | Frankfurt, Germany (EU region) | Yes |
+| **PostHog** (analytics) | Event names, properties, anonymous device ID, your signed-in user UUID **and email address** | Frankfurt, Germany (EU region) | Yes |
+| **Sentry** (crash reporting) | Stack traces, occasional URL/screen context, and (in diagnostic breadcrumbs) your **mobile number** | Frankfurt, Germany (EU region) | Yes |
 | **Netlify** (hosting) | Web app static assets (no personal info on the host) | United States CDN | Yes (hosting only) |
+
+> Analytics and crash reporting (PostHog, Sentry) are only sent if you leave them enabled — you can turn each off in **Settings → Privacy**, which stops all further events to that processor.
 
 **Overseas disclosure consent:** by using EQ Cards, you consent to your information being disclosed to the overseas recipients above for the purposes described in §4. If you object to overseas disclosure, please do not use the service.
 
@@ -140,7 +144,7 @@ We have taken reasonable steps (contractual review of each provider's privacy an
 - **Row-level security:** every database row is scoped to the authenticated user; RLS policies enforce this in the database layer, not just the app layer.
 - **Photo URLs:** licence photos are served via 1-hour signed URLs, not public links.
 - **EXIF stripping:** GPS/location metadata is removed from photos before upload.
-- **Authentication:** email + 6-digit OTP via Supabase Auth. We do not store passwords.
+- **Authentication:** mobile number + 6-digit SMS one-time code via Supabase Auth (email one-time code also supported). We do not store passwords.
 - **Biometric unlock:** optional Face ID / fingerprint gate on the app itself (mobile only).
 - **Access controls:** internally, only the named directors (Royce Milmlow, Emma Curth) have administrative access to the production Supabase project. Access is logged.
 
@@ -172,7 +176,7 @@ Under the Australian Privacy Principles you may:
 - **Access** the personal information we hold about you. The app already shows you everything we hold. You can also generate a machine-readable JSON export of your profile + licences in-app via **Settings → Export my data**, or request the same by emailing the privacy contact above.
 - **Correct** inaccurate information. Edit the relevant field in the app, or email the privacy contact.
 - **Delete your account.** Settings → Sign out → email the privacy contact requesting deletion. We will hard-delete all data within 30 days and confirm by email. Note: deleting the account does not retroactively scrub analytics events that were generated under your distinct user ID — those are anonymised but retained per the table in §8. You may separately request the anonymised analytics record be deleted; we will comply within 30 days.
-- **Object** to processing for analytics or crash reporting. You can disable each in Settings → Privacy (planned for v1.1). Until that ships, email the privacy contact and we will exclude your account.
+- **Object** to processing for analytics or crash reporting. You can disable each at any time in **Settings → Privacy**. You may also email the privacy contact and we will exclude your account.
 - **Withdraw consent** for overseas disclosure by ceasing to use the service. We cannot retroactively recall data already disclosed under your prior consent, but we will not disclose further.
 
 We will respond to requests within 30 days.
