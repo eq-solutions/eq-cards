@@ -1,9 +1,9 @@
 # EQ Cards — Privacy Policy
 
 **Effective date:** 2026-04-29
-**Version:** 1.0 (template — pending Australian privacy-lawyer review)
+**Version:** 1.1 (pre-lawyer review — revised 2026-06-27 per Privacy and Other Legislation Amendment Act 2024)
 
-> ⚠ **This document is a working template, not legal advice.** It was drafted to comply with the Australian Privacy Act 1988 (Cth) and the Australian Privacy Principles (APPs), but **must be reviewed by a qualified Australian privacy lawyer before being published as the public-facing policy**. Webb Financial (the entity's accountant) handles tax, not privacy law — different specialist required.
+> ⚠ **This document is a working template, not legal advice.** It was drafted to comply with the Australian Privacy Act 1988 (Cth) and the Australian Privacy Principles (APPs), including amendments in force from 11 December 2024 under the Privacy and Other Legislation Amendment Act 2024, but **must be reviewed by a qualified Australian privacy lawyer before being published as the public-facing policy**. Webb Financial (the entity's accountant) handles tax, not privacy law — different specialist required.
 
 ---
 
@@ -17,7 +17,7 @@ EQ Cards is a product of **CDC Solutions Pty Ltd** (trading as **EQ Solutions**)
 - **Directors:** Royce Milmlow, Emma Curth
 - **Privacy contact:** contact@eq.solutions
 
-We are an APP entity under the Australian Privacy Act 1988 (Cth) and we comply with the 13 Australian Privacy Principles.
+We are an APP entity under the Australian Privacy Act 1988 (Cth) and we comply with the 13 Australian Privacy Principles as amended.
 
 ---
 
@@ -47,7 +47,7 @@ We collect only what's needed to operate the wallet.
 - Postal/residential address (street, suburb, state, postcode)
 - Emergency contact (name, relationship, mobile)
 
-You decide which of these to enter. None are mandatory beyond the email address used for sign-in.
+You decide which of these to enter. None are mandatory beyond the mobile number used for sign-in.
 
 ### 3.3 Licence and certificate information
 - Licence type (e.g. White Card, driver licence, HLTAID first aid)
@@ -58,14 +58,18 @@ You decide which of these to enter. None are mandatory beyond the email address 
 - Type-specific metadata you enter (e.g. driver-class, forklift-class)
 - Free-text notes you add
 
+### 3.3a Government-related identifiers
+
+Some licence information we hold constitutes government-related identifiers under APP 9 — for example, driver licence numbers, passport numbers, WWCC numbers, and police check references. We do not adopt these as our own identifier for you, use them for any purpose other than displaying and sharing them on your instruction, or disclose them except as described in §6. This is consistent with our obligations under APP 9.
+
 ### 3.4 Sensitive information
 
-Some licences are or may contain **sensitive information** under section 6 of the Privacy Act:
+Some licences contain **sensitive information** as defined in section 6 of the Privacy Act 1988. This includes:
 
-- **Medicare card details** are health-adjacent identifying information.
-- **Driver licence photos** contain a portrait that could be used for biometric identification (we do not perform any biometric matching — see §5.4).
+- **Health-adjacent credentials** — Medicare card details, first-aid certifications, WWCC numbers.
+- **Identity document photos** — photos on driver licences and passports. We do not use facial recognition or automated biometric identification on any photos you upload; photos are stored as static images. However, we treat identity document photos as sensitive information out of caution and apply heightened security to them (see §7).
 
-By uploading these, **you give us your express consent** to collect and store them for the purposes described in §4. You can delete any licence at any time (§9).
+**Consent requirement.** We will seek your express consent within the app at the point you first upload each document in a sensitive category, before any sensitive information is collected. A brief consent prompt will describe what is being collected and why. You may withdraw consent at any time by deleting the relevant licence from your wallet. Uploading a sensitive document without completing the in-app consent prompt is not possible.
 
 ### 3.5 Information we automatically collect
 - **Analytics events** describing your interactions with the app (e.g. "tap-to-copy a field", "add a licence"). These do not contain the values you copy or the contents of your fields — only that an action happened. Sent to PostHog (see §6).
@@ -85,16 +89,24 @@ By uploading these, **you give us your express consent** to collect and store th
 
 | Information | Purpose |
 |---|---|
-| Email + OTP | Authenticate you as the account owner |
+| Mobile + OTP | Authenticate you as the account owner |
 | Profile fields | Render the wallet; tap-to-copy onto induction forms; emergency contact display |
 | Licence data + photos | Display your licences; share with sites/employers when you choose to |
-| Sensitive info (Medicare etc.) | Same as licence data — only because you've added it to your wallet |
-| Analytics events | Improve the product. Identify which features work, which break |
-| Crash reports | Diagnose and fix bugs |
+| Sensitive info (Medicare etc.) | Same as licence data — only because you've added it to your wallet, with your express consent |
+| Analytics events | Improve the product. Identify which features work, which break (secondary purpose — see §4a) |
+| Crash reports | Diagnose and fix bugs (secondary purpose — see §4a) |
 
 We will not use your information for any other purpose without your consent.
 
 We do **not** sell your information. We do **not** use it for advertising. We do **not** disclose it to data brokers.
+
+**Analytics and crash reporting as secondary purposes (APP 6).** Analytics and error tracking are secondary purposes for personal information collected primarily for the wallet and credentialing function. By using EQ Cards you consent to this secondary use, and we disclose it upfront so it forms part of your informed consent at account creation. You may opt out of analytics and crash reporting via **Settings → Privacy** without affecting core wallet functionality. Opting out means we cannot collect information used solely for product improvement and debugging.
+
+### 4a. Automated processing
+
+Some features of EQ Cards involve automated processing of your information — for example, OCR to pre-fill licence fields from uploaded photos, and automated expiry reminders sent before a licence expires. These automated processes are designed to assist you and do not constitute decisions that significantly affect your legal rights or interests.
+
+We will update this policy before December 2026 with full disclosures required under APP 1.7 as introduced by the Privacy and Other Legislation Amendment Act 2024, which regulates automated decision-making that significantly affects individual rights.
 
 ---
 
@@ -114,6 +126,9 @@ Analytics and crash reports are collected automatically by SDKs running in the a
 - We do not perform face recognition on uploaded photos.
 - We do not infer biometric templates from photos.
 
+### 5.5 Collection notices (APP 5)
+At or before each material collection event — account creation, profile setup, and first upload of each licence category — the app displays a brief collection notice stating the purpose, who will see the information, and how to withdraw. This notice is separate from this policy. The Privacy Policy is not a substitute for these collection-specific notices and does not by itself satisfy APP 5.
+
 ---
 
 ## 6. Where your information is stored and disclosed
@@ -122,16 +137,16 @@ We use third-party processors. Each is bound by their own contractual obligation
 
 | Service | Data | Location | Transferred outside Australia? |
 |---|---|---|---|
-| **Supabase** (database, storage, auth, transactional email for email sign-in codes) | Profile, licences, photos, audit log, email + OTP | Sydney (Australia) — `ap-southeast-2` region for app data; Supabase Auth's transactional mailer routes any email OTP via their infrastructure | No — primary data in AU; the email OTP-delivery mail-server hop is operated by Supabase |
-| **Twilio** (SMS delivery for sign-in one-time codes) | Your **mobile phone number** and the one-time code | United States | **Yes** — your mobile number is sent to Twilio (USA) each time you request an SMS sign-in code |
-| **Anthropic Claude Vision** (OCR) | Licence photo bytes (transient) | United States | Yes — photo sent for OCR processing, not retained |
-| **PostHog** (analytics) | Event names, properties, anonymous device ID, your signed-in user UUID **and email address** | Frankfurt, Germany (EU region) | Yes |
-| **Sentry** (crash reporting) | Stack traces, occasional URL/screen context, and (in diagnostic breadcrumbs) your **mobile number** | Frankfurt, Germany (EU region) | Yes |
+| **Supabase** (database, storage, auth) | Profile, licences, photos, audit log, email + OTP | Sydney (`ap-southeast-2`) | No — primary data in AU |
+| **Twilio** (SMS delivery for sign-in one-time codes) | Your mobile phone number and the one-time code | United States | **Yes** |
+| **Anthropic Claude Vision** (OCR) | Licence photo bytes (transient) | United States | **Yes** |
+| **PostHog** (analytics) | Event names, properties, anonymous device ID, user UUID and email address | Frankfurt, Germany (EU) | **Yes** |
+| **Sentry** (crash reporting) | Stack traces, occasional URL/screen context | Frankfurt, Germany (EU) | **Yes** |
 | **Netlify** (hosting) | Web app static assets (no personal info on the host) | United States CDN | Yes (hosting only) |
 
-> Analytics and crash reporting (PostHog, Sentry) are only sent if you leave them enabled — you can turn each off in **Settings → Privacy**, which stops all further events to that processor.
+> Analytics and crash reporting (PostHog, Sentry) are only sent if you leave them enabled — you can turn each off in **Settings → Privacy**.
 
-**Overseas disclosure consent:** by using EQ Cards, you consent to your information being disclosed to the overseas recipients above for the purposes described in §4. If you object to overseas disclosure, please do not use the service.
+**Overseas disclosure and your rights.** Where we disclose your personal information to overseas recipients (see table above), we take reasonable steps under APP 8.1 to ensure each recipient is contractually obligated to handle your information consistently with the Australian Privacy Principles. We note that where you consent to overseas disclosure under this policy, the Australian Privacy Principles may not apply to the overseas recipient's handling of your information, and you may have limited recourse under Australian law. Where we have not relied on your consent and have instead relied on taking reasonable steps under APP 8.1, we retain accountability for breaches by overseas recipients as if they were our own (s16C, Privacy Act 1988). If you do not consent to overseas disclosure, you cannot use EQ Cards — the service depends on these processors. By creating an account, you confirm you understand and accept this.
 
 We have taken reasonable steps (contractual review of each provider's privacy and security practices) to ensure they handle your information consistently with the Australian Privacy Principles.
 
@@ -139,6 +154,7 @@ We have taken reasonable steps (contractual review of each provider's privacy an
 
 ## 7. How we secure your information
 
+**Technical security measures:**
 - **Encryption in transit:** all communication uses HTTPS / TLS 1.2+.
 - **Encryption at rest:** Supabase encrypts the database and storage with AES-256.
 - **Row-level security:** every database row is scoped to the authenticated user; RLS policies enforce this in the database layer, not just the app layer.
@@ -146,9 +162,17 @@ We have taken reasonable steps (contractual review of each provider's privacy an
 - **EXIF stripping:** GPS/location metadata is removed from photos before upload.
 - **Authentication:** mobile number + 6-digit SMS one-time code via Supabase Auth (email one-time code also supported). We do not store passwords.
 - **Biometric unlock:** optional Face ID / fingerprint gate on the app itself (mobile only).
-- **Access controls:** internally, only the named directors (Royce Milmlow, Emma Curth) have administrative access to the production Supabase project. Access is logged.
 
-No system is perfectly secure. We will notify you and the Office of the Australian Information Commissioner (OAIC) of any eligible data breach as required by the Notifiable Data Breaches scheme.
+**Organisational security measures (APP 11.3):**
+- Mandatory privacy and security training for all personnel with access to personal information.
+- Documented access management policies restricting personal data access to those with a genuine operational need. Internally, only the named directors (Royce Milmlow, Emma Curth) have administrative access to the production Supabase project. Access is logged.
+- A formal incident response and data breach assessment procedure (see NDB commitment below).
+- Contractual data processing agreements with all third-party processors requiring equivalent security and data-handling standards.
+- Periodic security reviews including vulnerability assessments.
+
+**Data breach notification (NDB scheme).** If we become aware of grounds to suspect an eligible data breach — that is, unauthorised access to, or disclosure of, your personal information that is likely to result in serious harm — we will assess the incident within 30 days as required under Part IIIC of the Privacy Act 1988. If we form reasonable grounds to believe an eligible data breach has occurred, we will notify the Office of the Australian Information Commissioner (OAIC) and all affected individuals as soon as practicable after completing that assessment. Our notification to you will include: a description of the breach; the kinds of information involved; what serious harm you may face; and steps you can take to reduce that risk. We may notify you directly by email or SMS, or by prominent notice on our website and in the app where direct contact is impracticable.
+
+No system is perfectly secure. We will comply with all notification obligations under the Notifiable Data Breaches scheme.
 
 ---
 
@@ -179,13 +203,17 @@ Under the Australian Privacy Principles you may:
 - **Object** to processing for analytics or crash reporting. You can disable each at any time in **Settings → Privacy**. You may also email the privacy contact and we will exclude your account.
 - **Withdraw consent** for overseas disclosure by ceasing to use the service. We cannot retroactively recall data already disclosed under your prior consent, but we will not disclose further.
 
-We will respond to requests within 30 days.
+We will respond to all access and correction requests within 30 days.
+
+**Grounds for refusing access (APP 12.3).** We may decline an access request where giving access would pose a serious threat to the safety of any person, unreasonably impact another person's privacy, or is subject to legal privilege. Where we refuse or limit access, we will provide written reasons and advise you of your right to complain to the OAIC.
 
 ---
 
 ## 10. Children
 
-EQ Cards is intended for **users aged 18 and over** (the wallet typically holds work-related licences, which presupposes adult employment). We do not knowingly collect information from children under 18. If you become aware that a child has provided us with personal information, please contact us; we will delete the information.
+EQ Cards is intended for **users aged 18 and over** (the wallet holds work-related licences, which presupposes adult employment). By creating an account you represent that you are 18 or over. We do not knowingly collect personal information from persons under 18. If we become aware that a person under 18 has created an account, we will delete that account and associated data promptly.
+
+Note: the OAIC is developing a Children's Online Privacy Code (due by December 2026) — we will update our age-verification practices and this policy to comply when the Code is registered.
 
 ---
 

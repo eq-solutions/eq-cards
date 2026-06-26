@@ -1,15 +1,15 @@
 # EQ Cards — Terms of Use
 
 **Effective date:** 2026-04-29
-**Version:** 1.0 (template — pending Australian commercial-lawyer review)
+**Version:** 1.1 (pre-lawyer review — revised 2026-06-27 per ACL s64A review and Privacy and Other Legislation Amendment Act 2024)
 
-> ⚠ **This document is a working template, not legal advice.** Review by a qualified Australian commercial / consumer-law lawyer required before public release.
+> ⚠ **This document is a working template, not legal advice.** Review by a qualified Australian commercial / consumer-law lawyer is required before public release. Specific questions for lawyer review are flagged inline with **[LAWYER:]** markers.
 
 ---
 
 ## 1. Agreement
 
-By using EQ Cards, you agree to these Terms of Use and to the [Privacy Policy](PRIVACY-POLICY.md). If you don't agree, please don't use the service.
+By using EQ Cards, you agree to these Terms of Use and to the [Privacy Policy](privacy-policy.md). If you don't agree, please don't use the service.
 
 EQ Cards is provided by **CDC Solutions Pty Ltd** (trading as **EQ Solutions**) — referred to as "we", "us", "our". You are referred to as "you", "your".
 
@@ -25,7 +25,7 @@ We are not a substitute for the original licence document. The wallet is a **con
 
 ## 3. Eligibility
 
-You must be **18 years or older** to use EQ Cards. By using the service you represent that you are.
+You must be **18 years or older** to use EQ Cards. By using the service you represent that you are 18 or over.
 
 If you are using the wallet on behalf of an employer, you represent that you have the employer's authority to do so.
 
@@ -62,7 +62,7 @@ You retain ownership of everything you enter — your profile, your licences, yo
 
 - Store them on your behalf
 - Display them back to you
-- Transmit them to the third-party processors listed in the [Privacy Policy](PRIVACY-POLICY.md) §6 for the purposes described there (sign-in one-time code delivery by SMS/email, OCR, analytics, crash reporting)
+- Transmit them to the third-party processors listed in the [Privacy Policy](privacy-policy.md) §6 for the purposes described there
 - Generate derived data (e.g. parsed licence-number text from a photo) for your use
 
 We do not claim ownership. We do not sell or relicense your content. The licence ends when you delete the content or delete your account.
@@ -73,26 +73,28 @@ We do not claim ownership. We do not sell or relicense your content. The licence
 
 We aim to keep EQ Cards available, but we do not guarantee uninterrupted access. The service may be unavailable due to maintenance, outages of third-party providers (Supabase, Anthropic, PostHog, Sentry, Netlify), or events outside our reasonable control.
 
-We do not back up your data outside Supabase's own redundancy. **You should keep the original physical licences as the system of record.**
+We rely on Supabase's managed infrastructure for data storage and redundancy, which includes automated database backups. We do not operate additional independent backups beyond Supabase's own infrastructure. **We strongly recommend you retain your original physical licences as your system of record** — EQ Cards is a convenience layer, not a primary document store. In the event of data loss, we will take reasonable steps to notify you promptly and assist with data restoration within the limits of available backups.
 
 ---
 
 ## 8. OCR accuracy
 
-The licence-photo magic-scanner uses Anthropic Claude Vision. It's accurate but not perfect.
+The licence-photo scanner uses **Anthropic Claude Vision**. OCR is a best-effort tool — it is accurate in most cases but not infallible, particularly with worn, partially obscured, or non-standard documents.
 
 - Always **review the pre-filled fields** before saving a new licence.
-- We are not liable for errors caused by incorrect OCR output that you saved without correction.
-- The wallet displays exactly what you saved. If you tap-to-copy a wrong licence number onto an induction form, that's on you.
+- The wallet displays exactly what you save.
+
+We apply due care and skill in selecting and integrating OCR technology, consistent with our obligations under the Australian Consumer Law. We are not responsible for data inaccuracies arising from pre-filled fields that you did not review and correct before saving.
 
 ---
 
 ## 9. Sharing licences with sites
 
-EQ Cards lets you share licence data with third parties (sites, employers, principal contractors) via tap-to-copy or, in future versions, share-link / QR code.
+EQ Cards lets you share licence data with third parties (sites, employers, principal contractors) via tap-to-copy or share-link / QR code.
 
 When you do this:
 - You decide which fields to share. We don't share anything without your action.
+- We recommend you share only the specific fields or documents required by the requesting site — share the minimum necessary for the purpose.
 - Once shared, the data is in the third party's hands. We have no control over how they use, store, or disclose it.
 - The third party's privacy policy applies to the shared data.
 
@@ -112,17 +114,19 @@ We don't give legal, professional, safety, or compliance advice. Consult the rel
 
 ## 11. Liability
 
-Nothing in these Terms excludes liability that cannot lawfully be excluded under the Australian Consumer Law (ACL). Where we are entitled to limit liability, we limit it to:
+**Australian Consumer Law.** Our services come with non-excludable guarantees under the Australian Consumer Law (ACL), including that services will be rendered with due care and skill (s60 ACL). Nothing in these Terms excludes or modifies those guarantees.
 
-- For services: re-supplying the service, or refunding the price you paid (which is currently zero — EQ Cards is provided free during the Phase 1 / pause-and-polish window)
-- For goods: replacement, repair, or refund
+**[LAWYER: Confirm whether s64A ACL applies to this service — it may only apply to B2B services or services not ordinarily for personal/domestic use. If EQ Cards users are "consumers" under the ACL, the s64A remedy cap may not be available and this clause should be simplified to preserve ACL rights only.]**
 
-Subject to non-excludable rights, **we are not liable** for:
+To the extent permitted by law and consistent with s64A of the ACL (where applicable), where a defect in our service causes loss and a remedy is available, our liability is limited to: supplying the affected service again, or providing equivalent alternative access to your data while the issue is resolved. EQ Cards is currently provided at no charge; we cannot offer a monetary refund as a remedy.
 
-- Indirect, consequential, or special loss (lost profits, lost contracts, lost work-time)
-- Loss caused by your reliance on inaccurate OCR output that you didn't correct
-- Loss caused by third-party processor outages
-- Loss caused by you sharing licence data with a third party
+Subject to the non-excludable ACL guarantees, and to the fullest extent permitted by law, we are not liable for:
+
+- (a) indirect, consequential, special or incidental loss (including lost profits, lost contracts, lost work-time)
+- (b) loss of data beyond what can be recovered from available backups
+- (c) loss caused by your reliance on OCR output that you did not review and correct before saving
+- (d) loss caused by third-party processor outages
+- (e) loss caused by your decision to share licence data with a third party
 
 ---
 
@@ -130,13 +134,22 @@ Subject to non-excludable rights, **we are not liable** for:
 
 You can stop using EQ Cards at any time. To delete your account and all data, see Privacy Policy §9.
 
-We may suspend or terminate your access if you breach these Terms, or if continued provision becomes unlawful or impractical. We will give you reasonable notice unless the breach is severe.
+**We may suspend or terminate your access** where:
+- (a) you breach these Terms and do not remedy the breach within 14 days of written notice from us;
+- (b) your use of EQ Cards becomes unlawful; or
+- (c) we discontinue the service, in which case we will provide no less than **30 days' advance notice** and offer you a full data export via **Settings → Export my data**.
+
+We may immediately suspend access without notice where we reasonably believe continued access poses a material security risk or involves serious criminal conduct. In all cases, your right to export your data under Privacy Policy §9 survives termination.
 
 ---
 
 ## 13. Changes
 
-We may update these Terms. The "Effective date" at the top changes when we do. For material changes we will notify you in-app and via email at least 14 days before the change takes effect. By continuing to use the service after a non-material change, you accept the updated Terms.
+We may update these Terms. The "Effective date" at the top changes when we do.
+
+For **material changes** (changes to data handling, liability, or user rights), we will notify you by in-app notification and email at least **14 days** before the changes take effect, and we will ask you to affirmatively accept the updated Terms before continuing.
+
+For **non-material changes** (typographical corrections, clarifications that do not reduce your rights, new features described in updated sections), the effective date will be updated and changes will take effect on the stated date. If you disagree with any change, you may delete your account before the effective date.
 
 ---
 
