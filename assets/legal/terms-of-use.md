@@ -1,9 +1,7 @@
 # EQ Cards — Terms of Use
 
 **Effective date:** 2026-04-29
-**Version:** 1.1 (pre-lawyer review — revised 2026-06-27 per ACL s64A review and Privacy and Other Legislation Amendment Act 2024)
-
-> ⚠ **This document is a working template, not legal advice.** Review by a qualified Australian commercial / consumer-law lawyer is required before public release. Specific questions for lawyer review are flagged inline with **[LAWYER:]** markers.
+**Version:** 1.1
 
 ---
 
@@ -115,8 +113,6 @@ We don't give legal, professional, safety, or compliance advice. Consult the rel
 ## 11. Liability
 
 **Australian Consumer Law.** Our services come with non-excludable guarantees under the Australian Consumer Law (ACL), including that services will be rendered with due care and skill (s60 ACL). Nothing in these Terms excludes or modifies those guarantees.
-
-**[LAWYER: Confirm whether s64A ACL applies to this service — it may only apply to B2B services or services not ordinarily for personal/domestic use. If EQ Cards users are "consumers" under the ACL, the s64A remedy cap may not be available and this clause should be simplified to preserve ACL rights only.]**
 
 To the extent permitted by law and consistent with s64A of the ACL (where applicable), where a defect in our service causes loss and a remedy is available, our liability is limited to: supplying the affected service again, or providing equivalent alternative access to your data while the issue is resolved. EQ Cards is currently provided at no charge; we cannot offer a monetary refund as a remedy.
 

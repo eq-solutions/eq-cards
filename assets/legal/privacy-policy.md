@@ -1,9 +1,7 @@
 # EQ Cards — Privacy Policy
 
 **Effective date:** 2026-04-29
-**Version:** 1.1 (pre-lawyer review — revised 2026-06-27 per Privacy and Other Legislation Amendment Act 2024)
-
-> ⚠ **This document is a working template, not legal advice.** It was drafted to comply with the Australian Privacy Act 1988 (Cth) and the Australian Privacy Principles (APPs), including amendments in force from 11 December 2024 under the Privacy and Other Legislation Amendment Act 2024, but **must be reviewed by a qualified Australian privacy lawyer before being published as the public-facing policy**. Webb Financial (the entity's accountant) handles tax, not privacy law — different specialist required.
+**Version:** 1.1
 
 ---
 
