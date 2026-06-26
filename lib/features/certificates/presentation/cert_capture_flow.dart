@@ -65,7 +65,7 @@ Future<void> certCaptureFlow(BuildContext context, WidgetRef ref) async {
   final loadingDialog = showDialog<bool>(
     context: context,
     barrierDismissible: false,
-    builder: (_) => const OcrLoadingDialog(noun: 'certificate'),
+    builder: (_) => const OcrLoadingDialog(noun: 'document'),
   );
 
   var bytes = rawBytes;

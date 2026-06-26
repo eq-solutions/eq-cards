@@ -33,7 +33,7 @@ class CertificateDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: EqAppBar(
-        title: 'Certificate',
+        title: 'Document',
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_outlined),
@@ -65,7 +65,7 @@ class CertificateDetailScreen extends ConsumerWidget {
         data: (certs) {
           final match = certs.where((c) => c.id == certificateId).toList();
           if (match.isEmpty) {
-            return const Center(child: Text('Certificate not found.'));
+            return const Center(child: Text('Document not found.'));
           }
           return _CertificateDetailBody(
             cert: match.first,
@@ -84,7 +84,7 @@ class CertificateDetailScreen extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete certificate?'),
+        title: const Text('Delete document?'),
         content: Text(
           'This will remove "${cert.title}" from your wallet.',
         ),
@@ -243,7 +243,7 @@ class _CertificateDetailBody extends StatelessWidget {
           TextButton(
             onPressed: onDelete,
             child: Text(
-              'Delete certificate',
+              'Delete document',
               style: EqTypography.bodyM.copyWith(color: EqColours.error),
             ),
           ),
