@@ -43,6 +43,7 @@ import '../helpers/licences_list_helpers.dart';
 import '../notifiers/licence_types_provider.dart';
 import '../notifiers/licences_list_notifier.dart';
 import '../widgets/expiry_badge.dart';
+import '../widgets/wallet_completion_nudge.dart';
 import '../../../consent/consent_gate.dart';
 import 'licence_crop_screen.dart';
 import 'licence_edit_screen.dart';
@@ -330,6 +331,12 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
                       const CompleteProfileBanner(),
                       const PendingConnectionsBanner(),
                       const _ConnectNudgeBanner(),
+                      if (items.length < 6)
+                        WalletCompletionNudge(
+                          existingTypeCodes: licencesList
+                              .map((l) => l.licenceType)
+                              .toSet(),
+                        ),
                       _SearchAndFilterBar(
                         query: _query,
                         controller: _searchCtrl,
@@ -1105,6 +1112,7 @@ class _IllustrationEmpty extends StatelessWidget {
               style: EqTypography.bodyM.copyWith(color: EqColours.grey),
             ),
           ),
+          const WalletEmptySuggestions(),
         ],
       ),
     );

@@ -29,9 +29,10 @@ import 'licence_crop_screen.dart';
 import 'licence_detail_screen.dart';
 
 class LicencePrefill {
-  const LicencePrefill({this.photoBytes, this.ocr});
+  const LicencePrefill({this.photoBytes, this.ocr, this.typeCode});
   final Uint8List? photoBytes;
   final OcrExtraction? ocr;
+  final String? typeCode;
 }
 
 class LicenceEditScreen extends ConsumerStatefulWidget {
@@ -134,6 +135,8 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
       }
       if (ocr?.licenceTypeCandidate != null) {
         _typeCode = ocr!.licenceTypeCandidate;
+      } else if (pre?.typeCode != null) {
+        _typeCode = pre!.typeCode;
       }
       if (ocr?.stateCandidate != null) {
         _selectedState = ocr!.stateCandidate;
