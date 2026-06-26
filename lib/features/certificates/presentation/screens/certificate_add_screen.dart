@@ -132,12 +132,12 @@ class _CertificateAddScreenState extends ConsumerState<CertificateAddScreen> {
       if (result == null || result.files.isEmpty) return; // user cancelled
       final file = result.files.first;
       if (file.bytes == null) {
-        // Some browsers return a file entry without bytes even with
-        // withData:true — show an actionable error rather than silently
-        // dropping the selection.
+        // iOS: cloud-only files (iCloud Drive but not downloaded) return an
+        // entry without bytes. User needs to download the file first.
+        // Web: some browsers return entries without bytes for large files.
         setState(
           () => _error =
-              'Could not read the file. Try a different format or browser.',
+              'Could not read the file. On iPhone, make sure the file is downloaded to your device (no cloud icon), then try again.',
         );
         return;
       }

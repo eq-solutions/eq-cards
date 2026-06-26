@@ -60,9 +60,20 @@ class _CertificatesListScreenState
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
+              leading: const Icon(Icons.picture_as_pdf_outlined),
+              title: const Text('Upload a PDF or document'),
+              subtitle: const Text(
+                'Attach a PDF, image, or photo from your device',
+              ),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                context.go(Routes.certificateCreate);
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.document_scanner_outlined),
               title: Text(
-                kIsWeb ? 'Upload a certificate photo' : 'Scan a certificate',
+                kIsWeb ? 'Scan a certificate photo' : 'Scan a certificate',
               ),
               subtitle: const Text(
                 'First aid, working at heights, white card — OCR reads the expiry',
@@ -70,14 +81,6 @@ class _CertificatesListScreenState
               onTap: () async {
                 Navigator.of(sheetContext).pop();
                 await certCaptureFlow(context, ref);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.edit_outlined),
-              title: const Text('Enter manually'),
-              onTap: () {
-                Navigator.of(sheetContext).pop();
-                context.go(Routes.certificateCreate);
               },
             ),
             const SizedBox(height: EqSpacing.sm),
@@ -239,15 +242,15 @@ class _EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: EqSpacing.xl),
           EqButton(
-            label: kIsWeb ? 'Upload a certificate photo' : 'Scan a certificate',
-            onPressed: onScan,
+            label: 'Upload a PDF or document',
+            onPressed: onManual,
             fullWidth: true,
           ),
           const SizedBox(height: EqSpacing.sm),
           TextButton(
-            onPressed: onManual,
+            onPressed: onScan,
             child: Text(
-              'Enter manually instead',
+              kIsWeb ? 'Scan a certificate photo instead' : 'Scan a certificate instead',
               style: EqTypography.bodyM.copyWith(color: EqColours.deep),
             ),
           ),
