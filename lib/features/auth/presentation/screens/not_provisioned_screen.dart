@@ -10,6 +10,7 @@ import '../../../../core/router/routes.dart';
 import '../../../../core/theme/eq_colours.dart';
 import '../../../../core/theme/eq_spacing.dart';
 import '../../../../core/theme/eq_typography.dart';
+import '../../../workers/data/worker_self_repository.dart';
 import '../../data/auth_repository.dart';
 
 /// Shown when a user has authenticated (valid Supabase session) but has no
@@ -19,8 +20,9 @@ import '../../data/auth_repository.dart';
 ///   1. Standalone tradie — "Start my personal wallet" calls
 ///      eq_cards_auto_provision() then refreshSession(). The hook injects
 ///      tenant_id into the new JWT and the router routes to the wallet.
-///   2. Employer code — enter a join code (tenant slug) and navigate to
-///      the join-tenant flow where the worker's phone is matched to an invite.
+///   2. Company account — "Find my company account" calls
+///      eq_cards_find_invites_by_phone() (authenticated, no code needed).
+///      Single match → straight to /claim?token=. Multiple → picker sheet.
 class NotProvisionedScreen extends ConsumerStatefulWidget {
   const NotProvisionedScreen({super.key});
 
@@ -29,10 +31,14 @@ class NotProvisionedScreen extends ConsumerStatefulWidget {
       _NotProvisionedScreenState();
 }
 
+enum _FindPhase { idle, searching, noneFound, error }
+
 class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
   bool _provisioning = false;
-  String? _error;
-  final _codeController = TextEditingController();
+  String? _provisionError;
+
+  _FindPhase _findPhase = _FindPhase.idle;
+  String? _findError;
 
   @override
   void initState() {
@@ -48,26 +54,19 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
     }
   }
 
-  @override
-  void dispose() {
-    _codeController.dispose();
-    super.dispose();
-  }
-
   Future<void> _startPersonalWallet() async {
     setState(() {
       _provisioning = true;
-      _error = null;
+      _provisionError = null;
     });
     try {
       await ref.read(authRepositoryProvider).autoProvision();
       if (!mounted) return;
 
       // Verify the JWT refresh actually embedded the tenant_id. If the refresh
-      // token was stale (Refresh token is not valid — EQ-CARDS-D) the silent
-      // catch in autoProvision() leaves tenant_id absent, causing the router to
-      // bounce straight back here. Detect that and sign out so the next sign-in
-      // starts with a fresh session and the hook embeds tenant_id correctly.
+      // token was stale the silent catch in autoProvision() leaves tenant_id
+      // absent, causing the router to bounce straight back here. Sign out so
+      // the next sign-in starts with a fresh session.
       final tenantId = Supabase.instance.client.auth.currentSession
           ?.user.appMetadata['tenant_id'];
       if (tenantId != null) {
@@ -76,13 +75,9 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
         await ref.read(authRepositoryProvider).signOut();
         if (mounted) {
           context.go(Routes.email);
-          // Show a brief snackbar so the user understands why they're back at
-          // sign-in rather than silently looping.
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text(
-                'Wallet created — sign in again to open it.',
-              ),
+              content: Text('Wallet created — sign in again to open it.'),
               duration: Duration(seconds: 5),
             ),
           );
@@ -92,19 +87,56 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
       if (mounted) {
         setState(() {
           _provisioning = false;
-          _error = 'Could not set up your wallet. Please try again.';
+          _provisionError = 'Could not set up your wallet. Please try again.';
         });
       }
     }
   }
 
-  void _joinWithCode() {
-    final code = _codeController.text.trim().toLowerCase();
-    if (code.isEmpty) return;
-    // /claim?tenant= finds the worker's existing invite by phone (ClaimByPhoneScreen).
-    // /join?tenant= is open enrollment — creates a blank account and bypasses
-    // pre-loaded invite credentials. Never use /join for employer-code entry.
-    context.go('${Routes.claim}?tenant=$code');
+  Future<void> _findCompanyAccount() async {
+    setState(() {
+      _findPhase = _FindPhase.searching;
+      _findError = null;
+    });
+    try {
+      final invites = await ref
+          .read(workerSelfRepositoryProvider)
+          .findInvitesByPhone();
+
+      if (!mounted) return;
+
+      if (invites.isEmpty) {
+        setState(() => _findPhase = _FindPhase.noneFound);
+        return;
+      }
+
+      setState(() => _findPhase = _FindPhase.idle);
+
+      if (invites.length == 1) {
+        context.go('${Routes.claim}?token=${invites.first.token}');
+      } else {
+        await showModalBottomSheet<void>(
+          context: context,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          builder: (ctx) => _InvitePickerSheet(
+            invites: invites,
+            onPicked: (token) {
+              Navigator.of(ctx).pop();
+              context.go('${Routes.claim}?token=$token');
+            },
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _findPhase = _FindPhase.error;
+          _findError = 'Could not search for invites. Check your connection.';
+        });
+      }
+    }
   }
 
   @override
@@ -142,6 +174,8 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: EqSpacing.xl),
+
+                  // ── Personal wallet ──────────────────────────────────────
                   FilledButton(
                     onPressed: _provisioning ? null : _startPersonalWallet,
                     style: FilledButton.styleFrom(
@@ -159,16 +193,17 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
                           )
                         : const Text('Start my personal wallet'),
                   ),
-                  if (_error != null) ...[
+                  if (_provisionError != null) ...[
                     const SizedBox(height: EqSpacing.sm),
                     Text(
-                      _error!,
+                      _provisionError!,
                       style: EqTypography.label.copyWith(
                         color: EqColours.error,
                       ),
                       textAlign: TextAlign.center,
                     ),
                   ],
+
                   const SizedBox(height: EqSpacing.xl),
                   Row(
                     children: [
@@ -187,56 +222,128 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
                     ],
                   ),
                   const SizedBox(height: EqSpacing.lg),
-                  Text(
-                    'Have a code from your employer?',
-                    style: EqTypography.label.copyWith(color: EqColours.grey),
-                    textAlign: TextAlign.center,
+
+                  // ── Company account ──────────────────────────────────────
+                  OutlinedButton(
+                    onPressed: _findPhase == _FindPhase.searching
+                        ? null
+                        : _findCompanyAccount,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: EqColours.deep,
+                      side: const BorderSide(color: EqColours.border),
+                      minimumSize: const Size.fromHeight(48),
+                    ),
+                    child: _findPhase == _FindPhase.searching
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: EqColours.deep,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text('Find my company account'),
                   ),
-                  const SizedBox(height: EqSpacing.sm),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _codeController,
-                          decoration: const InputDecoration(
-                            hintText: 'Enter join code',
-                          ),
-                          autocorrect: false,
-                          textCapitalization: TextCapitalization.none,
-                          onSubmitted: (_) => _joinWithCode(),
-                        ),
+
+                  if (_findPhase == _FindPhase.noneFound) ...[
+                    const SizedBox(height: EqSpacing.md),
+                    Container(
+                      padding: const EdgeInsets.all(EqSpacing.md),
+                      decoration: BoxDecoration(
+                        color: EqColours.ice,
+                        borderRadius: BorderRadius.circular(8),
+                        border:
+                            Border.all(color: EqColours.sky.withAlpha(80)),
                       ),
-                      const SizedBox(width: EqSpacing.sm),
-                      SizedBox(
-                        height: 48,
-                        child: FilledButton(
-                          onPressed: _joinWithCode,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: EqColours.deep,
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                          ),
-                          child: const Icon(
-                            Icons.arrow_forward,
-                            color: Colors.white,
-                          ),
-                        ),
+                      child: Text(
+                        'No company invites found for your number. Ask your manager to send you an invite.',
+                        style:
+                            EqTypography.bodyM.copyWith(color: EqColours.grey),
+                        textAlign: TextAlign.center,
                       ),
-                    ],
-                  ),
+                    ),
+                  ] else if (_findPhase == _FindPhase.error &&
+                      _findError != null) ...[
+                    const SizedBox(height: EqSpacing.sm),
+                    Text(
+                      _findError!,
+                      style: EqTypography.label
+                          .copyWith(color: EqColours.error),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+
                   const SizedBox(height: EqSpacing.xl),
                   TextButton(
                     onPressed: () =>
                         ref.read(authRepositoryProvider).signOut(),
                     child: Text(
                       'Back to sign in',
-                      style: EqTypography.label.copyWith(color: EqColours.grey),
+                      style:
+                          EqTypography.label.copyWith(color: EqColours.grey),
                     ),
                   ),
                 ],
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Invite picker (multiple orgs) ────────────────────────────────────────────
+
+class _InvitePickerSheet extends StatelessWidget {
+  const _InvitePickerSheet({
+    required this.invites,
+    required this.onPicked,
+  });
+
+  final List<FoundInvite> invites;
+  final void Function(String token) onPicked;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: EqSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: EqSpacing.xl),
+              child: Text(
+                'Choose your company',
+                style: EqTypography.headingM.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: EqColours.ink,
+                ),
+              ),
+            ),
+            const SizedBox(height: EqSpacing.sm),
+            ...invites.map(
+              (invite) => ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: EqSpacing.xl,
+                  vertical: EqSpacing.xs,
+                ),
+                leading: const Icon(Icons.business_outlined,
+                    color: EqColours.sky),
+                title: Text(
+                  invite.orgName,
+                  style: EqTypography.bodyM
+                      .copyWith(fontWeight: FontWeight.w600),
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios,
+                    size: 14, color: EqColours.grey),
+                onTap: () => onPicked(invite.token),
+              ),
+            ),
+          ],
         ),
       ),
     );
