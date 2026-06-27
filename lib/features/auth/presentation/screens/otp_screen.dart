@@ -141,6 +141,16 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     )));
 
     if (tenant != null) {
+      // User already has an active tenant (returning user or Core-first admin).
+      // Fire-and-forget autoProvision so the __personal__ wallet membership is
+      // always created — Core admins visiting Cards for the first time will see
+      // Personal in the workspace switcher without any extra friction.
+      unawaited(
+        ref
+            .read(authRepositoryProvider)
+            .autoProvision()
+            .catchError((_) {}),
+      );
       context.go(Routes.card);
     } else if (hasPending) {
       context.go('${Routes.claim}?token=$pending');
