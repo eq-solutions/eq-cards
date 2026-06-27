@@ -15,6 +15,8 @@ sealed class Failure implements Exception {
 /// surface a retry CTA rather than a hard error.
 class NetworkFailure extends Failure {
   const NetworkFailure();
+  @override
+  String toString() => 'NetworkFailure: device offline or network unreachable';
 }
 
 /// The current session has no authenticated user. Repositories throw this
@@ -22,12 +24,16 @@ class NetworkFailure extends Failure {
 /// bounce to the auth flow.
 class NotAuthenticatedFailure extends Failure {
   const NotAuthenticatedFailure();
+  @override
+  String toString() => 'NotAuthenticatedFailure: no authenticated session';
 }
 
 /// The requested entity doesn't exist (or the user can't see it under RLS,
 /// which looks identical from the client's perspective).
 class NotFoundFailure extends Failure {
   const NotFoundFailure();
+  @override
+  String toString() => 'NotFoundFailure: resource not found';
 }
 
 /// Client-side validation failure. The [message] is intended for direct
@@ -35,6 +41,8 @@ class NotFoundFailure extends Failure {
 class ValidationFailure extends Failure {
   const ValidationFailure(this.message);
   final String message;
+  @override
+  String toString() => 'ValidationFailure: $message';
 }
 
 /// Server returned an error response. [code] is the HTTP / Postgres code,
@@ -44,6 +52,8 @@ class ServerFailure extends Failure {
   const ServerFailure(this.code, this.message);
   final int code;
   final String message;
+  @override
+  String toString() => 'ServerFailure($code): $message';
 }
 
 /// Too many requests — the caller is being rate-limited (HTTP 429), e.g. the
@@ -52,6 +62,8 @@ class ServerFailure extends Failure {
 class RateLimitedFailure extends Failure {
   const RateLimitedFailure(this.retryAfterSeconds);
   final int? retryAfterSeconds;
+  @override
+  String toString() => 'RateLimitedFailure: retry after ${retryAfterSeconds ?? 'unknown'}s';
 }
 
 /// Catch-all for unexpected errors. Sentry receives the underlying [error]
@@ -59,4 +71,6 @@ class RateLimitedFailure extends Failure {
 class UnknownFailure extends Failure {
   const UnknownFailure(this.error);
   final Object error;
+  @override
+  String toString() => 'UnknownFailure: $error';
 }

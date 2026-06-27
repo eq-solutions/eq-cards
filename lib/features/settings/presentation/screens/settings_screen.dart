@@ -307,12 +307,21 @@ class SettingsScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () async {
-              await Clipboard.setData(ClipboardData(text: composed));
+              bool copied = true;
+              try {
+                await Clipboard.setData(ClipboardData(text: composed));
+              } on PlatformException {
+                copied = false;
+              }
               if (!ctx.mounted) return;
               ScaffoldMessenger.of(ctx).showSnackBar(
-                const SnackBar(
-                  content: Text('Copied. Paste into your mail app.'),
-                  duration: Duration(seconds: 3),
+                SnackBar(
+                  content: Text(
+                    copied
+                        ? 'Copied. Paste into your mail app.'
+                        : 'Copy failed — try again',
+                  ),
+                  duration: const Duration(seconds: 3),
                   behavior: SnackBarBehavior.floating,
                   backgroundColor: EqColours.ink,
                 ),
@@ -346,7 +355,11 @@ class SettingsScreen extends ConsumerWidget {
     );
     final json = exportPayloadToJsonString(payload);
 
-    await Clipboard.setData(ClipboardData(text: json));
+    try {
+      await Clipboard.setData(ClipboardData(text: json));
+    } on PlatformException {
+      // clipboard unavailable on web; data still shown in the dialog below
+    }
     if (!context.mounted) return;
     await showDialog<void>(
       context: context,
@@ -849,12 +862,21 @@ class _WorkerJoinQrCard extends StatelessWidget {
               const SizedBox(height: EqSpacing.sm),
               InkWell(
                 onTap: () async {
-                  await Clipboard.setData(ClipboardData(text: joinUrl));
+                  bool copied = true;
+                  try {
+                    await Clipboard.setData(ClipboardData(text: joinUrl));
+                  } on PlatformException {
+                    copied = false;
+                  }
                   if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Join link copied to clipboard.'),
-                      duration: Duration(seconds: 2),
+                    SnackBar(
+                      content: Text(
+                        copied
+                            ? 'Join link copied to clipboard.'
+                            : 'Copy failed — try again',
+                      ),
+                      duration: const Duration(seconds: 2),
                       behavior: SnackBarBehavior.floating,
                       backgroundColor: EqColours.ink,
                     ),

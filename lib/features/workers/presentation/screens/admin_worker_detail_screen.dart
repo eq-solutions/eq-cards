@@ -301,11 +301,20 @@ class _ActiveInviteCardState extends ConsumerState<_ActiveInviteCard> {
       'https://cards.eq.solutions/claim?token=${widget.invite.token}';
 
   Future<void> _copy() async {
-    await Clipboard.setData(ClipboardData(text: _claimUrl));
+    bool copied = true;
+    try {
+      await Clipboard.setData(ClipboardData(text: _claimUrl));
+    } on PlatformException {
+      copied = false;
+    }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Invite link copied — paste it into a text message.'),
+      SnackBar(
+        content: Text(
+          copied
+              ? 'Invite link copied — paste it into a text message.'
+              : 'Copy failed — try again',
+        ),
         behavior: SnackBarBehavior.floating,
         backgroundColor: EqColours.ink,
       ),
@@ -332,11 +341,20 @@ class _ActiveInviteCardState extends ConsumerState<_ActiveInviteCard> {
   }
 
   Future<void> _copyFallback() async {
-    await Clipboard.setData(ClipboardData(text: _claimUrl));
+    bool copied = true;
+    try {
+      await Clipboard.setData(ClipboardData(text: _claimUrl));
+    } on PlatformException {
+      copied = false;
+    }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('No messaging app found — link copied instead.'),
+      SnackBar(
+        content: Text(
+          copied
+              ? 'No messaging app found — link copied instead.'
+              : 'No messaging app found — copy the link manually.',
+        ),
         behavior: SnackBarBehavior.floating,
         backgroundColor: EqColours.ink,
       ),

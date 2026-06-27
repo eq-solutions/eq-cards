@@ -28,14 +28,19 @@ Future<void> copyWithFeedback({
   required String value,
   required String label,
 }) async {
-  await Clipboard.setData(ClipboardData(text: value));
+  bool copied = true;
+  try {
+    await Clipboard.setData(ClipboardData(text: value));
+  } on PlatformException {
+    copied = false;
+  }
   await HapticFeedback.lightImpact();
   unawaited(AnalyticsService.track('copy_field', {'label': label}));
 
   if (!context.mounted) return;
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
-      content: Text('$label copied'),
+      content: Text(copied ? '$label copied' : 'Copy failed — try again'),
       duration: const Duration(milliseconds: 1200),
       behavior: SnackBarBehavior.floating,
       backgroundColor: EqColours.ink,
