@@ -23,6 +23,15 @@ Failure mapSupabaseError(Object error) {
   if (error is AuthException) {
     // AuthException.statusCode is a String? — parse it for rate-limit detection.
     final statusCode = int.tryParse(error.statusCode ?? '') ?? 401;
+    // Supabase returns HTTP 403 with code='otp_expired' when the SMS code
+    // window closes before the user submits. Without this guard the 403 falls
+    // through to ServerFailure(403) → "Session expired", which is wrong — the
+    // user's session is fine, just their code timed out.
+    if (error.code == 'otp_expired') {
+      return const ValidationFailure(
+        'Your sign-in code expired. Tap Resend to get a new one.',
+      );
+    }
     return ServerFailure(statusCode, error.message);
   }
   if (error is PostgrestException) {
