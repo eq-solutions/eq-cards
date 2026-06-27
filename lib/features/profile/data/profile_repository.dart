@@ -5,6 +5,7 @@
 
 import 'dart:async';
 
+import 'package:http/http.dart' as http;
 import 'package:meta/meta.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -18,6 +19,13 @@ import '../../../core/utils/date_utils.dart';
 import 'models/profile.dart';
 
 part 'profile_repository.g.dart';
+
+// Shell base URL — overridable for local dev via:
+//   flutter run --dart-define=SHELL_BASE_URL=http://localhost:8888
+const String _kShellBaseUrl = String.fromEnvironment(
+  'SHELL_BASE_URL',
+  defaultValue: 'https://core.eq.solutions',
+);
 
 class ProfileRepository {
   ProfileRepository(this._data, this._client);
@@ -51,10 +59,27 @@ class ProfileRepository {
       final row = await _data.upsertMyProfile(profileToUpsertPayload(profile));
       final saved = Profile.fromJson(row);
       unawaited(_breadcrumb('profile_upsert_succeeded'));
+      unawaited(_pushToTenants()); // propagate updated contact data to employer staff rows
       return saved;
     } catch (e) {
       unawaited(_breadcrumb('profile_upsert_failed', {'error': e.toString()}));
       throw mapSupabaseError(e);
+    }
+  }
+
+  // Calls worker-profile-push on eq-shell after a successful profile save.
+  // Fire-and-forget — never throws, never blocks the caller.
+  Future<void> _pushToTenants() async {
+    try {
+      final token = _client.auth.currentSession?.accessToken;
+      if (token == null) return;
+      await http.post(
+        Uri.parse('$_kShellBaseUrl/.netlify/functions/worker-profile-push'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+    } catch (_) {
+      // Transient failures are acceptable — the trigger keeps workers current
+      // on jvkn; the staff row will sync on the next successful save.
     }
   }
 
