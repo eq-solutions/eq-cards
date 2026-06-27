@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/analytics/analytics_service.dart';
 import '../../../../core/design/design_version.dart';
@@ -124,6 +125,17 @@ class LicenceDetailScreen extends ConsumerWidget {
     final url = 'https://cards.eq.solutions/share?licence_id=${licence.id}';
     unawaited(
       AnalyticsService.track('qr_generated', {'licence_id': licence.id ?? ''}),
+    );
+    // Audit: log the share event so the worker has a record that this licence
+    // was made externally accessible at this point in time.
+    unawaited(
+      Supabase.instance.client
+          .rpc('eq_cards_log_read_event', params: {
+            'p_action': 'licence.qr_shared',
+            'p_entity_type': 'licence',
+            'p_entity_id': licence.id,
+          })
+          .catchError((_) {}),
     );
     await showModalBottomSheet<void>(
       context: context,
