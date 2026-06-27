@@ -130,7 +130,7 @@ class LicenceDetailScreen extends ConsumerWidget {
     // was made externally accessible at this point in time.
     unawaited(
       Supabase.instance.client
-          .rpc('eq_cards_log_read_event', params: {
+          .rpc<void>('eq_cards_log_read_event', params: {
             'p_action': 'licence.qr_shared',
             'p_entity_type': 'licence',
             'p_entity_id': licence.id,
