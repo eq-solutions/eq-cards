@@ -32,6 +32,7 @@ import '../../../certificates/presentation/cert_capture_flow.dart'
 import '../../../certificates/presentation/notifiers/certificates_list_notifier.dart';
 import '../../../connections/presentation/notifiers/connections_notifier.dart';
 import '../../../connections/presentation/widgets/pending_connections_banner.dart';
+import '../../../consent/consent_gate.dart';
 import '../../../profile/presentation/notifiers/profile_notifier.dart';
 import '../../../profile/presentation/screens/profile_fill_from_licence_screen.dart'
     show DlProfileFill;
@@ -44,7 +45,6 @@ import '../notifiers/licence_types_provider.dart';
 import '../notifiers/licences_list_notifier.dart';
 import '../widgets/expiry_badge.dart';
 import '../widgets/wallet_completion_nudge.dart';
-import '../../../consent/consent_gate.dart';
 import 'licence_crop_screen.dart';
 import 'licence_edit_screen.dart';
 

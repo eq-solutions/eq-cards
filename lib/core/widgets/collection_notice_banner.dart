@@ -6,7 +6,7 @@ import '../theme/eq_typography.dart';
 
 /// One-time dismissable info strip for APP 5 collection notices. Shown once
 /// per screen; dismissed state is persisted by the caller via
-/// [CollectionNoticePrefs].
+/// CollectionNoticePrefs.
 class CollectionNoticeBanner extends StatelessWidget {
   const CollectionNoticeBanner({
     super.key,

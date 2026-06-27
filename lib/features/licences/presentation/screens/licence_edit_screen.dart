@@ -10,20 +10,20 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/analytics/analytics_service.dart';
 import '../../../../core/error/user_messages.dart';
+import '../../../../core/privacy/collection_notice_prefs.dart';
 import '../../../../core/router/routes.dart';
 import '../../../../core/theme/eq_colours.dart';
 import '../../../../core/theme/eq_spacing.dart';
 import '../../../../core/theme/eq_typography.dart';
 import '../../../../core/utils/photo_upload.dart';
 import '../../../../core/validators/input_validators.dart';
+import '../../../../core/widgets/collection_notice_banner.dart';
 import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_button.dart';
 import '../../../../core/widgets/eq_text_field.dart';
 import '../../data/licence_repository.dart';
 import '../../data/models/licence_type.dart';
 import '../../data/ocr_service.dart';
-import '../../../../core/privacy/collection_notice_prefs.dart';
-import '../../../../core/widgets/collection_notice_banner.dart';
 import '../../data/sensitive_licence_types.dart';
 import '../helpers/licence_crop.dart';
 import '../notifiers/licence_types_provider.dart';
@@ -145,7 +145,7 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
         if (sensitiveCategoryFor(prefillCode) != null) {
           // Defer consent check — initState is synchronous, context not ready.
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) _checkConsentAndApplyType(prefillCode);
+            if (mounted) unawaited(_checkConsentAndApplyType(prefillCode));
           });
         } else {
           _typeCode = prefillCode;
@@ -458,7 +458,7 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
                       'the text fields. Anthropic does not keep the photo.',
                   onDismiss: () {
                     setState(() => _showPhotoUploadNotice = false);
-                    CollectionNoticePrefs.setPhotoUploadSeen();
+                    unawaited(CollectionNoticePrefs.setPhotoUploadSeen());
                   },
                 ),
               // OCR-prefill verify banner — when fields were populated from

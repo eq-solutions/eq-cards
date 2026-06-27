@@ -9,15 +9,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/analytics/analytics_service.dart';
 import '../../../../core/error/user_messages.dart';
+import '../../../../core/privacy/collection_notice_prefs.dart';
 import '../../../../core/theme/eq_colours.dart';
 import '../../../../core/theme/eq_spacing.dart';
 import '../../../../core/theme/eq_typography.dart';
 import '../../../../core/validators/input_validators.dart';
+import '../../../../core/widgets/collection_notice_banner.dart';
 import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_button.dart';
 import '../../../../core/widgets/eq_text_field.dart';
-import '../../../../core/privacy/collection_notice_prefs.dart';
-import '../../../../core/widgets/collection_notice_banner.dart';
 import '../../data/models/profile.dart';
 import '../notifiers/profile_notifier.dart';
 
@@ -261,7 +261,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                       'Only you can see it unless you choose to share.',
                   onDismiss: () {
                     setState(() => _showProfileNotice = false);
-                    CollectionNoticePrefs.setProfileSeen();
+                    unawaited(CollectionNoticePrefs.setProfileSeen());
                   },
                 ),
               _SectionHeader('You'),

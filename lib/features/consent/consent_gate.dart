@@ -8,7 +8,7 @@ import '../../core/theme/eq_colours.dart';
 import '../../core/theme/eq_spacing.dart';
 import '../../core/theme/eq_typography.dart';
 
-// ignore: specify_nonobvious_property_types
+// ignore: specify_nonobvious_property_types — FutureProvider.autoDispose<T> is not exported by riverpod
 final consentStatusProvider = FutureProvider.autoDispose<bool>((ref) async {
   final user = Supabase.instance.client.auth.currentUser;
   if (user == null) return true;
