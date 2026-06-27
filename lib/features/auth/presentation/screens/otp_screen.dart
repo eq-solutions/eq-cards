@@ -14,6 +14,7 @@ import '../../../../core/router/routes.dart';
 import '../../../../core/theme/eq_colours.dart';
 import '../../../../core/theme/eq_spacing.dart';
 import '../../../../core/theme/eq_typography.dart';
+import '../../data/auth_repository.dart';
 import '../../domain/auth_flow_state.dart';
 import '../notifiers/auth_flow_notifier.dart';
 import '../notifiers/join_context_notifier.dart';
@@ -161,7 +162,26 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
       if (inviteToken != null) {
         context.go('${Routes.claim}?token=$inviteToken');
       } else {
-        context.go(Routes.notProvisioned);
+        // No tenant, no pending claim, no pending invite — new self-signup.
+        // Auto-provision a personal wallet inline so the user lands in the app
+        // without pressing a button on an extra screen.
+        try {
+          await ref.read(authRepositoryProvider).autoProvision();
+        } catch (_) {
+          // Provision failed (network, server). Fall back to the not-provisioned
+          // screen which lets the user retry.
+          if (mounted) context.go(Routes.notProvisioned);
+          return;
+        }
+        if (!mounted) return;
+        // autoProvision() includes refreshSession() — check whether the hook
+        // has now embedded tenant_id. If still absent (stale refresh token),
+        // route to not-provisioned which handles the sign-out + snackbar.
+        if (tenantId() != null) {
+          context.go(Routes.card);
+        } else {
+          context.go(Routes.notProvisioned);
+        }
       }
     }
   }

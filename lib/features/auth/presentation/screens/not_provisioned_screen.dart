@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../../core/router/pending_claim.dart';
 import '../../../../core/router/routes.dart';
 import '../../../../core/theme/eq_colours.dart';
 import '../../../../core/theme/eq_spacing.dart';
@@ -30,6 +33,20 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
   bool _provisioning = false;
   String? _error;
   final _codeController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Reach here only in edge cases (e.g. autoProvision already ran in
+    // _resolveAndLand but refreshSession returned no tenant_id due to a stale
+    // refresh token). If there's no pending invite to activate, provision
+    // immediately rather than making the user press a button.
+    if (PendingClaim.token == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_startPersonalWallet());
+      });
+    }
+  }
 
   @override
   void dispose() {
