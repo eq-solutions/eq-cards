@@ -3,6 +3,7 @@ import 'package:eq_cards/features/profile/profile.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Fake notifier returning a fixed Profile (or null) on build().
 class _FakeProfileNotifier extends ProfileNotifier {
@@ -29,6 +30,12 @@ Profile _seed() => Profile(
     );
 
 Future<void> _pump(WidgetTester tester, {Profile? initial}) async {
+  // CollectionNoticePrefs uses SharedPreferences; without mock values the
+  // platform channel call hangs in the test VM, blocking ref.listenManual
+  // setup and leaving the form unhydrated. Seed an empty store so the call
+  // completes synchronously.
+  SharedPreferences.setMockInitialValues(const <String, Object>{});
+
   // The ProfileEditScreen has 11 fields and is taller than the default
   // 800x600 test viewport. Without a larger surface the ListView lazy-builds
   // only what's visible and "Emergency contact" / "Emma" never render. Bump

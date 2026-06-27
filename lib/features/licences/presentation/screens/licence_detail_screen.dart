@@ -128,15 +128,17 @@ class LicenceDetailScreen extends ConsumerWidget {
     );
     // Audit: log the share event so the worker has a record that this licence
     // was made externally accessible at this point in time.
-    unawaited(
-      Supabase.instance.client
-          .rpc<void>('eq_cards_log_read_event', params: {
-            'p_action': 'licence.qr_shared',
-            'p_entity_type': 'licence',
-            'p_entity_id': licence.id,
-          })
-          .catchError((_) {}),
-    );
+    try {
+      unawaited(
+        Supabase.instance.client
+            .rpc<void>('eq_cards_log_read_event', params: {
+              'p_action': 'licence.qr_shared',
+              'p_entity_type': 'licence',
+              'p_entity_id': licence.id,
+            })
+            .catchError((_) {}),
+      );
+    } catch (_) {}
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: EqColours.white,
