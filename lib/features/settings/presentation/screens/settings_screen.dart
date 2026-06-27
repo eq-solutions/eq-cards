@@ -310,7 +310,7 @@ class SettingsScreen extends ConsumerWidget {
               bool copied = true;
               try {
                 await Clipboard.setData(ClipboardData(text: composed));
-              } on PlatformException {
+              } catch (_) {
                 copied = false;
               }
               if (!ctx.mounted) return;
@@ -355,16 +355,21 @@ class SettingsScreen extends ConsumerWidget {
     );
     final json = exportPayloadToJsonString(payload);
 
+    bool clipboardOk = true;
     try {
       await Clipboard.setData(ClipboardData(text: json));
-    } on PlatformException {
-      // clipboard unavailable on web; data still shown in the dialog below
+    } catch (_) {
+      clipboardOk = false;
     }
     if (!context.mounted) return;
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Your data — copied to clipboard'),
+        title: Text(
+          clipboardOk
+              ? 'Your data — copied to clipboard'
+              : 'Your data — select to copy',
+        ),
         content: ConstrainedBox(
           constraints: const BoxConstraints(maxHeight: 400),
           child: SingleChildScrollView(

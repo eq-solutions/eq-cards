@@ -31,10 +31,10 @@ Future<void> copyWithFeedback({
   bool copied = true;
   try {
     await Clipboard.setData(ClipboardData(text: value));
-  } on PlatformException {
+    await HapticFeedback.lightImpact();
+  } catch (_) {
     copied = false;
   }
-  await HapticFeedback.lightImpact();
   unawaited(AnalyticsService.track('copy_field', {'label': label}));
 
   if (!context.mounted) return;

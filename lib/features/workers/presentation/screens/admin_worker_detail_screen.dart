@@ -304,7 +304,7 @@ class _ActiveInviteCardState extends ConsumerState<_ActiveInviteCard> {
     bool copied = true;
     try {
       await Clipboard.setData(ClipboardData(text: _claimUrl));
-    } on PlatformException {
+    } catch (_) {
       copied = false;
     }
     if (!mounted) return;
@@ -344,7 +344,7 @@ class _ActiveInviteCardState extends ConsumerState<_ActiveInviteCard> {
     bool copied = true;
     try {
       await Clipboard.setData(ClipboardData(text: _claimUrl));
-    } on PlatformException {
+    } catch (_) {
       copied = false;
     }
     if (!mounted) return;
