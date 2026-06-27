@@ -11,8 +11,6 @@ EQ Cards is a product of **CDC Solutions Pty Ltd** (trading as **EQ Solutions**)
 
 - **ACN:** 651 962 935
 - **ABN:** 40 651 962 935
-- **Registered office:** 173 Chuter Ave, Sans Souci NSW 2219
-- **Directors:** Royce Milmlow, Emma Curth
 - **Privacy contact:** contact@eq.solutions
 
 We are an APP entity under the Australian Privacy Act 1988 (Cth) and we comply with the 13 Australian Privacy Principles as amended.
@@ -163,7 +161,7 @@ We have taken reasonable steps (contractual review of each provider's privacy an
 
 **Organisational security measures (APP 11.3):**
 - Mandatory privacy and security training for all personnel with access to personal information.
-- Documented access management policies restricting personal data access to those with a genuine operational need. Internally, only the named directors (Royce Milmlow, Emma Curth) have administrative access to the production Supabase project. Access is logged.
+- Documented access management policies restricting personal data access to those with a genuine operational need. Internally, only the directors of CDC Solutions Pty Ltd have administrative access to the production Supabase project. Access is logged.
 - A formal incident response and data breach assessment procedure (see NDB commitment below).
 - Contractual data processing agreements with all third-party processors requiring equivalent security and data-handling standards.
 - Periodic security reviews including vulnerability assessments.

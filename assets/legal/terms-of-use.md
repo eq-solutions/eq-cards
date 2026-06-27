@@ -161,7 +161,6 @@ CDC Solutions Pty Ltd (trading as EQ Solutions)
 ACN: 651 962 935
 ABN: 40 651 962 935
 Email: contact@eq.solutions
-Address: 173 Chuter Ave, Sans Souci NSW 2219
 
 ---
 
