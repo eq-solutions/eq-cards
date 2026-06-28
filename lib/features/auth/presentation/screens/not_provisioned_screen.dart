@@ -64,13 +64,15 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
       if (!mounted) return;
 
       // Verify the JWT refresh actually embedded the tenant_id.
+      // Retry up to 3 times with 1s gaps — the provision committed but the
+      // hook may need a moment to propagate. Never sign the user out here:
+      // the wallet row exists and they're authenticated; a sign-out would
+      // force a second OTP entry for no reason.
       String? tenantId() => Supabase.instance.client.auth.currentSession
           ?.user.appMetadata['tenant_id'] as String?;
-      if (tenantId() == null) {
-        // The provision committed but the refresh timed out. Give the hook one
-        // more bounded attempt (with a brief pause so the DB write propagates)
-        // before forcing a sign-out.
-        await Future<void>.delayed(const Duration(milliseconds: 500));
+      for (var i = 0; i < 3 && tenantId() == null; i++) {
+        await Future<void>.delayed(const Duration(seconds: 1));
+        if (!mounted) return;
         try {
           await Supabase.instance.client.auth
               .refreshSession()
@@ -81,18 +83,13 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
       if (tenantId() != null) {
         context.go(Routes.card);
       } else {
-        // Both refresh attempts failed. The wallet exists — the user just needs
-        // a fresh token. Sign out cleanly so the next OTP lands in the app.
-        await ref.read(authRepositoryProvider).signOut();
-        if (mounted) {
-          context.go(Routes.email);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Wallet created — sign in again to open it.'),
-              duration: Duration(seconds: 5),
-            ),
-          );
-        }
+        // All retries exhausted. Wallet is provisioned but the JWT hasn't
+        // caught up — show a tap-to-retry error so the user can try again
+        // without losing their session (no sign-out).
+        setState(() {
+          _provisioning = false;
+          _provisionError = 'Your wallet is ready — tap to open it.';
+        });
       }
     } catch (_) {
       if (mounted) {

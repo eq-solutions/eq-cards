@@ -185,10 +185,11 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
         }
         if (!mounted) return;
         // autoProvision() includes refreshSession(). If tenant_id is still
-        // absent (hook propagation lag), retry once with a brief pause before
-        // routing anywhere — avoids the notProvisioned detour for new users.
-        if (tenantId() == null) {
-          await Future<void>.delayed(const Duration(milliseconds: 500));
+        // absent (hook propagation lag), retry up to 3 times with 1s gaps
+        // before falling through to notProvisioned.
+        for (var i = 0; i < 3 && tenantId() == null; i++) {
+          await Future<void>.delayed(const Duration(seconds: 1));
+          if (!mounted) return;
           try {
             await Supabase.instance.client.auth
                 .refreshSession()
