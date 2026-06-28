@@ -184,9 +184,18 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
           return;
         }
         if (!mounted) return;
-        // autoProvision() includes refreshSession() — check whether the hook
-        // has now embedded tenant_id. If still absent (stale refresh token),
-        // route to not-provisioned which handles the sign-out + snackbar.
+        // autoProvision() includes refreshSession(). If tenant_id is still
+        // absent (hook propagation lag), retry once with a brief pause before
+        // routing anywhere — avoids the notProvisioned detour for new users.
+        if (tenantId() == null) {
+          await Future<void>.delayed(const Duration(milliseconds: 500));
+          try {
+            await Supabase.instance.client.auth
+                .refreshSession()
+                .timeout(const Duration(seconds: 10));
+          } catch (_) {}
+        }
+        if (!mounted) return;
         if (tenantId() != null) {
           context.go(Routes.card);
         } else {

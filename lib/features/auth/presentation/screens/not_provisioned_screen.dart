@@ -63,15 +63,26 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
       await ref.read(authRepositoryProvider).autoProvision();
       if (!mounted) return;
 
-      // Verify the JWT refresh actually embedded the tenant_id. If the refresh
-      // token was stale the silent catch in autoProvision() leaves tenant_id
-      // absent, causing the router to bounce straight back here. Sign out so
-      // the next sign-in starts with a fresh session.
-      final tenantId = Supabase.instance.client.auth.currentSession
-          ?.user.appMetadata['tenant_id'];
-      if (tenantId != null) {
+      // Verify the JWT refresh actually embedded the tenant_id.
+      String? tenantId() => Supabase.instance.client.auth.currentSession
+          ?.user.appMetadata['tenant_id'] as String?;
+      if (tenantId() == null) {
+        // The provision committed but the refresh timed out. Give the hook one
+        // more bounded attempt (with a brief pause so the DB write propagates)
+        // before forcing a sign-out.
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+        try {
+          await Supabase.instance.client.auth
+              .refreshSession()
+              .timeout(const Duration(seconds: 10));
+        } catch (_) {}
+      }
+      if (!mounted) return;
+      if (tenantId() != null) {
         context.go(Routes.card);
       } else {
+        // Both refresh attempts failed. The wallet exists — the user just needs
+        // a fresh token. Sign out cleanly so the next OTP lands in the app.
         await ref.read(authRepositoryProvider).signOut();
         if (mounted) {
           context.go(Routes.email);
