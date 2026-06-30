@@ -8,19 +8,6 @@ import 'models/worker.dart';
 
 export 'models/worker.dart';
 
-/// One unclaimed invite returned by eq_cards_find_invites_by_phone.
-class FoundInvite {
-  const FoundInvite({required this.orgName, required this.token});
-
-  factory FoundInvite.fromJson(Map<String, dynamic> json) => FoundInvite(
-        orgName: (json['org_name'] as String?) ?? 'Unknown organisation',
-        token: json['token'] as String,
-      );
-
-  final String orgName;
-  final String token;
-}
-
 /// Summary returned by eq_cards_preview_invite — shown on the consent screen
 /// before the worker commits to claiming.
 class InvitePreview {
@@ -84,23 +71,6 @@ class WorkerSelfRepository {
       final list = rows.cast<Map<String, dynamic>>();
       if (list.isEmpty) return null;
       return Worker.fromJson(list.first);
-    } catch (e) {
-      _throw(e);
-    }
-  }
-
-  /// Searches all active tenants for unclaimed invites matching the signed-in
-  /// user's phone (read from auth.uid()). Returns one entry per org.
-  /// Used by the "Find my company account" button on the not-provisioned screen.
-  Future<List<FoundInvite>> findInvitesByPhone() async {
-    try {
-      final rows = await _client.rpc<List<dynamic>>(
-        'eq_cards_find_invites_by_phone',
-      );
-      return rows
-          .cast<Map<String, dynamic>>()
-          .map(FoundInvite.fromJson)
-          .toList();
     } catch (e) {
       _throw(e);
     }
