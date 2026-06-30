@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../theme/eq_colours.dart';
 import '../theme/eq_typography.dart';
@@ -57,7 +57,7 @@ class EqButton extends StatelessWidget {
             ? SizedBox(
                 width: 20,
                 height: 20,
-                child: CircularProgressIndicator(
+                child: CircularProgressIndicator.adaptive(
                   strokeWidth: 2,
                   valueColor: AlwaysStoppedAnimation(foreground),
                 ),

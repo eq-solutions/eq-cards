@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,10 +12,10 @@ import '../../../../core/theme/eq_typography.dart';
 import '../../data/auth_repository.dart';
 
 /// Shown when a user has authenticated (valid Supabase session) but has no
-/// tenant_id in their JWT — no shell_control.users row exists yet.
+/// tenant_id in their JWT â€” no shell_control.users row exists yet.
 ///
 /// Auto-provisions a personal wallet immediately. Company access is granted
-/// separately via the access-request flow (sign up → tap company → Royce
+/// separately via the access-request flow (sign up â†’ tap company â†’ Royce
 /// approves). No invite tokens, no manual lookup needed.
 class NotProvisionedScreen extends ConsumerStatefulWidget {
   const NotProvisionedScreen({super.key});
@@ -47,7 +47,7 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
       if (!mounted) return;
 
       // Verify the JWT refresh actually embedded the tenant_id.
-      // Retry up to 3 times with 1s gaps — the provision committed but the
+      // Retry up to 3 times with 1s gaps â€” the provision committed but the
       // hook may need a moment to propagate. Never sign the user out here:
       // the wallet row exists and they're authenticated; a sign-out would
       // force a second OTP entry for no reason.
@@ -67,11 +67,11 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
         context.go(Routes.card);
       } else {
         // All retries exhausted. Wallet is provisioned but the JWT hasn't
-        // caught up — show a tap-to-retry so the user can try again
+        // caught up â€” show a tap-to-retry so the user can try again
         // without losing their session (no sign-out).
         setState(() {
           _provisioning = false;
-          _provisionError = 'Your wallet is ready — tap to open it.';
+          _provisionError = 'Your wallet is ready â€” tap to open it.';
         });
       }
     } catch (_) {
@@ -127,11 +127,11 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
                       minimumSize: const Size.fromHeight(48),
                     ),
                     child: _provisioning
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
+                            child: CircularProgressIndicator.adaptive(
+                              valueColor: const AlwaysStoppedAnimation(Colors.white),
                               strokeWidth: 2,
                             ),
                           )

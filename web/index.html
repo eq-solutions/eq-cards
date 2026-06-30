@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
   <!--
@@ -47,9 +47,9 @@
   <title>EQ Cards</title>
   <link rel="manifest" href="manifest.json">
 
-  <!-- Cropper.js — required by image_cropper on web. Must load synchronously
+  <!-- Cropper.js â€” required by image_cropper on web. Must load synchronously
        before flutter_bootstrap.js so Cropper is available when Flutter calls
-       new Cropper(...). Bundled locally (web/cropper.min.*) — CDN approach
+       new Cropper(...). Bundled locally (web/cropper.min.*) â€” CDN approach
        was being blocked by ad/privacy tools causing "Cropper is not a constructor". -->
   <link rel="stylesheet" href="cropper.min.css">
   <script src="cropper.min.js"></script>
@@ -74,7 +74,7 @@
     broken SW installed: it unregisters it, clears its caches, and sets
     eq_sw_legacy_purged in localStorage so it never runs again. New users
     (no prior SW) skip it entirely via the localStorage guard. After the
-    one-time purge the SW is free to register and stay registered — enabling
+    one-time purge the SW is free to register and stay registered â€” enabling
     offline wallet support.
   -->
   <script>
@@ -95,7 +95,7 @@
   </script>
 
   <!--
-    PostHog JS SDK — required for posthog_flutter on web.
+    PostHog JS SDK â€” required for posthog_flutter on web.
     The package's setup() call is a no-op on web (see posthog_flutter_web_handler.dart);
     capture/identify/reset all expect window.posthog to already exist.
     Project token is a write-only client key (safe to commit). If the key or host
@@ -108,7 +108,7 @@
       person_profiles: 'identified_only'
     });
   </script>
-  <!-- EQ boot loader — bars spinner shown during Flutter engine init. Mirrors the
+  <!-- EQ boot loader â€” bars spinner shown during Flutter engine init. Mirrors the
        @eq-solutions/ui <Spinner variant="bars">; brand colours are inlined because the
        Flutter boot shell has no design-token CSS. Removed on the first painted frame. -->
   <style>
@@ -141,6 +141,13 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <script>
+    // Flutter 3.22+ defaults to CanvasKit on all platforms, but CanvasKit's
+    // WebGL animation loop is throttled by iOS Safari causing spinners to freeze.
+    // 'auto' restores the pre-3.22 behaviour: HTML renderer on mobile browsers
+    // (iOS/Android) and CanvasKit on desktop where WebGL is reliable.
+    window.flutterConfiguration = { renderer: 'auto' };
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
