@@ -16,6 +16,7 @@ import '../../../../core/theme/eq_colours.dart';
 import '../../../../core/theme/eq_spacing.dart';
 import '../../../../core/theme/eq_typography.dart';
 import '../../../../core/utils/photo_upload.dart';
+import '../../../../core/utils/pick_image.dart';
 import '../../../../core/validators/input_validators.dart';
 import '../../../../core/widgets/collection_notice_banner.dart';
 import '../../../../core/widgets/eq_app_bar.dart';
@@ -258,12 +259,7 @@ class _LicenceEditScreenState extends ConsumerState<LicenceEditScreen> {
 
   Future<void> _pickPhoto({required bool front}) async {
     final picker = ImagePicker();
-    // Web doesn't have a hardware camera tied to ImageSource.camera in most
-    // browsers, so fall through to gallery / file picker there.
-    final picked = await picker.pickImage(
-      source: kIsWeb ? ImageSource.gallery : ImageSource.camera,
-      preferredCameraDevice: CameraDevice.rear,
-    );
+    final picked = await pickImageWithSourceChoice(context, picker);
     if (picked == null || !mounted) return;
 
     // Crop after pick so saved photos are framed + JPEG-compressed.
@@ -915,7 +911,13 @@ class _DateField extends StatelessWidget {
   }
 }
 
-class _PhotoSlot extends StatelessWidget {
+// StatefulWidget so we can hold a single MemoryImage instance across parent
+// rebuilds. On Flutter Web / CanvasKit, each new MemoryImage() allocates a
+// blob URL; Chrome Mobile revokes these under memory pressure, producing
+// "Could not load Blob from its URL. Has it been revoked?" (Sentry EQ-CARDS-W).
+// Holding the provider in state means one blob URL per photo pick, not one
+// per rebuild.
+class _PhotoSlot extends StatefulWidget {
   const _PhotoSlot({
     required this.label,
     required this.bytes,
@@ -929,9 +931,40 @@ class _PhotoSlot extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<_PhotoSlot> createState() => _PhotoSlotState();
+}
+
+class _PhotoSlotState extends State<_PhotoSlot> {
+  MemoryImage? _memoryImage;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.bytes != null) {
+      _memoryImage = MemoryImage(widget.bytes!);
+    }
+  }
+
+  @override
+  void didUpdateWidget(_PhotoSlot oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(widget.bytes, oldWidget.bytes)) {
+      unawaited(_memoryImage?.evict());
+      _memoryImage =
+          widget.bytes != null ? MemoryImage(widget.bytes!) : null;
+    }
+  }
+
+  @override
+  void dispose() {
+    unawaited(_memoryImage?.evict());
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onTap,
+      onTap: widget.onTap,
       child: Container(
         height: 120,
         decoration: BoxDecoration(
@@ -941,15 +974,19 @@ class _PhotoSlot extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (bytes != null)
+            if (widget.bytes != null)
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.memory(bytes!, fit: BoxFit.cover),
+                child: Image(
+                  image: _memoryImage!,
+                  fit: BoxFit.cover,
+                  gaplessPlayback: true,
+                ),
               )
-            else if (existingUrl != null)
+            else if (widget.existingUrl != null)
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.network(existingUrl!, fit: BoxFit.cover),
+                child: Image.network(widget.existingUrl!, fit: BoxFit.cover),
               )
             else
               Center(
@@ -961,11 +998,11 @@ class _PhotoSlot extends StatelessWidget {
                       color: EqColours.grey,
                     ),
                     const SizedBox(height: EqSpacing.sm),
-                    Text(label, style: EqTypography.label),
+                    Text(widget.label, style: EqTypography.label),
                   ],
                 ),
               ),
-            if (bytes != null || existingUrl != null)
+            if (widget.bytes != null || widget.existingUrl != null)
               Positioned(
                 top: EqSpacing.sm,
                 right: EqSpacing.sm,

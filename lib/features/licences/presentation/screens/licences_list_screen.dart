@@ -20,6 +20,7 @@ import '../../../../core/theme/eq_colours.dart';
 import '../../../../core/theme/eq_spacing.dart';
 import '../../../../core/theme/eq_typography.dart';
 import '../../../../core/utils/photo_upload.dart';
+import '../../../../core/utils/pick_image.dart';
 import '../../../../core/widgets/eq_app_bar.dart';
 import '../../../../core/widgets/eq_button.dart';
 import '../../../../core/widgets/eq_card.dart';
@@ -513,14 +514,9 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
 
   Future<void> _captureFlow(BuildContext context, WidgetRef ref) async {
     final picker = ImagePicker();
-    // Web: use gallery (file input, no capture attribute) — this reliably
-    // opens a file picker on both desktop and mobile browsers. camera with
-    // capture=environment is unreliable on desktop Chrome/Edge and may
-    // return null without showing any UI.
-    // Native: camera directly for best OCR quality.
-    final picked = await picker.pickImage(
-      source: kIsWeb ? ImageSource.gallery : ImageSource.camera,
-      preferredCameraDevice: CameraDevice.rear,
+    final picked = await pickImageWithSourceChoice(
+      context,
+      picker,
       imageQuality: 85,
     );
     if (picked == null || !context.mounted) return;

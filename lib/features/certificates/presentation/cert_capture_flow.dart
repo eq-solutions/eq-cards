@@ -10,6 +10,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 
 import '../../../core/router/routes.dart';
 import '../../../core/utils/photo_upload.dart';
+import '../../../core/utils/pick_image.dart';
 import '../../../core/widgets/ocr_loading_dialog.dart';
 import '../../licences/data/ocr_service.dart';
 import '../../licences/presentation/helpers/licence_crop.dart';
@@ -34,9 +35,9 @@ const certTypeSet = {
 /// at any step.
 Future<void> certCaptureFlow(BuildContext context, WidgetRef ref) async {
   final picker = ImagePicker();
-  final picked = await picker.pickImage(
-    source: kIsWeb ? ImageSource.gallery : ImageSource.camera,
-    preferredCameraDevice: CameraDevice.rear,
+  final picked = await pickImageWithSourceChoice(
+    context,
+    picker,
     imageQuality: 85,
   );
   if (picked == null || !context.mounted) return;
