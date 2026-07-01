@@ -26,6 +26,7 @@ import '../../../../core/widgets/eq_button.dart';
 import '../../../../core/widgets/eq_card.dart';
 import '../../../../core/widgets/ocr_loading_dialog.dart';
 import '../../../../core/widgets/offline_banner.dart';
+import '../../../../features/onboarding/first_scan_screen.dart';
 import '../../../auth/auth.dart';
 import '../../../certificates/data/models/certificate.dart';
 import '../../../certificates/presentation/cert_capture_flow.dart'
@@ -39,7 +40,6 @@ import '../../../profile/presentation/screens/profile_fill_from_licence_screen.d
     show DlProfileFill;
 import '../../../settings/data/workspace_repository.dart';
 import '../../../workers/data/models/worker.dart';
-import '../../../../features/onboarding/first_scan_screen.dart';
 import '../../data/ocr_service.dart';
 import '../helpers/licence_crop.dart';
 import '../helpers/licences_list_helpers.dart';
@@ -138,15 +138,15 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
       final prefs = await SharedPreferences.getInstance();
       if (prefs.getBool(_firstScanShownKey) ?? false) return;
       if (!mounted) return;
-      final shouldScan = await Navigator.of(context).push<bool>(
+      final source = await Navigator.of(context).push<ImageSource>(
         MaterialPageRoute(
           fullscreenDialog: true,
           builder: (_) => const FirstScanScreen(),
         ),
       );
       await prefs.setBool(_firstScanShownKey, true);
-      if (shouldScan == true && mounted) {
-        unawaited(_captureFlow(context, ref));
+      if (source != null && mounted) {
+        unawaited(_captureFlow(context, ref, source: source));
       }
     } catch (_) {
       // shared_preferences unreachable on web in some private-mode browsers.
@@ -318,13 +318,16 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
                     return ListView(
                       padding: const EdgeInsets.all(EqSpacing.md),
                       children: [
-                        idCard,
-                        const SizedBox(height: EqSpacing.md),
                         const CompleteProfileBanner(),
                         const PendingConnectionsBanner(),
                         const _ConnectNudgeBanner(),
                         _EmptyState(
-                          onScan: () => unawaited(_captureFlow(context, ref)),
+                          onScan: () => unawaited(
+                              _captureFlow(context, ref,
+                                  source: ImageSource.camera)),
+                          onGallery: () => unawaited(
+                              _captureFlow(context, ref,
+                                  source: ImageSource.gallery)),
                           onManual: () => context.go(Routes.licenceCreate),
                           orgName: orgName,
                           version: designVersion,
@@ -547,13 +550,26 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
     );
   }
 
-  Future<void> _captureFlow(BuildContext context, WidgetRef ref) async {
+  Future<void> _captureFlow(
+    BuildContext context,
+    WidgetRef ref, {
+    ImageSource? source,
+  }) async {
     final picker = ImagePicker();
-    final picked = await pickImageWithSourceChoice(
-      context,
-      picker,
-      imageQuality: 85,
-    );
+    final XFile? picked;
+    if (source != null) {
+      picked = await picker.pickImage(
+        source: source,
+        preferredCameraDevice: CameraDevice.rear,
+        imageQuality: 85,
+      );
+    } else {
+      picked = await pickImageWithSourceChoice(
+        context,
+        picker,
+        imageQuality: 85,
+      );
+    }
     if (picked == null || !context.mounted) return;
 
     // Cropping step — native Flutter UI on web (no JS bridge); ImageCropper
@@ -1061,12 +1077,14 @@ class _WalletTileState extends State<_WalletTile> {
 class _EmptyState extends StatelessWidget {
   const _EmptyState({
     required this.onScan,
+    required this.onGallery,
     required this.onManual,
     this.orgName,
     this.version = DesignVersion.linear,
   });
 
   final VoidCallback onScan;
+  final VoidCallback onGallery;
   final VoidCallback onManual;
   final String? orgName;
   final DesignVersion version;
@@ -1074,24 +1092,32 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (version) {
-      DesignVersion.linear =>
-        _IllustrationEmpty(onScan: onScan, onManual: onManual, orgName: orgName),
-      DesignVersion.wallet => _ActionGridEmpty(onScan: onScan, onManual: onManual),
-      DesignVersion.photoFirst => _DashboardEmpty(onScan: onScan, onManual: onManual),
+      DesignVersion.linear => _IllustrationEmpty(
+          onScan: onScan,
+          onGallery: onGallery,
+          onManual: onManual,
+          orgName: orgName,
+        ),
+      DesignVersion.wallet =>
+        _ActionGridEmpty(onScan: onScan, onManual: onManual),
+      DesignVersion.photoFirst =>
+        _DashboardEmpty(onScan: onScan, onManual: onManual),
     };
   }
 }
 
-// Linear — scan-first. Primary CTA goes straight to the capture flow;
+// Linear — action-first. Camera and gallery both explicit above the fold;
 // manual entry is a secondary text link so it's there without competing.
 class _IllustrationEmpty extends StatelessWidget {
   const _IllustrationEmpty({
     required this.onScan,
+    required this.onGallery,
     required this.onManual,
     this.orgName,
   });
 
   final VoidCallback onScan;
+  final VoidCallback onGallery;
   final VoidCallback onManual;
   final String? orgName;
 
@@ -1102,36 +1128,18 @@ class _IllustrationEmpty extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: EqSpacing.lg,
-        vertical: EqSpacing.xxl,
+        vertical: EqSpacing.lg,
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Image.asset(
-            'assets/icon/launcher.png',
-            width: 96,
-            height: 96,
-            errorBuilder: (_, _, _) => const Icon(
-              Icons.badge_outlined,
-              size: 64,
-              color: EqColours.grey,
-            ),
-          ),
-          const SizedBox(height: EqSpacing.md),
           Text(
             'Your digital wallet is empty',
             style: EqTypography.headingL,
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: EqSpacing.sm),
-          Text(
-            kIsWeb
-                ? 'Upload a photo of your licence — we read the number, type, and expiry automatically.'
-                : 'Take a photo of your licence — we read the number, type, and expiry automatically.',
-            style: EqTypography.bodyM.copyWith(color: EqColours.grey),
-            textAlign: TextAlign.center,
-          ),
           if (showEmployerCtx) ...[
-            const SizedBox(height: EqSpacing.xs),
             Text(
               "$orgName checks your credentials are current — add them now so you're ready for site.",
               style: EqTypography.bodyM.copyWith(
@@ -1141,20 +1149,23 @@ class _IllustrationEmpty extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
           ] else ...[
-            const SizedBox(height: EqSpacing.xs),
             Text(
-              'Then tap any field to copy it straight onto an induction form.',
-              style: EqTypography.bodyM.copyWith(
-                color: EqColours.deep,
-                fontWeight: FontWeight.w600,
-              ),
+              'Scan or upload a licence photo — we read the number, type, and expiry automatically.',
+              style: EqTypography.bodyM.copyWith(color: EqColours.grey),
               textAlign: TextAlign.center,
             ),
           ],
-          const SizedBox(height: EqSpacing.xl),
+          const SizedBox(height: EqSpacing.lg),
           EqButton(
-            label: kIsWeb ? 'Upload a licence photo' : 'Scan my licence',
+            label: 'Take a photo of a licence',
             onPressed: onScan,
+            fullWidth: true,
+          ),
+          const SizedBox(height: EqSpacing.sm),
+          EqButton(
+            label: 'Upload from album',
+            onPressed: onGallery,
+            variant: EqButtonVariant.secondary,
             fullWidth: true,
           ),
           const SizedBox(height: EqSpacing.sm),
