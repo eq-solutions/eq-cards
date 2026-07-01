@@ -57,9 +57,9 @@ class EqButton extends StatelessWidget {
             ? SizedBox(
                 width: 20,
                 height: 20,
-                child: CircularProgressIndicator.adaptive(
+                child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation(foreground),
+                  color: foreground,
                 ),
               )
             : Text(

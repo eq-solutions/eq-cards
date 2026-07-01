@@ -457,8 +457,6 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
                   return ListView(
                     padding: const EdgeInsets.all(EqSpacing.md),
                     children: [
-                      idCard,
-                      const SizedBox(height: EqSpacing.md),
                       if (items.isNotEmpty) ...[
                         _WalletHealthCard(
                           validCount: validCount,
@@ -518,6 +516,8 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
                           _WalletTile(item: item),
                           const SizedBox(height: EqSpacing.sm),
                         ],
+                      const SizedBox(height: EqSpacing.lg),
+                      idCard,
                     ],
                   );
                 },

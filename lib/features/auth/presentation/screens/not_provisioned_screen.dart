@@ -130,8 +130,8 @@ class _NotProvisionedScreenState extends ConsumerState<NotProvisionedScreen> {
                         ? SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator.adaptive(
-                              valueColor: const AlwaysStoppedAnimation(Colors.white),
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
                               strokeWidth: 2,
                             ),
                           )
