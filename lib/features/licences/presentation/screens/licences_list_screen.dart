@@ -69,14 +69,18 @@ class LicencesListScreen extends ConsumerStatefulWidget {
 }
 
 class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
-  static const _hintShownKey      = 'eq_cards.hint.tap_to_copy_shown';
-  static const _firstScanShownKey = 'eq_cards.first_scan_shown';
+  static const _hintShownKey           = 'eq_cards.hint.tap_to_copy_shown';
+  static const _firstScanShownKey      = 'eq_cards.first_scan_shown';
+  static const _firstLicenceShownKey   = 'eq_cards.first_licence_shown';
+  static const _lastTenantKey          = 'eq_cards.last_known_tenant';
 
   String _query = '';
   LicenceFilter _filter = LicenceFilter.all;
   final _searchCtrl = TextEditingController();
   bool _hintCheckedThisSession  = false;
   bool _firstScanLaunched       = false;
+  bool _firstLicenceChecked     = false;
+  bool _tenantChecked           = false;
 
   void _showQrStub() {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -151,6 +155,92 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
     } catch (_) {
       // shared_preferences unreachable on web in some private-mode browsers.
     }
+  }
+
+  /// Once-ever success moment: shown after the first credential lands in the
+  /// wallet. Bottom sheet with a tick and a brief ready-for-site message.
+  Future<void> _maybeShowFirstLicenceSuccess(
+    BuildContext context,
+    String orgName,
+  ) async {
+    if (_firstLicenceChecked) return;
+    _firstLicenceChecked = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool(_firstLicenceShownKey) ?? false) return;
+      if (!context.mounted) return;
+      unawaited(prefs.setBool(_firstLicenceShownKey, true));
+      final showOrg = orgName != 'Personal' && orgName != '—';
+      await showModalBottomSheet<void>(
+        context: context,
+        backgroundColor: EqColours.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        builder: (_) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+                EqSpacing.xl, EqSpacing.xl, EqSpacing.xl, EqSpacing.lg),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.check_circle_outline,
+                    size: 48, color: EqColours.sky),
+                const SizedBox(height: EqSpacing.md),
+                Text(
+                  "You're ready for site.",
+                  style: EqTypography.headingL
+                      .copyWith(color: EqColours.ink),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: EqSpacing.sm),
+                Text(
+                  showOrg
+                      ? '$orgName can now verify your credentials are current.'
+                      : 'Your first credential is in your wallet.',
+                  style: EqTypography.bodyM
+                      .copyWith(color: EqColours.grey),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: EqSpacing.xl),
+                EqButton(
+                  label: 'Done',
+                  onPressed: () => Navigator.of(context).pop(),
+                  fullWidth: true,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } catch (_) {}
+  }
+
+  /// Once-ever connection confirmation: shown the first time a non-personal
+  /// tenant becomes active (after a claim or join). Persisted per tenant slug
+  /// so it only fires once per workspace connection.
+  Future<void> _maybeShowConnectionConfirmation(
+    BuildContext context,
+    String tenantSlug,
+    String tenantName,
+  ) async {
+    if (_tenantChecked) return;
+    _tenantChecked = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final lastKnown = prefs.getString(_lastTenantKey);
+      if (lastKnown == tenantSlug) return;
+      if (!context.mounted) return;
+      unawaited(prefs.setString(_lastTenantKey, tenantSlug));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Connected to $tenantName'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: EqColours.deep,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } catch (_) {}
   }
 
   @override
@@ -300,6 +390,30 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
                   if (items.isEmpty && !_firstScanLaunched) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (mounted) unawaited(_maybeShowFirstScan());
+                    });
+                  }
+                  // First-licence success moment — fires once when the wallet
+                  // transitions from empty to having its first credential.
+                  if (items.isNotEmpty && !_firstLicenceChecked) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) {
+                        unawaited(_maybeShowFirstLicenceSuccess(context, orgName));
+                      }
+                    });
+                  }
+                  // Connection confirmation — fires once when the user's active
+                  // tenant changes to a non-personal workspace (after claim/join).
+                  if (activeTenant != null &&
+                      !activeTenant.isPersonal &&
+                      !_tenantChecked) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) {
+                        unawaited(_maybeShowConnectionConfirmation(
+                          context,
+                          activeTenant.slug,
+                          activeTenant.name,
+                        ));
+                      }
                     });
                   }
 

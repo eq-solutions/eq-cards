@@ -62,7 +62,15 @@ abstract class AnalyticsService {
         case AuthChangeEvent.signedIn:
           if (user != null) {
             unawaited(identify(user.id, email: user.email));
-            unawaited(track('signup_completed', const {'method': 'email'}));
+            // Fire signup_completed only for genuinely new auth users.
+            // signedIn fires on every login; createdAt within 5 min = new signup.
+            final created = DateTime.tryParse(user.createdAt);
+            final isNew = created != null &&
+                DateTime.now().toUtc().difference(created).abs() <
+                    const Duration(minutes: 5);
+            if (isNew) {
+              unawaited(track('signup_completed', const {'method': 'phone'}));
+            }
           }
         case AuthChangeEvent.initialSession:
           if (user != null) unawaited(identify(user.id, email: user.email));
