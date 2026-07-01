@@ -134,7 +134,8 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
 
   /// Once-ever first-login nudge: shown the first time a user lands on an
   /// empty wallet. Navigates to [FirstScanScreen] full-screen; if the user
-  /// taps "Scan now" the capture flow launches immediately on return.
+  /// taps "Take a photo"/"Upload from album", [FirstScanScreen] picks the
+  /// image itself (see its doc comment for why) and pops with the result.
   Future<void> _maybeShowFirstScan() async {
     if (_firstScanLaunched) return;
     _firstScanLaunched = true;
@@ -142,15 +143,15 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
       final prefs = await SharedPreferences.getInstance();
       if (prefs.getBool(_firstScanShownKey) ?? false) return;
       if (!mounted) return;
-      final source = await Navigator.of(context).push<ImageSource>(
+      final picked = await Navigator.of(context).push<XFile>(
         MaterialPageRoute(
           fullscreenDialog: true,
           builder: (_) => const FirstScanScreen(),
         ),
       );
       await prefs.setBool(_firstScanShownKey, true);
-      if (source != null && mounted) {
-        unawaited(_captureFlow(context, ref, source: source));
+      if (picked != null && mounted) {
+        unawaited(_captureFlow(context, ref, prePicked: picked));
       }
     } catch (_) {
       // shared_preferences unreachable on web in some private-mode browsers.
@@ -668,21 +669,32 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
     BuildContext context,
     WidgetRef ref, {
     ImageSource? source,
+    XFile? prePicked,
   }) async {
-    final picker = ImagePicker();
     final XFile? picked;
-    if (source != null) {
-      picked = await picker.pickImage(
-        source: source,
-        preferredCameraDevice: CameraDevice.rear,
-        imageQuality: 85,
-      );
+    if (prePicked != null) {
+      // Already picked by the caller (e.g. FirstScanScreen) in the same
+      // synchronous tap handler that triggered it. Browsers — iOS Safari
+      // especially — require the camera/file-picker call to happen with
+      // essentially no async gap after the user's tap, or they silently
+      // refuse to open it. Picking again here, after this function's own
+      // Navigator round-trip, would reintroduce exactly that gap.
+      picked = prePicked;
     } else {
-      picked = await pickImageWithSourceChoice(
-        context,
-        picker,
-        imageQuality: 85,
-      );
+      final picker = ImagePicker();
+      if (source != null) {
+        picked = await picker.pickImage(
+          source: source,
+          preferredCameraDevice: CameraDevice.rear,
+          imageQuality: 85,
+        );
+      } else {
+        picked = await pickImageWithSourceChoice(
+          context,
+          picker,
+          imageQuality: 85,
+        );
+      }
     }
     if (picked == null || !context.mounted) return;
 

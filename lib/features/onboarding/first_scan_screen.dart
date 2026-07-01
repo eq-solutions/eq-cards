@@ -9,9 +9,16 @@ import '../../core/theme/eq_typography.dart';
 import '../../core/widgets/eq_button.dart';
 
 /// Full-screen first-login screen shown once when a new user's wallet is empty.
-/// Pops with [ImageSource.camera], [ImageSource.gallery], or null (set up later).
-/// The caller uses the result to launch the appropriate capture flow directly,
-/// bypassing any additional source-picker sheet.
+/// Pops with the picked [XFile], or null (picker cancelled / "set up later").
+///
+/// The picker is invoked here, directly inside each button's `onPressed`,
+/// rather than deferred to the caller after this screen pops. Browsers —
+/// iOS Safari especially — require the camera/file-picker call to happen
+/// essentially synchronously with the user's tap; routing the choice back
+/// through a `Navigator.push().then()` continuation on the caller (plus a
+/// `SharedPreferences` await in between) puts enough async distance between
+/// the tap and the picker call that the browser silently refuses to open
+/// it — the reported "first scan does nothing, second attempt works" bug.
 class FirstScanScreen extends StatefulWidget {
   const FirstScanScreen({super.key});
 
@@ -44,6 +51,17 @@ class _FirstScanScreenState extends State<FirstScanScreen>
   void dispose() {
     _ctrl.dispose();
     super.dispose();
+  }
+
+  /// Picks as the first line of the tap handler — no awaits before it —
+  /// so the browser still sees this as a direct continuation of the click.
+  Future<void> _pickAndPop(BuildContext context, ImageSource source) async {
+    final picked = await ImagePicker().pickImage(
+      source: source,
+      preferredCameraDevice: CameraDevice.rear,
+      imageQuality: 85,
+    );
+    if (context.mounted) Navigator.of(context).pop(picked);
   }
 
   @override
@@ -87,8 +105,7 @@ class _FirstScanScreenState extends State<FirstScanScreen>
                   const Spacer(flex: 4),
                   EqButton(
                     label: 'Take a photo',
-                    onPressed: () =>
-                        Navigator.of(context).pop(ImageSource.camera),
+                    onPressed: () => _pickAndPop(context, ImageSource.camera),
                     fullWidth: true,
                   ),
                   const SizedBox(height: EqSpacing.sm),
@@ -98,7 +115,7 @@ class _FirstScanScreenState extends State<FirstScanScreen>
                       icon: const Icon(Icons.photo_library_outlined, size: 18),
                       label: const Text('Upload from album'),
                       onPressed: () =>
-                          Navigator.of(context).pop(ImageSource.gallery),
+                          _pickAndPop(context, ImageSource.gallery),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: EqColours.white,
                         side: BorderSide(

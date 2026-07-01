@@ -28,7 +28,10 @@ class _OcrLoadingDialogState extends State<OcrLoadingDialog> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer(const Duration(seconds: 5), () {
+    // 9s, not 5 — the copy below tells the user scans usually take 5-10s,
+    // so a 5s threshold flagged most completely normal scans (edge function
+    // logs: 6.5-9.8s typical) as "taking longer than usual".
+    _timer = Timer(const Duration(seconds: 9), () {
       if (mounted) setState(() => _allowCancel = true);
     });
   }
@@ -67,8 +70,8 @@ class _OcrLoadingDialogState extends State<OcrLoadingDialog> {
               const SizedBox(height: EqSpacing.xs),
               Text(
                 _allowCancel
-                    ? 'Taking longer than usual — tap below to fill the '
-                        'details in yourself instead.'
+                    ? "Still reading — you're welcome to fill it in "
+                        'yourself instead.'
                     : 'Usually 5–10 seconds. '
                         'First scan of the day may take a little longer.',
                 textAlign: TextAlign.center,
