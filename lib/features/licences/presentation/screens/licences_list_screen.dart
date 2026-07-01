@@ -39,6 +39,7 @@ import '../../../profile/presentation/screens/profile_fill_from_licence_screen.d
     show DlProfileFill;
 import '../../../settings/data/workspace_repository.dart';
 import '../../../workers/data/models/worker.dart';
+import '../../../../features/onboarding/first_scan_screen.dart';
 import '../../data/ocr_service.dart';
 import '../helpers/licence_crop.dart';
 import '../helpers/licences_list_helpers.dart';
@@ -68,12 +69,14 @@ class LicencesListScreen extends ConsumerStatefulWidget {
 }
 
 class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
-  static const _hintShownKey = 'eq_cards.hint.tap_to_copy_shown';
+  static const _hintShownKey      = 'eq_cards.hint.tap_to_copy_shown';
+  static const _firstScanShownKey = 'eq_cards.first_scan_shown';
 
   String _query = '';
   LicenceFilter _filter = LicenceFilter.all;
   final _searchCtrl = TextEditingController();
-  bool _hintCheckedThisSession = false;
+  bool _hintCheckedThisSession  = false;
+  bool _firstScanLaunched       = false;
 
   void _showQrStub() {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -122,6 +125,31 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
     } catch (_) {
       // shared_preferences unreachable on web in some private-mode browsers;
       // silently skip rather than crash the list render.
+    }
+  }
+
+  /// Once-ever first-login nudge: shown the first time a user lands on an
+  /// empty wallet. Navigates to [FirstScanScreen] full-screen; if the user
+  /// taps "Scan now" the capture flow launches immediately on return.
+  Future<void> _maybeShowFirstScan() async {
+    if (_firstScanLaunched) return;
+    _firstScanLaunched = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool(_firstScanShownKey) ?? false) return;
+      if (!mounted) return;
+      final shouldScan = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (_) => const FirstScanScreen(),
+        ),
+      );
+      await prefs.setBool(_firstScanShownKey, true);
+      if (shouldScan == true && mounted) {
+        unawaited(_captureFlow(context, ref));
+      }
+    } catch (_) {
+      // shared_preferences unreachable on web in some private-mode browsers.
     }
   }
 
@@ -268,6 +296,12 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
                       if (mounted) unawaited(_maybeShowTapToCopyHint(context));
                     });
                   }
+                  // Show the first-login scan prompt once when wallet is empty.
+                  if (items.isEmpty && !_firstScanLaunched) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) unawaited(_maybeShowFirstScan());
+                    });
+                  }
 
                   final idCard = _WalletIdCard(
                     initials: idInitials,
@@ -292,6 +326,7 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
                         _EmptyState(
                           onScan: () => unawaited(_captureFlow(context, ref)),
                           onManual: () => context.go(Routes.licenceCreate),
+                          orgName: orgName,
                           version: designVersion,
                         ),
                       ],
@@ -1027,17 +1062,20 @@ class _EmptyState extends StatelessWidget {
   const _EmptyState({
     required this.onScan,
     required this.onManual,
+    this.orgName,
     this.version = DesignVersion.linear,
   });
 
   final VoidCallback onScan;
   final VoidCallback onManual;
+  final String? orgName;
   final DesignVersion version;
 
   @override
   Widget build(BuildContext context) {
     return switch (version) {
-      DesignVersion.linear => _IllustrationEmpty(onScan: onScan, onManual: onManual),
+      DesignVersion.linear =>
+        _IllustrationEmpty(onScan: onScan, onManual: onManual, orgName: orgName),
       DesignVersion.wallet => _ActionGridEmpty(onScan: onScan, onManual: onManual),
       DesignVersion.photoFirst => _DashboardEmpty(onScan: onScan, onManual: onManual),
     };
@@ -1047,13 +1085,20 @@ class _EmptyState extends StatelessWidget {
 // Linear — scan-first. Primary CTA goes straight to the capture flow;
 // manual entry is a secondary text link so it's there without competing.
 class _IllustrationEmpty extends StatelessWidget {
-  const _IllustrationEmpty({required this.onScan, required this.onManual});
+  const _IllustrationEmpty({
+    required this.onScan,
+    required this.onManual,
+    this.orgName,
+  });
 
   final VoidCallback onScan;
   final VoidCallback onManual;
+  final String? orgName;
 
   @override
   Widget build(BuildContext context) {
+    final showEmployerCtx =
+        orgName != null && orgName != 'Personal' && orgName != '—';
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: EqSpacing.lg,
@@ -1073,7 +1118,7 @@ class _IllustrationEmpty extends StatelessWidget {
           ),
           const SizedBox(height: EqSpacing.md),
           Text(
-            'Your licences, one place',
+            'Your digital wallet is empty',
             style: EqTypography.headingL,
             textAlign: TextAlign.center,
           ),
@@ -1085,15 +1130,27 @@ class _IllustrationEmpty extends StatelessWidget {
             style: EqTypography.bodyM.copyWith(color: EqColours.grey),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: EqSpacing.xs),
-          Text(
-            'Then tap any field to copy it straight onto an induction form.',
-            style: EqTypography.bodyM.copyWith(
-              color: EqColours.deep,
-              fontWeight: FontWeight.w600,
+          if (showEmployerCtx) ...[
+            const SizedBox(height: EqSpacing.xs),
+            Text(
+              "$orgName checks your credentials are current — add them now so you're ready for site.",
+              style: EqTypography.bodyM.copyWith(
+                color: EqColours.deep,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
+          ] else ...[
+            const SizedBox(height: EqSpacing.xs),
+            Text(
+              'Then tap any field to copy it straight onto an induction form.',
+              style: EqTypography.bodyM.copyWith(
+                color: EqColours.deep,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
           const SizedBox(height: EqSpacing.xl),
           EqButton(
             label: kIsWeb ? 'Upload a licence photo' : 'Scan my licence',
