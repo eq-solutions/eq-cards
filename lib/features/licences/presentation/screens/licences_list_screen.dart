@@ -916,18 +916,30 @@ class _LicencesListScreenState extends ConsumerState<LicencesListScreen> {
         extraction!.holderName == null &&
         extraction!.licenceTypeCandidate == null;
     if (looksLikeRear) {
+      // Give an escape hatch instead of dead-ending here: without it the
+      // user's only option is to retake the photo from scratch, which is
+      // what was causing people to give up after a failed scan.
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text(
-            'That looks like the back of the licence — '
-            'flip to the front and scan again.',
+            'That looks like the back of the licence — flip to the front '
+            'and scan again, or fill it in yourself.',
           ),
-          duration: const Duration(seconds: 6),
+          duration: const Duration(seconds: 8),
           behavior: SnackBarBehavior.floating,
           backgroundColor: EqColours.ink,
+          action: SnackBarAction(
+            label: 'Fill manually',
+            textColor: EqColours.sky,
+            onPressed: () {
+              if (context.mounted) {
+                context.go(Routes.licenceCreate, extra: licencePrefill);
+              }
+            },
+          ),
         ),
       );
-      return; // Stay on the list; user can tap + to try again.
+      return; // Stay on the list; user can tap + to retry, or use the action.
     }
 
     // Driver licence + profile fields extracted → ask the user to confirm

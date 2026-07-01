@@ -50,6 +50,11 @@ dependencies:
   image_cropper: ^12.0.0
   flutter_image_compress: ^2.3.0
 
+  # Web-only: canvas.toBlob() replacement for flutter_image_compress_web's
+  # synchronous canvas.toDataURL() call, which blocks the main thread long
+  # enough to freeze the OCR loading spinner mid-scan (architecture §11.2).
+  web: ^1.1.0
+
   # OCR — on-device (architecture §16 Q3 starting position)
   google_mlkit_text_recognition: ^0.15.0
 
