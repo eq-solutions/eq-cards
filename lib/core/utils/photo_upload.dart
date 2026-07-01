@@ -10,13 +10,17 @@
 // the RLS check, staff_id second so a future "all licences for a
 // tenant" admin tool can prefix-list by tenant cleanly.
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:js_interop';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:web/web.dart' as web;
 
 import '../error/failure.dart';
 import '../supabase/supabase_client_provider.dart';
@@ -124,19 +128,66 @@ class PhotoUpload {
 /// - `PhotoUpload` before persisting to Supabase Storage.
 /// - The web OCR path before sending to the `ocr-licence` Edge Function (so
 ///   the licence image never leaves the device with GPS metadata attached).
+///
+/// On web this bypasses `flutter_image_compress`'s own web implementation,
+/// which encodes via `canvas.toDataURL()` — a synchronous call that blocks
+/// the main thread for the full encode, freezing any on-screen spinner
+/// (e.g. `OcrLoadingDialog`) for however long that takes. `_compressForWeb`
+/// below does the identical resize + JPEG encode via `canvas.toBlob()`,
+/// which is asynchronous and doesn't block the UI thread.
 Future<Uint8List> stripExifAndCompress(Uint8List input) async {
-  final result = await FlutterImageCompress.compressWithList(
-    input,
-    quality: 80,
-    minWidth: 1080,
-    minHeight: 1080,
-    keepExif: false,
-    format: CompressFormat.jpeg,
-  );
+  final result = kIsWeb
+      ? await _compressForWeb(input, quality: 80, maxDimension: 1080)
+      : await FlutterImageCompress.compressWithList(
+          input,
+          quality: 80,
+          minWidth: 1080,
+          minHeight: 1080,
+          keepExif: false,
+          format: CompressFormat.jpeg,
+        );
   if (result.isEmpty) {
     throw const ServerFailure(0, 'Image compression failed');
   }
   return result;
+}
+
+/// Web-only resize + JPEG re-encode. Mirrors `flutter_image_compress_web`'s
+/// `resizeWithList` (same decode-via-`createImageBitmap`, same canvas draw,
+/// same downscale-only-if-larger sizing), but swaps the final
+/// `canvas.toDataURL()` + base64 round-trip for `canvas.toBlob()` +
+/// `Blob.arrayBuffer()`, which encode off the main thread.
+Future<Uint8List> _compressForWeb(
+  Uint8List input, {
+  required int quality,
+  required int maxDimension,
+}) async {
+  final blob = web.Blob([input.toJS].toJS);
+  final bitmap = await web.window.createImageBitmap(blob).toDart;
+
+  final srcWidth = bitmap.width;
+  final srcHeight = bitmap.height;
+  final ratio = srcWidth / srcHeight;
+  final width = srcWidth > maxDimension ? maxDimension : srcWidth;
+  final height = (width / ratio).round();
+
+  final canvas = web.HTMLCanvasElement()
+    ..width = width
+    ..height = height;
+  final ctx = canvas.getContext('2d') as web.CanvasRenderingContext2D?;
+  ctx?.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close();
+
+  final completer = Completer<web.Blob?>();
+  void onEncoded(web.Blob? result) => completer.complete(result);
+  canvas.toBlob(onEncoded.toJS, 'image/jpeg', (quality / 100).toJS);
+  final encoded = await completer.future;
+  if (encoded == null) {
+    throw const ServerFailure(0, 'Image compression failed');
+  }
+
+  final buffer = await encoded.arrayBuffer().toDart;
+  return buffer.toDart.asUint8List();
 }
 
 @Riverpod(keepAlive: true)
