@@ -159,7 +159,7 @@ class AuthFlowNotifier extends _$AuthFlowNotifier {
 
 String _message(Failure f, {required bool isPhone}) => switch (f) {
       NetworkFailure() =>
-        'No internet connection. Check your network and try again.',
+        'Unable to connect. Please check your network and try again.',
       ServerFailure(code: 429) =>
         'Too many sign-in attempts. Wait a minute and try again.',
       ServerFailure(code: 401, message: final m)
@@ -187,7 +187,14 @@ String _message(Failure f, {required bool isPhone}) => switch (f) {
 /// Sentry, so the real error stays diagnosable. User-facing copy is produced
 /// separately by [_message]; the two never share text.
 void _reportOpaque(Failure f) {
-  if (f case ServerFailure(:final code, :final message)
+  if (f is NetworkFailure) {
+    unawaited(
+      Sentry.captureMessage(
+        'Auth flow: network failure (AuthRetryableFetchException or similar)',
+        level: SentryLevel.warning,
+      ),
+    );
+  } else if (f case ServerFailure(:final code, :final message)
       when code != 429 && code != 401 && code != 403) {
     unawaited(
       Sentry.captureMessage(
